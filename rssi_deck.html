@@ -1,0 +1,1306 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>RSSI Secure Command Deck</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html{font-size:15px}
+body{font-family:system-ui,-apple-system,'Inter','Segoe UI',sans-serif;background:#080c14;color:#e2e8f0;min-height:100vh;overflow-x:hidden}
+.glass{background:rgba(255,255,255,0.04);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.06);box-shadow:0 8px 32px rgba(0,0,0,0.3)}
+.glass-card{background:rgba(255,255,255,0.03);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:1.25rem;transition:all 0.2s ease}
+.glass-card:hover{border-color:rgba(59,130,246,0.3);transform:translateY(-1px);box-shadow:0 12px 40px rgba(0,0,0,0.4)}
+.glass-card .card-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0}
+#lockScreen{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:#080c14;background-image:radial-gradient(ellipse at 50% 0%,rgba(59,130,246,0.08) 0%,transparent 70%)}
+#lockScreen .lock-box{width:100%;max-width:440px;padding:2rem}
+#lockScreen h1{font-size:1.5rem;font-weight:700;letter-spacing:-0.02em;background:linear-gradient(135deg,#f1f5f9 0%,#60a5fa 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.lock-tabs{display:flex;gap:0;margin-bottom:1.5rem;background:rgba(255,255,255,0.04);border-radius:10px;padding:3px}
+.lock-tab{flex:1;text-align:center;padding:0.6rem 1rem;border-radius:8px;cursor:pointer;font-size:0.82rem;font-weight:500;color:#94a3b8;transition:all 0.2s;border:none;background:none}
+.lock-tab.active{background:rgba(59,130,246,0.2);color:#60a5fa}
+.lock-input{width:100%;padding:0.75rem 1rem;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:#e2e8f0;font-size:0.9rem;outline:none;transition:border-color 0.2s}
+.lock-input:focus{border-color:rgba(59,130,246,0.5)}
+.lock-input::placeholder{color:#475569}
+.btn{display:inline-flex;align-items:center;gap:0.5rem;padding:0.65rem 1.2rem;border-radius:8px;font-size:0.85rem;font-weight:600;border:none;cursor:pointer;transition:all 0.2s}
+.btn-primary{background:linear-gradient(135deg,#2563eb,#3b82f6);color:#fff}
+.btn-primary:hover{background:linear-gradient(135deg,#1d4ed8,#2563eb);transform:translateY(-1px)}
+.btn-secondary{background:rgba(255,255,255,0.08);color:#e2e8f0;border:1px solid rgba(255,255,255,0.1)}
+.btn-secondary:hover{background:rgba(255,255,255,0.12)}
+.btn-danger{background:rgba(239,68,68,0.15);color:#fca5a5;border:1px solid rgba(239,68,68,0.2)}
+.btn-danger:hover{background:rgba(239,68,68,0.25)}
+.btn-sm{padding:0.4rem 0.8rem;font-size:0.78rem}
+#app{display:none;min-height:100vh}
+#app.active{display:flex}
+#sidebar{width:240px;flex-shrink:0;padding:1rem;display:flex;flex-direction:column;gap:0.25rem;height:100vh;position:sticky;top:0;overflow-y:auto;z-index:10}
+#sidebar .logo{padding:0.5rem 0.75rem 1rem;font-size:1.1rem;font-weight:700;letter-spacing:-0.02em;background:linear-gradient(135deg,#f1f5f9 0%,#60a5fa 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.nav-item{display:flex;align-items:center;gap:0.65rem;padding:0.65rem 0.75rem;border-radius:8px;cursor:pointer;color:#94a3b8;font-size:0.85rem;font-weight:500;transition:all 0.15s;border:none;background:none;width:100%;text-align:left}
+.nav-item:hover{background:rgba(255,255,255,0.06);color:#e2e8f0}
+.nav-item.active{background:rgba(59,130,246,0.12);color:#60a5fa}
+.nav-item i{width:18px;text-align:center;font-size:0.9rem}
+#main{flex:1;padding:1.5rem 2rem;max-width:1400px;overflow-y:auto}
+#topbar{display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap}
+#topbar h2{font-size:1.25rem;font-weight:700;letter-spacing:-0.01em;flex-shrink:0}
+.search-wrap{position:relative;flex:1;max-width:420px}
+.search-wrap input{width:100%;padding:0.6rem 1rem 0.6rem 2.5rem;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:8px;color:#e2e8f0;font-size:0.82rem;outline:none}
+.search-wrap input:focus{border-color:rgba(59,130,246,0.4)}
+.search-wrap i{position:absolute;left:0.8rem;top:50%;transform:translateY(-50%);color:#64748b;font-size:0.85rem}
+.view{display:none}
+.view.active{display:block}
+.stat-card{padding:1.25rem;border-radius:12px;display:flex;flex-direction:column;gap:0.5rem}
+.stat-card .stat-value{font-size:1.8rem;font-weight:700;letter-spacing:-0.02em}
+.stat-card .stat-label{font-size:0.78rem;color:#94a3b8;font-weight:500}
+.stat-card .stat-icon{font-size:1.5rem;opacity:0.4}
+.category-label{font-size:0.75rem;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#64748b;margin:1.5rem 0 0.75rem}
+.category-label:first-child{margin-top:0}
+.tool-chip{display:inline-flex;align-items:center;gap:0.35rem;padding:0.25rem 0.6rem;border-radius:5px;font-size:0.7rem;font-weight:500;background:rgba(255,255,255,0.06);color:#94a3b8}
+#tooltip{position:fixed;z-index:10000;pointer-events:none;opacity:0;visibility:hidden;transform:translateY(4px);transition:opacity 0.15s,transform 0.2s,visibility 0.15s;background:rgba(15,23,42,0.95);backdrop-filter:blur(12px);color:#f1f5f9;border-radius:8px;padding:0.7rem 0.9rem;max-width:280px;font-size:0.78rem;line-height:1.4;border:1px solid rgba(255,255,255,0.08);box-shadow:0 12px 40px rgba(0,0,0,0.5)}
+#tooltip.visible{opacity:1;visibility:visible;transform:translateY(0)}
+#tooltip .tt-title{font-weight:600;font-size:0.82rem;margin-bottom:0.2rem;color:#f1f5f9}
+#tooltip .tt-desc{color:#94a3b8;font-size:0.74rem}
+#modalOverlay{position:fixed;inset:0;z-index:20000;background:rgba(0,0,0,0.6);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;opacity:0;visibility:hidden;transition:all 0.25s;padding:1rem}
+#modalOverlay.visible{opacity:1;visibility:visible}
+#modal{background:rgba(15,23,42,0.98);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.08);border-radius:16px;width:100%;max-width:600px;max-height:85vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,0.5);transform:scale(0.92) translateY(12px);transition:transform 0.3s cubic-bezier(0.16,1,0.3,1)}
+#modalOverlay.visible #modal{transform:scale(1) translateY(0)}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:1.25rem 1.5rem;border-bottom:1px solid rgba(255,255,255,0.06);position:sticky;top:0;background:rgba(15,23,42,0.98);border-radius:16px 16px 0 0;z-index:1}
+.modal-header h2{font-size:1.1rem;font-weight:700}
+.modal-close{background:none;border:none;font-size:1.2rem;color:#64748b;cursor:pointer;padding:0.25rem;border-radius:6px;transition:all 0.15s;width:32px;height:32px;display:flex;align-items:center;justify-content:center}
+.modal-close:hover{color:#f1f5f9;background:rgba(255,255,255,0.08)}
+.modal-body{padding:1.5rem}
+.modal-body section{margin-bottom:1.25rem}
+.modal-body section:last-child{margin-bottom:0}
+.modal-body h3{font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#64748b;margin-bottom:0.5rem;padding-bottom:0.3rem;border-bottom:1px solid rgba(255,255,255,0.05)}
+.modal-body p,.modal-body li{font-size:0.85rem;line-height:1.6;color:#cbd5e1}
+.modal-body ul{list-style:none;padding:0}
+.modal-body ul li{padding:0.25rem 0 0.25rem 1.1rem;position:relative}
+.modal-body ul li::before{content:'';position:absolute;left:0;top:0.7rem;width:4px;height:4px;border-radius:50%;background:#3b82f6}
+.modal-body a{color:#60a5fa;text-decoration:underline;text-underline-offset:2px}
+.modal-body a:hover{color:#93c5fd}
+.fav-btn{background:none;border:none;cursor:pointer;color:#64748b;font-size:1rem;padding:0.25rem;transition:color 0.15s;border-radius:4px}
+.fav-btn:hover{color:#fbbf24}
+.fav-btn.active{color:#fbbf24}
+.calc-group{margin-bottom:0.75rem}
+.calc-group label{font-size:0.78rem;color:#94a3b8;display:block;margin-bottom:0.3rem}
+.calc-group input[type="range"]{width:100%;accent-color:#3b82f6;height:4px;cursor:pointer}
+.calc-result{font-size:1.3rem;font-weight:700;color:#fbbf24;margin-top:0.5rem}
+.checklist-item{display:flex;align-items:flex-start;gap:0.6rem;padding:0.5rem 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:0.85rem;color:#cbd5e1}
+.checklist-item:last-child{border-bottom:none}
+.checklist-item input[type="checkbox"]{margin-top:0.2rem;accent-color:#3b82f6;width:16px;height:16px;flex-shrink:0}
+.checklist-item.done{color:#64748b;text-decoration:line-through}
+.contact-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:0.75rem;margin-bottom:1rem}
+.contact-card{background:rgba(255,255,255,0.03);border-radius:8px;padding:0.75rem;border:1px solid rgba(255,255,255,0.05)}
+.contact-card .c-name{font-size:0.82rem;font-weight:600;color:#e2e8f0;margin-bottom:0.25rem}
+.contact-card .c-detail{font-size:0.75rem;color:#64748b}
+.contact-card .c-detail i{width:14px;margin-right:0.3rem}
+.memo-editor{width:100%;min-height:120px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:8px;color:#e2e8f0;padding:0.75rem;font-size:0.85rem;font-family:inherit;outline:none;resize:vertical}
+.memo-editor:focus{border-color:rgba(59,130,246,0.4)}
+.memo-preview{background:rgba(255,255,255,0.02);border-radius:8px;padding:0.75rem;font-size:0.85rem;line-height:1.7;min-height:60px}
+.memo-preview h1{font-size:1.2rem;font-weight:700;margin:0.5rem 0 0.3rem}
+.memo-preview h2{font-size:1rem;font-weight:600;margin:0.5rem 0 0.3rem}
+.memo-preview h3{font-size:0.9rem;font-weight:600;margin:0.4rem 0 0.2rem}
+.memo-preview p{margin:0.3rem 0}
+.memo-preview code{background:rgba(255,255,255,0.06);padding:0.15rem 0.4rem;border-radius:4px;font-size:0.8rem}
+.memo-preview ul{padding-left:1.2rem;margin:0.3rem 0}
+.memo-preview li{margin:0.15rem 0}
+.memo-preview strong{color:#f1f5f9}
+.empty-state{text-align:center;padding:3rem 1rem;color:#64748b}
+.empty-state i{font-size:2.5rem;margin-bottom:1rem;opacity:0.3}
+.empty-state p{font-size:0.9rem}
+.badge-crit{display:inline-flex;align-items:center;padding:0.15rem 0.5rem;border-radius:4px;font-size:0.68rem;font-weight:600;background:rgba(239,68,68,0.12);color:#fca5a5}
+.badge-high{background:rgba(245,158,11,0.12);color:#fcd34d}
+.badge-med{background:rgba(59,130,246,0.12);color:#93c5fd}
+.badge-low{background:rgba(16,185,129,0.12);color:#6ee7b7}
+.chart-wrap{max-width:100%;height:180px;margin:0.5rem 0}
+.grid-bento{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1rem}
+.grid-bento-wide{display:grid;grid-template-columns:1fr;gap:1rem}
+@media(min-width:768px){.grid-bento-wide{grid-template-columns:1fr 1fr}}
+.notif{position:fixed;top:1rem;right:1rem;z-index:30000;padding:0.75rem 1.25rem;border-radius:8px;font-size:0.85rem;font-weight:500;box-shadow:0 8px 24px rgba(0,0,0,0.4);transform:translateX(120%);transition:transform 0.3s cubic-bezier(0.16,1,0.3,1);max-width:360px}
+.notif.show{transform:translateX(0)}
+.notif-success{background:rgba(16,185,129,0.2);border:1px solid rgba(16,185,129,0.3);color:#6ee7b7}
+.notif-error{background:rgba(239,68,68,0.2);border:1px solid rgba(239,68,68,0.3);color:#fca5a5}
+.notif-info{background:rgba(59,130,246,0.2);border:1px solid rgba(59,130,246,0.3);color:#93c5fd}
+.fs-path{font-size:0.72rem;color:#64748b;display:flex;align-items:center;gap:0.4rem;padding:0.25rem 0.6rem;border-radius:5px;background:rgba(255,255,255,0.04);white-space:nowrap}
+.fs-path i{font-size:0.7rem}
+.lock-hint{font-size:0.75rem;color:#64748b;text-align:center;padding:0.5rem 0 0}
+#sidebar::-webkit-scrollbar,#modal::-webkit-scrollbar{width:4px}
+#sidebar::-webkit-scrollbar-track,#modal::-webkit-scrollbar-track{background:transparent}
+#sidebar::-webkit-scrollbar-thumb,#modal::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08);border-radius:2px}
+@media(max-width:768px){#sidebar{width:56px;padding:0.5rem}#sidebar .logo{font-size:0;padding:0.5rem}#sidebar .logo::after{content:'\f085';font-family:'Font Awesome 6 Free';font-weight:900;font-size:1.2rem;-webkit-text-fill-color:#60a5fa}.nav-item span{display:none}#main{padding:1rem}.stat-card .stat-value{font-size:1.4rem}.grid-bento{grid-template-columns:1fr}.contact-grid{grid-template-columns:1fr}}
+@media(max-width:480px){#topbar{flex-direction:column;align-items:stretch}.search-wrap{max-width:none}}
+</style>
+</head>
+<body>
+
+<!-- LOCK SCREEN -->
+<div id="lockScreen">
+  <div class="lock-box glass rounded-2xl">
+    <div class="text-center mb-6">
+      <i class="fas fa-shield-halved text-4xl text-blue-400 mb-3"></i>
+      <h1>RSSI Secure Command Deck</h1>
+      <p class="text-xs text-slate-500 mt-1">Chiffrement AES-GCM 256 bits • PBKDF2 100k itérations</p>
+    </div>
+    <div class="lock-tabs">
+      <button class="lock-tab active" data-tab="create">Créer un coffre</button>
+      <button class="lock-tab" data-tab="load"><i class="fas fa-rotate-left mr-1" style="font-size:0.7rem"></i> Charger</button>
+      <button class="lock-tab" data-tab="import">Importer un fichier</button>
+    </div>
+    <div id="lockTabCreate">
+      <input type="password" class="lock-input mb-3" id="lockPwd" placeholder="Mot de passe maître">
+      <input type="password" class="lock-input mb-4" id="lockPwdConfirm" placeholder="Confirmer le mot de passe">
+      <button class="btn btn-primary w-full justify-center" id="lockCreateBtn"><i class="fas fa-lock"></i> Créer &amp; Déverrouiller</button>
+    </div>
+    <div id="lockTabLoad" style="display:none">
+      <p class="text-xs text-slate-400 mb-3 text-center">Charger le coffre depuis le répertoire .rssi_deck</p>
+      <input type="password" class="lock-input mb-3" id="lockLoadPwd" placeholder="Mot de passe du coffre">
+      <button class="btn btn-primary w-full justify-center mb-2" id="lockLoadBtn"><i class="fas fa-folder-open"></i> Charger &amp; Déverrouiller</button>
+      <p id="loadError" class="text-xs text-red-400 text-center" style="display:none"></p>
+    </div>
+    <div id="lockTabImport" style="display:none">
+      <p class="text-xs text-slate-400 mb-3 text-center">Sélectionner un fichier .json chiffré</p>
+      <div class="flex gap-2 mb-3">
+        <button class="btn btn-secondary flex-1 justify-center" id="lockPickFileBtn"><i class="fas fa-file-import"></i> Choisir un fichier</button>
+        <span id="lockFileName" class="text-xs text-slate-500 self-center"></span>
+      </div>
+      <input type="password" class="lock-input mb-4" id="lockImportPwd" placeholder="Mot de passe du coffre">
+      <button class="btn btn-primary w-full justify-center" id="lockImportBtn" disabled><i class="fas fa-unlock"></i> Déverrouiller</button>
+    </div>
+    <div id="lockFsUnsupported" class="lock-hint" style="display:none"><i class="fas fa-triangle-exclamation mr-1"></i> API Fichier non disponible — téléchargement manuel requis</div>
+    <p id="lockError" class="text-xs text-red-400 mt-3 text-center" style="display:none"></p>
+  </div>
+</div>
+
+<!-- APP SHELL -->
+<div id="app">
+  <!-- Sidebar -->
+  <aside id="sidebar" class="glass">
+    <div class="logo"><i class="fas fa-shield-halved mr-2" style="-webkit-text-fill-color:#60a5fa;font-size:1rem"></i>Command Deck</div>
+    <button class="nav-item active" data-view="dashboard"><i class="fas fa-chart-pie"></i><span>Dashboard</span></button>
+    <button class="nav-item" data-view="outils-tech"><i class="fas fa-network-wired"></i><span>Outils Techniques</span></button>
+    <button class="nav-item" data-view="outils-fonctionnels"><i class="fas fa-briefcase"></i><span>Outils Fonctionnels</span></button>
+    <button class="nav-item" data-view="threat-intel"><i class="fas fa-bug"></i><span>Threat Intel</span></button>
+    <button class="nav-item" data-view="frameworks"><i class="fas fa-scale-balanced"></i><span>Frameworks</span></button>
+    <button class="nav-item" data-view="memos"><i class="fas fa-book"></i><span>Mémos &amp; Playbooks</span></button>
+    <div style="flex:1"></div>
+    <button class="nav-item text-red-400 hover:text-red-300" id="lockBtn"><i class="fas fa-lock"></i><span>Verrouiller</span></button>
+  </aside>
+
+  <!-- Main Content -->
+  <div id="main">
+    <div id="topbar">
+      <h2 id="viewTitle">Dashboard</h2>
+      <div class="search-wrap">
+        <i class="fas fa-search"></i>
+        <input type="text" id="globalSearch" placeholder="Rechercher outils, playbooks, notes…">
+      </div>
+      <button class="btn btn-secondary btn-sm" id="saveBtn"><i class="fas fa-floppy-disk"></i> Sauvegarder</button>
+      <span id="fsPathDisplay" class="fs-path" style="display:none"><i class="fas fa-folder"></i> <span id="fsPathText"></span></span>
+      <button class="btn btn-secondary btn-sm" id="refreshBtn"><i class="fas fa-rotate"></i> Rafraîchir</button>
+    </div>
+
+    <div id="viewDashboard" class="view active"></div>
+    <div id="viewOutilsTech" class="view"></div>
+    <div id="viewOutilsFonctionnels" class="view"></div>
+    <div id="viewThreatIntel" class="view"></div>
+    <div id="viewFrameworks" class="view"></div>
+    <div id="viewMemos" class="view"></div>
+  </div>
+</div>
+
+<!-- TOOLTIP -->
+<div id="tooltip"><div class="tt-title" id="ttTitle"></div><div class="tt-desc" id="ttDesc"></div></div>
+
+<!-- MODAL -->
+<div id="modalOverlay">
+  <div id="modal">
+    <div class="modal-header">
+      <h2 id="modalTitle"></h2>
+      <button class="modal-close" id="modalClose">&times;</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+
+<!-- NOTIFICATION -->
+<div id="notification" class="notif"></div>
+
+<script>
+/* ============================================================
+   MODULE CRYPTO
+   ============================================================ */
+const Crypto = (() => {
+  async function deriveKey(pwd, salt) {
+    const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(pwd), 'PBKDF2', false, ['deriveKey']);
+    return crypto.subtle.deriveKey({ name:'PBKDF2', salt, iterations:100000, hash:'SHA-256' }, key,
+      { name:'AES-GCM', length:256 }, false, ['encrypt','decrypt']);
+  }
+  return {
+    async encrypt(data, pwd) {
+      const salt = crypto.getRandomValues(new Uint8Array(16));
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+      const key = await deriveKey(pwd, salt);
+      const enc = new TextEncoder().encode(JSON.stringify(data));
+      const ct = new Uint8Array(await crypto.subtle.encrypt({ name:'AES-GCM', iv }, key, enc));
+      return { salt: btoa(String.fromCharCode(...salt)), iv: btoa(String.fromCharCode(...iv)), ciphertext: btoa(String.fromCharCode(...ct)) };
+    },
+    async decrypt(obj, pwd) {
+      const salt = new Uint8Array(atob(obj.salt).split('').map(c=>c.charCodeAt(0)));
+      const iv = new Uint8Array(atob(obj.iv).split('').map(c=>c.charCodeAt(0)));
+      const ct = new Uint8Array(atob(obj.ciphertext).split('').map(c=>c.charCodeAt(0)));
+      const key = await deriveKey(pwd, salt);
+      const pt = await crypto.subtle.decrypt({ name:'AES-GCM', iv }, key, ct);
+      return JSON.parse(new TextDecoder().decode(pt));
+    }
+  };
+})();
+
+/* ============================================================
+   MODULE IDB — Stockage du FileSystemFileHandle
+   ============================================================ */
+const FS = {
+  _handle: null,
+  _fsaSupported: 'showSaveFilePicker' in window && 'showOpenFilePicker' in window,
+
+  async saveHandle(handle) {
+    this._handle = handle;
+    try {
+      const db = await new Promise((res, rej) => {
+        const r = indexedDB.open('rssi_deck_fs', 1);
+        r.onupgradeneeded = e => e.target.result.createObjectStore('handles');
+        r.onsuccess = e => res(e.target.result);
+        r.onerror = rej;
+      });
+      const tx = db.transaction('handles', 'readwrite');
+      tx.objectStore('handles').put(handle, 'vaultHandle');
+      await new Promise((res, rej) => { tx.oncomplete = res; tx.onerror = rej; });
+    } catch(e) { /* IDB may not support structured clone of handles in all browsers */ }
+  },
+
+  async loadHandle() {
+    if (this._handle) return this._handle;
+    try {
+      const db = await new Promise((res, rej) => {
+        const r = indexedDB.open('rssi_deck_fs', 1);
+        r.onsuccess = e => res(e.target.result);
+        r.onerror = rej;
+      });
+      const tx = db.transaction('handles', 'readonly');
+      const req = tx.objectStore('handles').get('vaultHandle');
+      const handle = await new Promise((res, rej) => { req.onsuccess = () => res(req.result); req.onerror = rej; });
+      if (handle) this._handle = handle;
+      return handle || null;
+    } catch(e) { return null; }
+  },
+
+  async clearHandle() {
+    this._handle = null;
+    try {
+      const db = await new Promise((res, rej) => {
+        const r = indexedDB.open('rssi_deck_fs', 1);
+        r.onsuccess = e => res(e.target.result);
+        r.onerror = rej;
+      });
+      const tx = db.transaction('handles', 'readwrite');
+      tx.objectStore('handles').delete('vaultHandle');
+      await new Promise((res, rej) => { tx.oncomplete = res; tx.onerror = rej; });
+    } catch(e) {}
+  },
+
+  supportsApi() { return this._fsaSupported; }
+};
+
+/* ============================================================
+   MODULE DATA — Contenu initial riche
+   ============================================================ */
+const DEFAULT_VAULT = {
+  version: '1.0.0',
+  last_updated: new Date().toISOString(),
+  favorites: [],
+  contacts_urgence: {
+    assurance: { nom:'', telephone:'', email:'' },
+    avocat: { nom:'', telephone:'', email:'' },
+    hebergeur: { nom:'OVH Support', telephone:'+33 9 72 10 10 07', email:'support@ovh.com' },
+    direction: { nom:'', telephone:'', email:'' }
+  },
+  playbook_checks: {},
+  memos: [],
+  outils_techniques: [
+    { id:'nmap', nom:'Nmap', icone:'fa-network-wired', categorie:'Réseau', description:'Scanner de ports et cartographie réseau. Indispensable pour l\'audit de périmètre et la découverte de services exposés.', lien:'https://nmap.org/', commandes:['nmap -sV -sC -A 192.168.1.0/24','nmap -p- -sS 10.0.0.1','nmap --script vuln target'], cas_usage:'Cartographie réseau, inventaire de services, détection de ports ouverts.' },
+    { id:'wireshark', nom:'Wireshark', icone:'fa-eye', categorie:'Réseau', description:'Analyseur de paquets réseau en temps réel. Permet l\'inspection approfondie des flux et la détection de comportements anormaux.', lien:'https://www.wireshark.org/', commandes:['tshark -i eth0 -w capture.pcap','tshark -r capture.pcap -Y "http.request"'], cas_usage:'Analyse forensique réseau, inspection de trafic suspect, troubleshooting.' },
+    { id:'masscan', nom:'Masscan', icone:'fa-bolt', categorie:'Réseau', description:'Scanner TCP à très haut débit. Capable de scanner l\'intégralité d\'Internet en quelques minutes.', lien:'https://github.com/robertdavidgraham/masscan', commandes:['masscan 10.0.0.0/8 -p443 --rate=10000','masscan --ports 0-65535 --rate=5000'], cas_usage:'Scan large de périmètre, découverte rapide de surfaces d\'attaque.' },
+    { id:'nessus', nom:'Nessus / OpenVAS', icone:'fa-shield', categorie:'Vulnérabilité', description:'Scanner de vulnérabilités complet. OpenVAS est la version open source. Identifie les CVE, configurations erronées et mots de passe faibles.', lien:'https://www.tenable.com/products/nessus', commandes:['openvas-setup','gvm-cli --gmp-username admin socket'], cas_usage:'Audit de vulnérabilités, campagnes de patch management, conformité.' },
+    { id:'metasploit', nom:'Metasploit', icone:'fa-skull', categorie:'Vulnérabilité', description:'Framework d\'exploitation et de validation de vulnérabilités. Utilisé en test d\'intrusion pour valider la criticité des failles.', lien:'https://www.metasploit.com/', commandes:['msfconsole','use exploit/multi/handler','set PAYLOAD windows/meterpreter/reverse_tcp'], cas_usage:'Test d\'intrusion, validation de correctifs, simulation d\'attaques.' },
+    { id:'nikto', nom:'Nikto', icone:'fa-globe', categorie:'Vulnérabilité', description:'Scanner de vulnérabilités web. Vérifie les serveurs HTTP pour les fichiers dangereux, CGIs obsolètes et configurations par défaut.', lien:'https://github.com/sullo/nikto', commandes:['nikto -h https://example.com','nikto -h 10.0.0.1 -port 8443 -ssl'], cas_usage:'Audit d\'applications web, revue de configuration serveur.' },
+    { id:'autopsy', nom:'Autopsy', icone:'fa-microscope', categorie:'Forensic', description:'Plateforme d\'analyse forensique numérique. Interface graphique pour The Sleuth Kit. Analyse de disques, fichiers supprimés, timeline.', lien:'https://www.autopsy.com/', commandes:['autopsy','tsk_recover -e img.dd ./sortie'], cas_usage:'Analyse post-incident, récupération de preuves numériques, investigation interne.' },
+    { id:'volatility', nom:'Volatility', icone:'fa-memory', categorie:'Forensic', description:'Framework d\'analyse de la mémoire volatile (RAM). Permet d\'extraire les processus, connexions réseau et artefacts des dumps mémoire.', lien:'https://www.volatilityfoundation.org/', commandes:['volatility -f mem.dump imageinfo','volatility -f mem.dump --profile=Win10x64 pslist'], cas_usage:'Analyse de malware en mémoire, investigation post-incident, reverse engineering.' },
+    { id:'grr', nom:'GRR Rapid Response', icone:'fa-gauge-high', categorie:'Forensic', description:'Framework de réponse sur incident à distance. Déploie des agents sur les endpoints pour collecte forensique en direct.', lien:'https://github.com/google/grr', commandes:['grr_admin','grr_config_updater'], cas_usage:'Réponse incident à grande échelle, chasse de menaces, collecte forensique distante.' },
+    { id:'proxmox', nom:'Proxmox VE', icone:'fa-server', categorie:'Infrastructure', description:'Plateforme de virtualisation open source. Gère VMs KVM et conteneurs LXC avec haute disponibilité et stockage Ceph intégré.', lien:'https://www.proxmox.com/', commandes:['qm list','pct list','pvecm status','ceph -s'], cas_usage:'Gestion d\'infrastructure virtualisée, snapshot et backup de VMs, clustering HA.' },
+    { id:'docker', nom:'Docker / Podman', icone:'fa-cubes', categorie:'Infrastructure', description:'Moteur de conteneurisation. Déploiement standardisé d\'applications. Podman est l\'alternative daemonless compatible OCI.', lien:'https://www.docker.com/', commandes:['docker ps','docker compose up -d','podman run --rm -it alpine sh'], cas_usage:'Déploiement applicatif, isolation de services, CI/CD.' },
+    { id:'kubernetes', nom:'Kubernetes', icone:'fa-ship', categorie:'Infrastructure', description:'Orchestrateur de conteneurs. Automatise le déploiement, la mise à l\'échelle et la gestion des applications conteneurisées.', lien:'https://kubernetes.io/', commandes:['kubectl get nodes','kubectl get pods --all-namespaces','kubectl describe pod'], cas_usage:'Orchestration micro-services, gestion de clusters, déploiement resilient.' },
+    { id:'terraform', nom:'Terraform', icone:'fa-cubes-stacked', categorie:'Infrastructure', description:'Outil d\'Infrastructure as Code. Déploie et gère les ressources cloud et on-premise par déclaration.', lien:'https://www.terraform.io/', commandes:['terraform init','terraform plan','terraform apply'], cas_usage:'Automatisation d\'infrastructure, gestion multi-cloud, reproductibilité des environnements.' },
+    { id:'ansible', nom:'Ansible', icone:'fa-gears', categorie:'Infrastructure', description:'Moteur d\'automatisation IT. Configuration, déploiement et orchestration sans agent sur les cibles.', lien:'https://www.ansible.com/', commandes:['ansible all -m ping','ansible-playbook site.yml'], cas_usage:'Gestion de configuration, déploiement applicatif, hardening automatisé.' },
+    { id:'wazuh', nom:'Wazuh', icone:'fa-chart-line', categorie:'SIEM', description:'Plateforme de sécurité unifiée (SIEM + XDR). Détection de menaces, analyse de conformité et réponse sur incident.', lien:'https://wazuh.com/', commandes:['systemctl status wazuh-manager','/var/ossec/bin/ossec-control status'], cas_usage:'Corrélation d\'alertes, conformité PCI-DSS/GDPR, scan de vulnérabilités intégré.' },
+    { id:'splunk', nom:'Splunk', icone:'fa-magnifying-glass-chart', categorie:'SIEM', description:'Plateforme de recherche et analyse de logs machine. Corrélation temps réel et visualisation avancée des données de sécurité.', lien:'https://www.splunk.com/', commandes:['index=windows_logs EventCode=4625','sourcetype=apache status=404'], cas_usage:'Analyse forensique SIEM, corrélation d\'événements, tableau de bord de sécurité.' },
+    { id:'elk', nom:'Elastic Stack (ELK)', icone:'fa-layer-group', categorie:'SIEM', description:'Stack Elasticsearch + Logstash + Kibana + Fleet. Centralisation des logs, détection et visualisation.', lien:'https://www.elastic.co/elastic-stack/', commandes:['elasticsearch','filebeat modules enable system','kibana'], cas_usage:'Centralisation de logs, détection d\'anomalies, analyse forensique centralisée.' },
+    { id:'grafana', nom:'Grafana', icone:'fa-chart-simple', categorie:'SIEM', description:'Plateforme de visualisation et d\'alerte. Tableaux de bord interactifs multi-sources (Prometheus, Elasticsearch, Loki).', lien:'https://grafana.com/', commandes:[], cas_usage:'Monitoring temps réel, dashboards RSSI, alerting métier et technique.' }
+  ],
+  outils_fonctionnels: [
+    { id:'thehive', nom:'TheHive', icone:'fa-hexagon-nodes', categorie:'Gestion de Crise', description:'Plateforme de réponse sur incident collaborative. Casel management, corrélation d\'alertes et workflow d\'investigation.', lien:'https://thehive-project.org/', commandes:[], cas_usage:'Suivi d\'incidents SOC, escalade, rapport post-mortem, collaboration équipe.' },
+    { id:'cortex', nom:'Cortex', icone:'fa-brain', categorie:'Gestion de Crise', description:'Moteur d\'analyse automatisée. Exécute des analyseurs (VirusTotal, AbuseIPDB) et des responders (blocage IP, quarantine).', lien:'https://cortex-project.org/', commandes:[], cas_usage:'Enrichissement automatique d\'IoC, réponse orchestrée, playbooks automatisés.' },
+    { id:'misp', nom:'MISP', icone:'fa-share-nodes', categorie:'Gestion de Crise', description:'Plateforme de partage de renseignement sur les menaces. Base de données collaborative d\'IoC et de TTPs.', lien:'https://www.misp-project.org/', commandes:[], cas_usage:'Partage de threat intelligence, enrichissement d\'alertes, veille collaborative.' },
+    { id:'eramba', nom:'Eramba', icone:'fa-clipboard-check', categorie:'GRC', description:'Solution open source de GRC (Gouvernance, Risque et Conformité). Gestion des risques, politiques et audits.', lien:'https://eramba.org/', commandes:[], cas_usage:'Cartographie des risques, pilotage de la conformité, plan d\'action RSSI.' },
+    { id:'simplerisk', nom:'SimpleRisk', icone:'fa-chart-simple', categorie:'GRC', description:'Outil de gestion de risques. Évaluation quantitative/qualitative, suivi des traitements et rapport de conformité.', lien:'https://simplerisk.com/', commandes:[], cas_usage:'Analyse de risques, suivi des plans de traitement, reporting RSSI.' },
+    { id:'iso27001', nom:'ISO 27001 Toolkit', icone:'fa-certificate', categorie:'GRC', description:'Framework de gestion pour la mise en œuvre d\'un SMSI conforme ISO 27001. Documents types et procédures.', lien:'https://www.iso.org/standard/27001', commandes:[], cas_usage:'Mise en conformité ISO 27001, documentation SMSI, audit blanc.' },
+    { id:'drawio', nom:'Draw.io / diagrams.net', icone:'fa-diagram-project', categorie:'Documentation', description:'Outil de création de diagrammes techniques. Gratuit, export SVG/PNG. Cartographie réseau et architecture.', lien:'https://www.drawio.com/', commandes:[], cas_usage:'Cartographie d\'infrastructure, diagrammes de flux, architecture de sécurité.' },
+    { id:'obsidian', nom:'Obsidian / Notion', icone:'fa-note-sticky', categorie:'Documentation', description:'Base de connaissances. Notes liées, graphe de connaissances. Idéal pour la documentation RSSI et les PAM.', lien:'https://obsidian.md/', commandes:[], cas_usage:'Documentation RSSI, base de connaissances, PAM (Procédures d\'Administration).' },
+    { id:'bitwarden', nom:'Bitwarden', icone:'fa-key', categorie:'Mots de passe', description:'Gestionnaire de mots de passe open source. Chiffrement de bout en bout, partage sécurisé entre équipes.', lien:'https://bitwarden.com/', commandes:[], cas_usage:'Gestion des mots de passe d\'infrastructure, coffre d\'équipe, rotation de secrets.' },
+    { id:'keepassxc', nom:'KeePassXC', icone:'fa-lock', categorie:'Mots de passe', description:'Gestionnaire de mots de passe hors ligne. Base de données locale chiffrée AES-256, compatible KeePass 2.', lien:'https://keepassxc.org/', commandes:[], cas_usage:'Coffre de mots de passe personnel, stockage hors ligne, authentification forte.' }
+  ],
+  threat_intel: {
+    cve: { nom:'NVD — National Vulnerability Database', url:'https://nvd.nist.gov/' },
+    frameworks: [
+      { nom:'MITRE ATT&CK', url:'https://attack.mitre.org/', description:'Matrice des tactiques, techniques et procédures adverses. Référence mondiale pour la classification des attaques.', icone:'fa-dragon' },
+      { nom:'MITRE D3FEND', url:'https://d3fend.mitre.org/', description:'Base de connaissances des contre-mesures défensives. Cartographie des techniques de défense.', icone:'fa-shield-halved' }
+    ],
+    modeles: [
+      { nom:'Cyber Kill Chain (Lockheed Martin)', url:'https://www.lockheedmartin.com/en-us/capabilities/cyber/cyber-kill-chain.html', description:'Modèle des 7 phases d\'une cyberattaque : Reconnaissance → Weaponization → Delivery → Exploitation → Installation → C2 → Actions on Objectives.', icone:'fa-chain' },
+      { nom:'Diamond Model', url:'http://diamondmodel.org/', description:'Analyse des intrusions selon 4 axes : Adversaire, Capacité, Infrastructure, Victime. Permet de modéliser chaque événement malveillant.', icone:'fa-gem' }
+    ],
+    sources: [
+      { nom:'ANSSI — Actualités & Alertes', url:'https://www.ssi.gouv.fr/actualite/', description:'Alerte et recommandations officielles de l\'Agence Nationale de la Sécurité des Systèmes d\'Information.', icone:'fa-flag-france' },
+      { nom:'CISA Cybersecurity Alerts', url:'https://www.cisa.gov/news-events/cybersecurity-advisories', description:'Alertes cybersécurité de la Cybersecurity and Infrastructure Security Agency US.', icone:'fa-shield' },
+      { nom:'The Hacker News', url:'https://thehackernews.com/', description:'Actualité cyber quotidienne. Vulnérabilités, fuites de données, malwares.', icone:'fa-newspaper' },
+      { nom:'BleepingComputer', url:'https://www.bleepingcomputer.com/', description:'Actualité technique, correctifs, ransomwares et support.', icone:'fa-computer' }
+    ],
+    osint: [
+      { nom:'Shodan', url:'https://www.shodan.io/', description:'Moteur de recherche d\'équipements connectés. Détection de services exposés, IoT, SCADA.', icone:'fa-search' },
+      { nom:'Censys', url:'https://censys.io/', description:'Moteur de recherche d\'attaques et d\'expositions. Cartographie de la surface d\'attaque Internet.', icone:'fa-map' },
+      { nom:'VirusTotal', url:'https://www.virustotal.com/', description:'Analyse multi-antivirus de fichiers et URLs. Détection de malwares par 70+ moteurs.', icone:'fa-virus' },
+      { nom:'Have I Been Pwned', url:'https://haveibeenpwned.com/', description:'Vérification de fuites de mots de passe et d\'emails dans les bases de données compromises.', icone:'fa-user-check' }
+    ]
+  },
+  playbooks: [
+    { id:'p1', titre:'Réponse Ransomware', scenario:'Détection d\'un rançongiciel actif sur le SI. Priorité : isolation, identification, restauration.', severity:'crit', checklist:[
+      'Isoler la machine infectée du réseau (débrancher RJ45 / couper le port switch)',
+      'Couper les accès AD du compte utilisateur concerné',
+      'Identifier la souche (hachage SHA256, nom, extension des fichiers chiffrés)',
+      'Vérifier l\'étendue de la compromission via les logs EDR/SIEM',
+      'Contacter l\'assurance cyber et l\'avocat si fuite de données clients',
+      'Déclarer à l\'ANSSI si OIV/OSE (obligation légale)',
+      'Restaurer depuis les sauvegardes immuables (S3/WORM)',
+      'Analyser le vecteur d\'entrée (phishing ? RDP ? vulnérabilité ?)',
+      'Corriger la brèche avant remise en production',
+      'Rédiger le rapport d\'incident et le REX'
+    ]},
+    { id:'p2', titre:'Fuite de Données (RGPD)', scenario:'Détection d\'un accès non autorisé à des données personnelles. Notification obligatoire sous 72h.', severity:'high', checklist:[
+      'Confirmer la réalité de la fuite (logs, alertes, témoignage)',
+      'Identifier les bases de données et fichiers concernés',
+      'Déterminer le périmètre : quels types de données, quels individus',
+      'Bloquer l\'accès à la ressource compromise',
+      'Contacter le DPD (Délégué à la Protection des Données)',
+      'Notifier la CNIL sous 72h (obligation RGPD Art. 33)',
+      'Informer les personnes concernées si risque élevé (Art. 34)',
+      'Corriger la vulnérabilité à l\'origine de la fuite',
+      'Mettre en place des mesures de surveillance renforcées',
+      'Documenter l\'incident pour le registre RGPD'
+    ]},
+    { id:'p3', titre:'Panne Datacenter', scenario:'Indisponibilité partielle ou totale d\'un site d\'hébergement. Activation du PCA/PRA.', severity:'crit', checklist:[
+      'Confirmer l\'étendue de la panne (site complet ou partiel)',
+      'Contacter l\'hébergeur (support technique)',
+      'Déclencher le PCA (Plan de Continuité d\'Activité)',
+      'Basculer le trafic vers le site secondaire (DNS/Failover)',
+      'Vérifier la réplication des données (RPO atteint ?)',
+      'Notifier la direction et les équipes concernées',
+      'Communiquer vers les clients si impact service',
+      'Suivre le RTO et ajuster les communications',
+      'Documenter les causes et actions pour le REX'
+    ]},
+    { id:'p4', titre:'Compromission Compte Admin', scenario:'Détection d\'un usage anormal d\'un compte administrateur (AD, cloud, SSH).', severity:'high', checklist:[
+      'Révoquer immédiatement les tokens et sessions du compte',
+      'Désactiver le compte AD/SSO concerné',
+      'Analyser les logs de connexion (heure, IP, actions)',
+      'Identifier les ressources accédées pendant la compromission',
+      'Vérifier les accès créés (clés SSH, comptes, règles firewall)',
+      'Chercher des persistence mechanisms (cron jobs, services)',
+      'Changer les mots de passe de tous les comptes privilégiés',
+      'Activer la MFA si pas déjà en place',
+      'Déployer un scan de compromission sur l\'infrastructure',
+      'Rétablir le compte après investigation avec MFA obligatoire'
+    ]}
+  ],
+  cadre_legal: {
+    normes: [
+      { nom:'RGPD', url:'https://www.cnil.fr/fr/reglement-europeen-protection-donnees', description:'Règlement Général sur la Protection des Données. Notification des fuites sous 72h, DPO obligatoire pour organismes publics.', icone:'fa-gavel' },
+      { nom:'NIS 2', url:'https://www.ssi.gouv.fr/guide/nis-2/', description:'Directive européenne sur la sécurité des réseaux et systèmes d\'information. Obligations renforcées pour OIV et OSE.', icone:'fa-landmark' },
+      { nom:'DORA', url:'https://www.ecb.europa.eu/press/pr/date/2024/html/ecb.pr240710~.html', description:'Digital Operational Resilience Act. Résilience opérationnelle des acteurs financiers (banques, fintechs).', icone:'fa-building-columns' },
+      { nom:'ISO 27001:2022', url:'https://www.iso.org/standard/27001', description:'SMSI — Management de la sécurité de l\'information. Référence internationale pour le système de management.', icone:'fa-certificate' },
+      { nom:'ISO 27002:2022', url:'https://www.iso.org/standard/27002', description:'Code de bonnes pratiques pour les mesures de sécurité. Catalogue d\'annexes A mis à jour en 2022.', icone:'fa-book' }
+    ]
+  }
+};
+
+/* ============================================================
+   STATE
+   ============================================================ */
+let vault = null;          // plaintext data
+let vaultKey = null;       // derived CryptoKey (held only in memory)
+let dirty = false;
+let currentView = 'dashboard';
+let chartInstance = null;
+let searchQuery = '';
+let chartData = [12,8,15,6,9,14,7]; // simulated alert trend
+
+function setDirty() { dirty = true; }
+
+/* ============================================================
+   NOTIFICATION
+   ============================================================ */
+function notify(msg, type = 'info') {
+  const n = document.getElementById('notification');
+  n.textContent = msg;
+  n.className = 'notif notif-' + type + ' show';
+  setTimeout(() => n.classList.remove('show'), 3500);
+}
+
+/* ============================================================
+   RENDER ENGINE
+   ============================================================ */
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function renderAll() {
+  renderView(currentView);
+  refreshFavorites();
+}
+
+function renderView(name) {
+  currentView = name;
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-item[data-view]').forEach(b => {
+    b.classList.toggle('active', b.dataset.view === name);
+  });
+  const titles = { dashboard:'Dashboard', 'outils-tech':'Outils Techniques', 'outils-fonctionnels':'Outils Fonctionnels',
+    'threat-intel':'Threat Intelligence', frameworks:'Frameworks & Conformité', memos:'Mémos & Playbooks' };
+  document.getElementById('viewTitle').textContent = titles[name] || name;
+  const viewMap = { dashboard:'viewDashboard', 'outils-tech':'viewOutilsTech', 'outils-fonctionnels':'viewOutilsFonctionnels',
+    'threat-intel':'viewThreatIntel', frameworks:'viewFrameworks', memos:'viewMemos' };
+  const el = document.getElementById(viewMap[name]);
+  el.classList.add('active');
+  el.innerHTML = renderFn[name]();
+  bindViewEvents(name);
+}
+
+const renderFn = {};
+
+/* ---------- DASHBOARD ---------- */
+renderFn.dashboard = function() {
+  const nTech = vault.outils_techniques.length;
+  const nFonc = vault.outils_fonctionnels.length;
+  const nPlay = vault.playbooks.length;
+  const nFav = vault.favorites.length;
+  return `
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+      <div class="stat-card glass-card"><div class="flex justify-between items-start"><div><div class="stat-value text-blue-400">${nTech}</div><div class="stat-label">Outils Techniques</div></div><i class="fas fa-network-wired stat-icon text-blue-500"></i></div></div>
+      <div class="stat-card glass-card"><div class="flex justify-between items-start"><div><div class="stat-value text-emerald-400">${nFonc}</div><div class="stat-label">Outils Fonctionnels</div></div><i class="fas fa-briefcase stat-icon text-emerald-500"></i></div></div>
+      <div class="stat-card glass-card"><div class="flex justify-between items-start"><div><div class="stat-value text-amber-400">${nPlay}</div><div class="stat-label">Playbooks</div></div><i class="fas fa-book stat-icon text-amber-500"></i></div></div>
+      <div class="stat-card glass-card"><div class="flex justify-between items-start"><div><div class="stat-value text-purple-400">${nFav}</div><div class="stat-label">Favoris</div></div><i class="fas fa-star stat-icon text-purple-500"></i></div></div>
+    </div>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div class="glass-card">
+        <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3"><i class="fas fa-chart-line mr-1"></i> Tendances Alertes (7 derniers jours)</h3>
+        <div class="chart-wrap"><canvas id="alertChart"></canvas></div>
+      </div>
+      <div class="glass-card">
+        <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3"><i class="fas fa-star mr-1"></i> Favoris Récents</h3>
+        <div id="favList">${nFav === 0 ? '<div class="empty-state" style="padding:1.5rem"><i class="fa-regular fa-star" style="font-size:1.5rem"></i><p>Aucun favori. Cliquez sur ☆ dans les fiches outils.</p></div>' : vault.favorites.map(id => {
+          const item = findItem(id);
+          return item ? `<div class="flex items-center gap-3 py-2 border-b border-white/5 last:border-0"><i class="fas ${item.icone || 'fa-cube'} text-blue-400 w-5 text-center"></i><span class="text-sm">${esc(item.nom)}</span><span class="text-xs text-slate-500 ml-auto">${item.categorie || ''}</span></div>` : '';
+        }).join('')}</div>
+      </div>
+    </div>`;
+};
+
+function initDashboardChart() {
+  const canvas = document.getElementById('alertChart');
+  if (!canvas) return;
+  if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+  const ctx = canvas.getContext('2d');
+  chartInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: ['J-7','J-6','J-5','J-4','J-3','J-2','Hier'],
+      datasets: [{
+        label: 'Alertes',
+        data: chartData,
+        borderColor: '#3b82f6',
+        backgroundColor: 'rgba(59,130,246,0.1)',
+        fill: true,
+        tension: 0.3,
+        pointBackgroundColor: '#3b82f6',
+        pointRadius: 3,
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color:'#64748b', font:{size:10} } },
+        y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color:'#64748b', font:{size:10}, stepSize:5 } }
+      }
+    }
+  });
+}
+
+/* ---------- OUTILS TECH ---------- */
+renderFn['outils-tech'] = function() {
+  const cats = {};
+  vault.outils_techniques.forEach(t => { (cats[t.categorie] = cats[t.categorie] || []).push(t); });
+  return Object.keys(cats).map(cat => `
+    <div class="category-label"><i class="fas fa-circle text-[6px] mr-1 align-middle" style="color:${catColor(cat)}"></i> ${cat}</div>
+    <div class="grid-bento">${cats[cat].map(t => toolCard(t, 'tech')).join('')}</div>
+  `).join('');
+};
+
+renderFn['outils-fonctionnels'] = function() {
+  const cats = {};
+  vault.outils_fonctionnels.forEach(t => { (cats[t.categorie] = cats[t.categorie] || []).push(t); });
+  return Object.keys(cats).map(cat => `
+    <div class="category-label"><i class="fas fa-circle text-[6px] mr-1 align-middle" style="color:${catColor(cat)}"></i> ${cat}</div>
+    <div class="grid-bento">${cats[cat].map(t => toolCard(t, 'fonc')).join('')}</div>
+  `).join('');
+};
+
+function catColor(c) {
+  const m = { 'Réseau':'#3b82f6', 'Vulnérabilité':'#ef4444', 'Forensic':'#10b981', 'Infrastructure':'#f59e0b', 'SIEM':'#8b5cf6', 'Gestion de Crise':'#f97316', 'GRC':'#06b6d4', 'Documentation':'#ec4899', 'Mots de passe':'#14b8a6' };
+  return m[c] || '#64748b';
+}
+
+function toolCard(t, ns) {
+  const isFav = vault.favorites.includes(t.id);
+  const ttl = filterText(t);
+  const desc = filterText(t.description);
+  return `<div class="glass-card cursor-pointer" data-id="${t.id}" data-ns="${ns}" data-modal="${t.id}">
+    <div class="flex items-start gap-3 mb-2">
+      <div class="card-icon" style="background:${t.categorie === 'Réseau' ? 'rgba(59,130,246,0.12)' : t.categorie === 'Vulnérabilité' ? 'rgba(239,68,68,0.12)' : t.categorie === 'Forensic' ? 'rgba(16,185,129,0.12)' : 'rgba(245,158,11,0.12)'}"><i class="fas ${t.icone}" style="color:${catColor(t.categorie)}"></i></div>
+      <div style="min-width:0;flex:1">
+        <div class="flex items-center gap-2 mb-1">
+          <span class="text-sm font-semibold text-slate-100">${ttl}</span>
+          <button class="fav-btn ${isFav?'active':''}" data-fav="${t.id}" title="Favori"><i class="${isFav?'fas':'fa-regular'} fa-star"></i></button>
+        </div>
+        <p class="text-xs text-slate-400 leading-relaxed line-clamp-2">${desc}</p>
+      </div>
+    </div>
+    <div class="flex gap-1 flex-wrap mt-2">
+      ${(t.commandes || []).slice(0,2).map(c => `<span class="tool-chip"><i class="fas fa-terminal mr-1" style="font-size:0.6rem"></i>${esc(c)}</span>`).join('')}
+    </div>
+  </div>`;
+}
+
+/* ---------- THREAT INTEL ---------- */
+renderFn['threat-intel'] = function() {
+  const ti = vault.threat_intel;
+  return `
+    <div class="glass-card mb-4">
+      <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2"><i class="fas fa-search mr-1"></i> Recherche CVE</h3>
+      <div class="flex gap-2">
+        <input type="text" class="lock-input flex-1" id="cveSearch" placeholder="CVE-2026-XXXXX ou mot-clé…" style="font-size:0.85rem">
+        <a href="https://nvd.nist.gov/" target="_blank" class="btn btn-primary btn-sm self-start" id="cveSearchBtn"><i class="fas fa-arrow-up-right-from-square"></i> NVD</a>
+      </div>
+      <p class="text-xs text-slate-500 mt-2">${esc(ti.cve.nom)} — Recherche directe dans la base NIST.</p>
+    </div>
+    <div class="category-label"><i class="fas fa-book-skull mr-1"></i> Frameworks de Menaces</div>
+    <div class="grid-bento mb-4">${ti.frameworks.map(f => threatCard(f)).join('')}</div>
+    <div class="category-label"><i class="fas fa-puzzle-piece mr-1"></i> Modèles Conceptuels</div>
+    <div class="grid-bento mb-4">${ti.modeles.map(f => threatCard(f)).join('')}</div>
+    <div class="category-label"><i class="fas fa-rss mr-1"></i> Sources & Veille</div>
+    <div class="grid-bento mb-4">${ti.sources.map(f => threatCard(f)).join('')}</div>
+    <div class="category-label"><i class="fas fa-eye mr-1"></i> OSINT</div>
+    <div class="grid-bento">${ti.osint.map(f => threatCard(f)).join('')}</div>`;
+};
+
+function threatCard(item) {
+  return `<a href="${esc(item.url)}" target="_blank" class="glass-card block no-underline">
+    <div class="flex items-start gap-3">
+      <div class="card-icon bg-blue-500/10"><i class="fas ${item.icone || 'fa-link'} text-blue-400"></i></div>
+      <div>
+        <div class="text-sm font-semibold text-slate-100 mb-1">${esc(item.nom)}</div>
+        <p class="text-xs text-slate-400 leading-relaxed">${esc(item.description)}</p>
+      </div>
+    </div>
+  </a>`;
+}
+
+/* ---------- FRAMEWORKS ---------- */
+renderFn.frameworks = function() {
+  const norms = vault.cadre_legal.normes;
+  return `
+    <div class="category-label"><i class="fas fa-scale-balanced mr-1"></i> Normes & Référentiels</div>
+    <div class="grid-bento mb-6">${norms.map(n => `
+      <a href="${esc(n.url)}" target="_blank" class="glass-card block no-underline">
+        <div class="flex items-start gap-3">
+          <div class="card-icon bg-blue-500/10"><i class="fas ${n.icone || 'fa-book'} text-blue-400"></i></div>
+          <div>
+            <div class="text-sm font-semibold text-slate-100 mb-1">${esc(n.nom)}</div>
+            <p class="text-xs text-slate-400 leading-relaxed">${esc(n.description)}</p>
+          </div>
+        </div>
+      </a>
+    `).join('')}</div>
+    <div class="grid-bento-wide gap-4">
+      <div class="glass-card">
+        <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3"><i class="fas fa-calculator mr-1"></i> Estimation Amende RGPD</h3>
+        <p class="text-xs text-slate-500 mb-3">Simulation basée sur les critères de l\'Article 83 du RGPD.</p>
+        <div class="calc-group"><label><span class="text-slate-400">Gravité de la violation</span> <span id="gravVal" class="text-blue-400">3/5</span></label><input type="range" min="1" max="5" value="3" id="gravSlider"></div>
+        <div class="calc-group"><label><span class="text-slate-400">Personnes concernées</span> <span id="nbreVal" class="text-blue-400">10 000</span></label><input type="range" min="100" max="10000000" value="10000" id="nbreSlider"></div>
+        <div class="calc-group"><label><span class="text-slate-400">Mesures correctives</span> <span id="corrVal" class="text-blue-400">2/5</span></label><input type="range" min="1" max="5" value="2" id="corrSlider"></div>
+        <div class="border-t border-white/5 pt-3 mt-3">
+          <div class="text-xs text-slate-500">Estimation indicative :</div>
+          <div class="calc-result" id="amendeResult">Jusqu'à 1 250 000 €</div>
+          <div class="text-xs text-slate-500 mt-1">Plafond légal : 20M€ ou 4% du CA annuel mondial</div>
+        </div>
+      </div>
+      <div class="glass-card">
+        <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3"><i class="fas fa-chart-pie mr-1"></i> Analyse de Risque Simplifiée</h3>
+        <p class="text-xs text-slate-500 mb-3">Méthode inspirée d\'EBIOS RM. Évaluez la vraisemblance et la gravité.</p>
+        <div class="calc-group"><label><span class="text-slate-400">Vraisemblance</span> <span id="vraiVal" class="text-blue-400">3/5</span></label><input type="range" min="1" max="5" value="3" id="vraiSlider"></div>
+        <div class="calc-group"><label><span class="text-slate-400">Gravité de l\'impact</span> <span id="gravImpVal" class="text-blue-400">3/5</span></label><input type="range" min="1" max="5" value="3" id="gravImpSlider"></div>
+        <div class="border-t border-white/5 pt-3 mt-3">
+          <div class="text-xs text-slate-500">Niveau de risque :</div>
+          <div class="calc-result" id="risqueResult" style="font-size:1.1rem">Moyen (9/25)</div>
+          <div class="text-xs text-slate-500 mt-1">Matrice 5×5 : ≤4 Faible, 5-9 Moyen, 10-15 Élevé, ≥16 Critique</div>
+        </div>
+      </div>
+    </div>`;
+};
+
+/* ---------- MEMOS & PLAYBOOKS ---------- */
+renderFn.memos = function() {
+  return `
+    <div class="category-label"><i class="fas fa-tower-broadcast mr-1"></i> Playbooks de Réponse</div>
+    <div class="grid-bento mb-6">${vault.playbooks.map(p => {
+      const checks = vault.playbook_checks[p.id] || [];
+      const done = checks.filter(Boolean).length;
+      const total = p.checklist.length;
+      return `<div class="glass-card cursor-pointer" data-playbook="${p.id}" data-modal="pb-${p.id}">
+        <div class="flex items-start gap-3 mb-2">
+          <div class="card-icon ${p.severity === 'crit' ? 'bg-red-500/10' : 'bg-amber-500/10'}"><i class="fas fa-${p.severity === 'crit' ? 'skull' : 'triangle-exclamation'} ${p.severity === 'crit' ? 'text-red-400' : 'text-amber-400'}"></i></div>
+          <div style="min-width:0">
+            <div class="flex items-center gap-2 mb-1">
+              <span class="text-sm font-semibold text-slate-100">${esc(p.titre)}</span>
+              <span class="${p.severity === 'crit' ? 'badge-crit' : 'badge-high'}">${p.severity === 'crit' ? 'CRITIQUE' : 'HAUTE'}</span>
+            </div>
+            <p class="text-xs text-slate-400">${esc(p.scenario)}</p>
+            <div class="flex items-center gap-2 mt-2">
+              <div class="flex-1 h-1 rounded-full bg-white/5"><div class="h-full rounded-full ${done === total ? 'bg-emerald-500' : 'bg-blue-500'}" style="width:${total ? Math.round(done/total*100) : 0}%"></div></div>
+              <span class="text-xs text-slate-500 font-mono">${done}/${total}</span>
+            </div>
+          </div>
+        </div>
+      </div>`;
+    }).join('')}</div>
+    <div class="category-label"><i class="fas fa-notes-medical mr-1"></i> Contacts d'Urgence</div>
+    <div class="contact-grid mb-6">${Object.entries(vault.contacts_urgence).map(([k,v]) => `
+      <div class="contact-card">
+        <div class="c-name"><i class="fas fa-${k === 'assurance' ? 'umbrella' : k === 'avocat' ? 'gavel' : k === 'hebergeur' ? 'server' : 'user-tie'} mr-1"></i> ${k.charAt(0).toUpperCase()+k.slice(1)}</div>
+        <div class="c-detail"><i class="fas fa-user"></i>${esc(v.nom || 'Non renseigné')}</div>
+        <div class="c-detail"><i class="fas fa-phone"></i>${esc(v.telephone || '—')}</div>
+        <div class="c-detail"><i class="fas fa-envelope"></i>${esc(v.email || '—')}</div>
+      </div>
+    `).join('')}</div>
+    <div class="grid-bento-wide gap-4">
+      <div class="glass-card">
+        <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3"><i class="fas fa-pen mr-1"></i> Nouveau Mémo</h3>
+        <input type="text" class="lock-input mb-2" id="memoTitle" placeholder="Titre du mémo…">
+        <textarea class="memo-editor mb-2" id="memoBody" placeholder="Écrire en Markdown…"></textarea>
+        <button class="btn btn-primary btn-sm" id="addMemoBtn"><i class="fas fa-plus"></i> Ajouter le mémo</button>
+      </div>
+      <div class="glass-card">
+        <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3"><i class="fas fa-folder mr-1"></i> Mémos (${vault.memos.length})</h3>
+        <div id="memoList">${vault.memos.length === 0 ? '<div class="empty-state" style="padding:1rem"><i class="fa-regular fa-note-sticky" style="font-size:1.5rem"></i><p>Aucun mémo pour le moment.</p></div>' : vault.memos.map((m,i) => `
+          <div class="border-b border-white/5 py-2 last:border-0">
+            <div class="flex items-center justify-between">
+              <span class="text-sm font-medium text-slate-200">${esc(m.titre)}</span>
+              <button class="text-xs text-red-400 hover:text-red-300 bg-none border-none cursor-pointer" data-del-memo="${i}"><i class="fas fa-trash-can"></i></button>
+            </div>
+            <div class="text-xs text-slate-400 mt-1 memo-preview">${marked.parse(m.contenu)}</div>
+            <div class="text-[0.6rem] text-slate-600 mt-1">${new Date(m.date).toLocaleDateString('fr-FR')}</div>
+          </div>
+        `).join('')}</div>
+      </div>
+    </div>`;
+};
+
+/* ============================================================
+   MODAL SYSTEM
+   ============================================================ */
+function showModal(id) {
+  let data = null;
+  let type = '';
+  if (id.startsWith('pb-')) {
+    const pid = id.slice(3);
+    data = vault.playbooks.find(p => p.id === pid);
+    type = 'playbook';
+  } else {
+    data = vault.outils_techniques.find(t => t.id === id) || vault.outils_fonctionnels.find(t => t.id === id);
+    type = 'tool';
+  }
+  if (!data) return;
+  const overlay = document.getElementById('modalOverlay');
+  const titleEl = document.getElementById('modalTitle');
+  const bodyEl = document.getElementById('modalBody');
+
+  if (type === 'playbook') {
+    const checks = vault.playbook_checks[data.id] || [];
+    titleEl.textContent = data.titre;
+    bodyEl.innerHTML = `
+      <section>
+        <h3>Scénario</h3>
+        <p>${esc(data.scenario)}</p>
+        <p class="mt-2"><span class="${data.severity === 'crit' ? 'badge-crit' : 'badge-high'}">${data.severity === 'crit' ? 'CRITIQUE' : 'HAUTE PRIORITÉ'}</span></p>
+      </section>
+      <section>
+        <h3>Checklist (${checks.filter(Boolean).length}/${data.checklist.length})</h3>
+        ${data.checklist.map((step, i) => `
+          <label class="checklist-item ${checks[i] ? 'done' : ''}">
+            <input type="checkbox" ${checks[i] ? 'checked' : ''} data-pb-id="${data.id}" data-idx="${i}">
+            <span>${esc(step)}</span>
+          </label>
+        `).join('')}
+      </section>
+      <section>
+        <h3>Contacts Utiles</h3>
+        <div class="text-sm text-slate-400">Référez-vous aux contacts d'urgence dans l'onglet Mémos.</div>
+      </section>`;
+  } else {
+    const isFav = vault.favorites.includes(data.id);
+    titleEl.innerHTML = `${esc(data.nom)} <button class="fav-btn ${isFav?'active':''}" data-fav="${data.id}" style="font-size:0.9rem"><i class="${isFav?'fas':'fa-regular'} fa-star"></i></button>`;
+    bodyEl.innerHTML = `
+      <section>
+        <h3>Description</h3>
+        <p>${esc(data.description)}</p>
+      </section>
+      ${data.lien ? `<section><h3>Lien Officiel</h3><a href="${esc(data.lien)}" target="_blank">${esc(data.lien)} <i class="fas fa-arrow-up-right-from-square" style="font-size:0.65rem"></i></a></section>` : ''}
+      ${data.cas_usage ? `<section><h3>Cas d'Usage RSSI</h3><p>${esc(data.cas_usage)}</p></section>` : ''}
+      ${data.commandes && data.commandes.length ? `<section><h3>Commandes Clés</h3><ul>${data.commandes.map(c => `<li><code style="background:rgba(255,255,255,0.05);padding:0.1rem 0.4rem;border-radius:3px;font-size:0.82rem">${esc(c)}</code></li>`).join('')}</ul></section>` : ''}
+      <section>
+        <h3>Ajouter aux Favoris</h3>
+        <button class="btn btn-sm ${isFav ? 'btn-secondary' : 'btn-primary'}" data-fav="${data.id}" id="modalFavBtn"><i class="${isFav ? 'fas' : 'fa-regular'} fa-star"></i> ${isFav ? 'Retirer des favoris' : 'Ajouter aux favoris'}</button>
+      </section>`;
+  }
+  overlay.classList.add('visible');
+  document.body.style.overflow = 'hidden';
+  overlay.scrollTop = 0;
+  bindModalEvents();
+}
+
+function bindModalEvents() {
+  document.getElementById('modalClose').onclick = hideModal;
+  document.getElementById('modalOverlay').onclick = function(e) { if (e.target === this) hideModal(); };
+  document.querySelectorAll('#modalBody .fav-btn, #modalBody [data-fav]').forEach(b => {
+    b.onclick = function(e) { e.stopPropagation(); toggleFav(this.dataset.fav); };
+  });
+  document.querySelectorAll('#modalBody input[type="checkbox"]').forEach(cb => {
+    cb.onchange = function() {
+      const pid = this.dataset.pbId;
+      const idx = parseInt(this.dataset.idx);
+      vault.playbook_checks[pid] = vault.playbook_checks[pid] || [];
+      vault.playbook_checks[pid][idx] = this.checked;
+      setDirty();
+      const label = this.closest('.checklist-item');
+      if (label) label.classList.toggle('done', this.checked);
+    };
+  });
+}
+
+function hideModal() {
+  document.getElementById('modalOverlay').classList.remove('visible');
+  document.body.style.overflow = '';
+}
+
+/* ============================================================
+   SEARCH
+   ============================================================ */
+function filterText(s) {
+  if (!s || !searchQuery) return s;
+  const q = searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const re = new RegExp('(' + q + ')', 'gi');
+  return s.replace(re, '<mark style="background:rgba(59,130,246,0.25);color:#93c5fd;padding:0.1rem 0.2rem;border-radius:2px">$1</mark>');
+}
+
+function globalSearch(query) {
+  searchQuery = query.trim();
+  renderAll();
+}
+
+function findItem(id) {
+  return vault.outils_techniques.find(t => t.id === id) || vault.outils_fonctionnels.find(t => t.id === id);
+}
+
+/* ============================================================
+   FAVORITES
+   ============================================================ */
+function toggleFav(id) {
+  const idx = vault.favorites.indexOf(id);
+  if (idx > -1) vault.favorites.splice(idx, 1);
+  else vault.favorites.push(id);
+  setDirty();
+  refreshFavorites();
+  renderAll();
+}
+
+function refreshFavorites() {
+  document.querySelectorAll('.fav-btn').forEach(b => {
+    const id = b.dataset.fav;
+    const isFav = vault.favorites.includes(id);
+    b.classList.toggle('active', isFav);
+    b.innerHTML = `<i class="${isFav ? 'fas' : 'fa-regular'} fa-star"></i>`;
+  });
+  document.querySelectorAll('#modalFavBtn').forEach(b => {
+    const id = b.dataset.fav;
+    const isFav = vault.favorites.includes(id);
+    b.className = 'btn btn-sm ' + (isFav ? 'btn-secondary' : 'btn-primary');
+    b.innerHTML = `<i class="${isFav ? 'fas' : 'fa-regular'} fa-star"></i> ${isFav ? 'Retirer des favoris' : 'Ajouter aux favoris'}`;
+  });
+}
+
+/* ============================================================
+   EVENT BINDINGS
+   ============================================================ */
+function bindViewEvents(name) {
+  if (name === 'dashboard') setTimeout(initDashboardChart, 50);
+
+  if (name === 'threat-intel') {
+    const input = document.getElementById('cveSearch');
+    const btn = document.getElementById('cveSearchBtn');
+    if (input && btn) {
+      input.onkeydown = function(e) {
+        if (e.key === 'Enter') {
+          const q = encodeURIComponent(this.value.trim());
+          if (q) btn.href = 'https://nvd.nist.gov/vuln/search?query=' + q;
+        }
+      };
+    }
+  }
+
+  if (name === 'frameworks') {
+    ['grav','nbre','corr'].forEach(id => {
+      const slider = document.getElementById(id + 'Slider');
+      const val = document.getElementById(id + 'Val');
+      if (slider && val) {
+        slider.oninput = function() {
+          const v = parseInt(this.value);
+          val.textContent = id === 'nbre' ? Number(v).toLocaleString('fr-FR') : v + '/5';
+          updateAmende();
+        };
+      }
+    });
+    ['vrai','gravImp'].forEach(id => {
+      const slider = document.getElementById(id + 'Slider');
+      const val = document.getElementById(id + 'Val');
+      if (slider && val) {
+        slider.oninput = function() {
+          val.textContent = this.value + '/5';
+          updateRisque();
+        };
+      }
+    });
+  }
+
+  if (name === 'memos') {
+    const addBtn = document.getElementById('addMemoBtn');
+    if (addBtn) {
+      addBtn.onclick = function() {
+        const title = document.getElementById('memoTitle');
+        const body = document.getElementById('memoBody');
+        if (!title.value.trim()) { notify('Le titre est requis.', 'error'); return; }
+        vault.memos.push({ titre: title.value.trim(), contenu: body.value.trim(), date: new Date().toISOString() });
+        title.value = '';
+        body.value = '';
+        setDirty();
+        renderView('memos');
+        notify('Mémo ajouté.', 'success');
+      };
+    }
+    document.querySelectorAll('[data-del-memo]').forEach(b => {
+      b.onclick = function() {
+        const idx = parseInt(this.dataset.delMemo);
+        vault.memos.splice(idx, 1);
+        setDirty();
+        renderView('memos');
+        notify('Mémo supprimé.', 'info');
+      };
+    });
+    // Render memo markdown
+    document.querySelectorAll('.memo-preview').forEach(el => {
+      try { if (window.marked) el.innerHTML = marked.parse(el.textContent); } catch(e) {}
+    });
+  }
+
+  /* Tooltips & Modals - event delegation */
+  const main = document.getElementById('main');
+  main.onmouseover = function(e) {
+    const card = e.target.closest('[data-modal]');
+    if (card && !document.querySelector('#modalOverlay.visible')) {
+      const id = card.dataset.modal;
+      const data = vault.outils_techniques.find(t => t.id === id) || vault.outils_fonctionnels.find(t => t.id === id) || vault.playbooks.find(p => 'pb-' + p.id === id);
+      if (data) {
+        const title = data.nom || data.titre;
+        const desc = data.description || data.scenario || (data.commandes ? data.commandes[0] : '');
+        document.getElementById('ttTitle').textContent = title;
+        document.getElementById('ttDesc').textContent = desc ? (desc.length > 100 ? desc.slice(0,100) + '…' : desc) : '';
+        const tt = document.getElementById('tooltip');
+        tt.style.left = (e.clientX + 14) + 'px';
+        tt.style.top = (e.clientY + 14) + 'px';
+        tt.classList.add('visible');
+      }
+    }
+  };
+  main.onmousemove = function(e) {
+    const tt = document.getElementById('tooltip');
+    if (tt.classList.contains('visible')) {
+      tt.style.left = (e.clientX + 14) + 'px';
+      tt.style.top = (e.clientY + 14) + 'px';
+    }
+  };
+  main.onmouseout = function(e) {
+    const card = e.target.closest('[data-modal]');
+    if (card) document.getElementById('tooltip').classList.remove('visible');
+  };
+  main.onclick = function(e) {
+    const card = e.target.closest('[data-modal]');
+    const fav = e.target.closest('.fav-btn');
+    if (fav) { e.stopPropagation(); toggleFav(fav.dataset.fav); return; }
+    if (card) { e.stopPropagation(); showModal(card.dataset.modal); }
+  };
+}
+
+/* ---------- CALCULATORS ---------- */
+function updateAmende() {
+  const grav = parseInt(document.getElementById('gravSlider').value);
+  const nbre = parseInt(document.getElementById('nbreSlider').value);
+  const corr = parseInt(document.getElementById('corrSlider').value);
+  // Simulation: base * (grav/5) * log10(nbre+1) / (corr/5)
+  const base = 20000000;
+  const ratio = (grav / 5) * Math.log10(nbre + 1) / Math.log10(10000001) * (1 - corr * 0.12);
+  const val = Math.min(base, Math.max(1000, Math.round(base * ratio)));
+  document.getElementById('amendeResult').textContent = 'Jusqu\'à ' + Number(val).toLocaleString('fr-FR') + ' €';
+}
+
+function updateRisque() {
+  const v = parseInt(document.getElementById('vraiSlider').value);
+  const g = parseInt(document.getElementById('gravImpSlider').value);
+  const score = v * g;
+  let level, color;
+  if (score <= 4) { level = 'Faible'; color = '#10b981'; }
+  else if (score <= 9) { level = 'Moyen'; color = '#f59e0b'; }
+  else if (score <= 15) { level = 'Élevé'; color = '#f97316'; }
+  else { level = 'Critique'; color = '#ef4444'; }
+  const el = document.getElementById('risqueResult');
+  el.textContent = level + ' (' + score + '/25)';
+  el.style.color = color;
+}
+
+/* ============================================================
+   EXPORT / IMPORT
+   ============================================================ */
+let _pendingImportFile = null;
+
+async function exportVault() {
+  if (!vault) return;
+  vault.last_updated = new Date().toISOString();
+
+  // Step 1 — Obtain file handle (needs user gesture, do this BEFORE prompt)
+  let handle = null;
+  if (FS.supportsApi()) {
+    handle = await FS.loadHandle();
+    if (handle) {
+      try {
+        const perm = await handle.requestPermission({ mode: 'readwrite' });
+        if (perm !== 'granted') { FS.clearHandle(); handle = null; }
+      } catch(e) { FS.clearHandle(); handle = null; }
+    }
+    if (!handle) {
+      try {
+        handle = await window.showSaveFilePicker({
+          suggestedName: 'rssi_coffre.json',
+          types: [{ description: 'Coffre RSSI', accept: { 'application/json': ['.json'] } }],
+          id: 'rssi_deck'
+        });
+        await FS.saveHandle(handle);
+        // After saveFilePicker creates the file, immediately ask for password
+        const pwd = await askPassword('Mot de passe pour chiffrer le coffre :');
+        if (!pwd) return;
+        // Prepare encrypted content
+        const encrypted = await Crypto.encrypt(vault, pwd);
+        encrypted.version = vault.version;
+        encrypted.last_updated = vault.last_updated;
+        const content = JSON.stringify(encrypted, null, 2);
+        // Write to the freshly picked file
+        const writable = await handle.createWritable();
+        await writable.write(content);
+        await writable.close();
+        dirty = false;
+        updateFsPath();
+        notify('Coffre enregistré dans .rssi_deck.', 'success');
+      } catch(e) {
+        if (e.name === 'AbortError') return;
+        // FSA failed — fallback to download
+        const pwd = await askPassword('Mot de passe pour chiffrer le coffre :');
+        if (!pwd) return;
+        const encrypted = await Crypto.encrypt(vault, pwd);
+        encrypted.version = vault.version;
+        encrypted.last_updated = vault.last_updated;
+        await exportVaultFallback(JSON.stringify(encrypted, null, 2));
+      }
+    } else {
+      // Existing handle — ask password, then write
+      const pwd = await askPassword('Mot de passe pour chiffrer le coffre :');
+      if (!pwd) return;
+      const encrypted = await Crypto.encrypt(vault, pwd);
+      encrypted.version = vault.version;
+      encrypted.last_updated = vault.last_updated;
+      const content = JSON.stringify(encrypted, null, 2);
+      const writable = await handle.createWritable();
+      await writable.write(content);
+      await writable.close();
+      dirty = false;
+      updateFsPath();
+      notify('Coffre enregistré dans .rssi_deck.', 'success');
+    }
+  } else {
+    // No FSA support — password then download
+    const pwd = await askPassword('Mot de passe pour chiffrer le coffre :');
+    if (!pwd) return;
+    const encrypted = await Crypto.encrypt(vault, pwd);
+    encrypted.version = vault.version;
+    encrypted.last_updated = vault.last_updated;
+    await exportVaultFallback(JSON.stringify(encrypted, null, 2));
+  }
+}
+
+async function exportVaultFallback(content) {
+  const blob = new Blob([content], { type:'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'rssi_coffre_' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  dirty = false;
+  notify('Coffre chiffré téléchargé.', 'success');
+}
+
+function askPassword(msg) {
+  return new Promise(resolve => {
+    const pwd = prompt(msg);
+    if (!pwd || pwd.length < 4) { notify('Mot de passe : minimum 4 caractères.', 'error'); resolve(null); }
+    else resolve(pwd);
+  });
+}
+
+async function importVault(file, pwd) {
+  try {
+    const text = await file.text();
+    const encrypted = JSON.parse(text);
+    if (!encrypted.salt || !encrypted.iv || !encrypted.ciphertext) {
+      throw new Error('Format de fichier invalide.');
+    }
+    const data = await Crypto.decrypt(encrypted, pwd);
+    vault = data;
+    vaultKey = true;
+    dirty = false;
+    unlockApp();
+    notify('Coffre déchiffré et chargé avec succès.', 'success');
+  } catch(e) {
+    const el = document.querySelector('#lockTabLoad:not([style*="none"])') ? 'loadError' : 'lockError';
+    document.getElementById(el).textContent = 'Mot de passe incorrect ou fichier corrompu.';
+    document.getElementById(el).style.display = 'block';
+    throw e;
+  }
+}
+
+async function decryptFromHandle(handle, pwd) {
+  try {
+    const file = await handle.getFile();
+    return importVault(file, pwd);
+  } catch(e) {
+    document.getElementById('loadError').textContent = 'Impossible de lire le fichier.';
+    document.getElementById('loadError').style.display = 'block';
+    throw e;
+  }
+}
+
+/* ============================================================
+   LOCK / UNLOCK
+   ============================================================ */
+function unlockApp() {
+  document.getElementById('lockScreen').style.display = 'none';
+  document.getElementById('app').classList.add('active');
+  renderAll();
+  updateFsPath();
+  notify('Bienvenue sur le RSSI Command Deck.', 'info');
+}
+
+function updateFsPath() {
+  const el = document.getElementById('fsPathDisplay');
+  const txt = document.getElementById('fsPathText');
+  if (FS._handle) {
+    el.style.display = 'flex';
+    txt.textContent = '.rssi_deck/rssi_coffre.json' + (vault ? ' • ' + new Date(vault.last_updated).toLocaleString('fr-FR') : '');
+  } else {
+    el.style.display = 'none';
+  }
+}
+
+function lockApp() {
+  vault = null;
+  vaultKey = null;
+  dirty = false;
+  _pendingImportFile = null;
+  document.getElementById('app').classList.remove('active');
+  document.getElementById('lockScreen').style.display = 'flex';
+  document.getElementById('lockError').style.display = 'none';
+  document.getElementById('loadError').style.display = 'none';
+  // Reset lock forms
+  document.getElementById('lockPwd').value = '';
+  document.getElementById('lockPwdConfirm').value = '';
+  document.getElementById('lockLoadPwd').value = '';
+  document.getElementById('lockImportPwd').value = '';
+  document.getElementById('lockFileName').textContent = '';
+  document.getElementById('lockImportBtn').disabled = true;
+}
+
+/* ============================================================
+   INIT
+   ============================================================ */
+document.addEventListener('DOMContentLoaded', async function() {
+  /* Detect FSA support */
+  if (!FS.supportsApi()) {
+    document.getElementById('lockFsUnsupported').style.display = 'block';
+  }
+
+  /* Lock tabs */
+  document.querySelectorAll('.lock-tab').forEach(tab => {
+    tab.addEventListener('click', function() {
+      document.querySelectorAll('.lock-tab').forEach(t => t.classList.remove('active'));
+      this.classList.add('active');
+      document.getElementById('lockTabCreate').style.display = this.dataset.tab === 'create' ? 'block' : 'none';
+      document.getElementById('lockTabLoad').style.display = this.dataset.tab === 'load' ? 'block' : 'none';
+      document.getElementById('lockTabImport').style.display = this.dataset.tab === 'import' ? 'block' : 'none';
+      document.getElementById('lockError').style.display = 'none';
+      document.getElementById('loadError').style.display = 'none';
+    });
+  });
+
+  /* Lock: Create */
+  document.getElementById('lockCreateBtn').addEventListener('click', async function() {
+    const pwd = document.getElementById('lockPwd').value;
+    const confirm = document.getElementById('lockPwdConfirm').value;
+    if (!pwd || pwd.length < 4) { document.getElementById('lockError').textContent = 'Mot de passe : minimum 4 caractères.'; document.getElementById('lockError').style.display = 'block'; return; }
+    if (pwd !== confirm) { document.getElementById('lockError').textContent = 'Les mots de passe ne correspondent pas.'; document.getElementById('lockError').style.display = 'block'; return; }
+    vault = JSON.parse(JSON.stringify(DEFAULT_VAULT));
+    vault.last_updated = new Date().toISOString();
+    vaultKey = true;
+    dirty = false;
+    unlockApp();
+  });
+
+  /* Lock: Load from .rssi_deck */
+  const loadBtn = document.getElementById('lockLoadBtn');
+  async function doLoadFromHandle() {
+    const pwd = document.getElementById('lockLoadPwd').value;
+    if (!pwd) { document.getElementById('loadError').textContent = 'Saisissez le mot de passe du coffre.'; document.getElementById('loadError').style.display = 'block'; return; }
+    const handle = await FS.loadHandle();
+    if (!handle) { document.getElementById('loadError').textContent = 'Aucun coffre trouvé. Utilisez "Importer" pour sélectionner le fichier.'; document.getElementById('loadError').style.display = 'block'; return; }
+    let perm;
+    try { perm = await handle.requestPermission({ mode: 'read' }); } catch(e) { perm = 'denied'; }
+    if (perm !== 'granted') { document.getElementById('loadError').textContent = 'Permission refusée. Utilisez "Importer" pour sélectionner le fichier.'; document.getElementById('loadError').style.display = 'block'; FS.clearHandle(); return; }
+    await decryptFromHandle(handle, pwd);
+  }
+  loadBtn.addEventListener('click', doLoadFromHandle);
+  document.getElementById('lockLoadPwd').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') doLoadFromHandle();
+  });
+
+  /* Lock: Import (file picker) */
+  let importFileHandle = null;
+  document.getElementById('lockPickFileBtn').addEventListener('click', async function() {
+    if (!FS.supportsApi()) { /* fallback: just show hint */ return; }
+    try {
+      const [handle] = await window.showOpenFilePicker({
+        types: [{ description: 'Coffre RSSI', accept: { 'application/json': ['.json'] } }],
+        multiple: false,
+        id: 'rssi_deck'
+      });
+      importFileHandle = handle;
+      _pendingImportFile = await handle.getFile();
+      document.getElementById('lockFileName').textContent = '✓ ' + _pendingImportFile.name;
+      document.getElementById('lockImportBtn').disabled = false;
+    } catch(e) { if (e.name !== 'AbortError') notify('Erreur : ' + e.message, 'error'); }
+  });
+
+  document.getElementById('lockImportBtn').addEventListener('click', async function() {
+    const pwd = document.getElementById('lockImportPwd').value;
+    if (!_pendingImportFile) { document.getElementById('lockError').textContent = 'Sélectionnez d\'abord un fichier .json.'; document.getElementById('lockError').style.display = 'block'; return; }
+    if (!pwd) { document.getElementById('lockError').textContent = 'Saisissez le mot de passe du coffre.'; document.getElementById('lockError').style.display = 'block'; return; }
+    await importVault(_pendingImportFile, pwd);
+    if (importFileHandle) await FS.saveHandle(importFileHandle);
+  });
+  document.getElementById('lockImportPwd').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !document.getElementById('lockImportBtn').disabled) document.getElementById('lockImportBtn').click();
+  });
+  document.getElementById('lockPwdConfirm').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') document.getElementById('lockCreateBtn').click();
+  });
+
+  /* Sidebar nav */
+  document.querySelectorAll('.nav-item[data-view]').forEach(item => {
+    item.addEventListener('click', function() { renderView(this.dataset.view); });
+  });
+
+  /* Lock button */
+  document.getElementById('lockBtn').addEventListener('click', lockApp);
+
+  /* Save */
+  document.getElementById('saveBtn').addEventListener('click', exportVault);
+
+  /* Refresh */
+  document.getElementById('refreshBtn').addEventListener('click', function() {
+    vault.last_updated = new Date().toISOString();
+    chartData = chartData.map(() => Math.floor(Math.random() * 20) + 2);
+    notify('Données rafraîchies.', 'info');
+    renderView(currentView);
+  });
+
+  /* Search */
+  let searchTimer;
+  document.getElementById('globalSearch').addEventListener('input', function() {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => globalSearch(this.value), 200);
+  });
+
+  /* beforeunload */
+  window.addEventListener('beforeunload', function(e) {
+    if (dirty) {
+      e.preventDefault();
+      e.returnValue = '';
+    }
+  });
+
+  /* Keyboard shortcut: Escape to close modal */
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') hideModal();
+  });
+
+  /* Auto-check for existing handle — show badge on "Charger" tab */
+  const existingHandle = await FS.loadHandle();
+  if (existingHandle) {
+    const loadTab = document.querySelector('.lock-tab[data-tab="load"]');
+    if (loadTab) loadTab.innerHTML = '<i class="fas fa-rotate-left mr-1" style="font-size:0.7rem"></i> Charger <span style="font-size:0.6rem;background:rgba(59,130,246,0.2);color:#93c5fd;padding:0.1rem 0.4rem;border-radius:3px;margin-left:0.3rem">✓</span>';
+  }
+});
+</script>
+</body>
+</html>
