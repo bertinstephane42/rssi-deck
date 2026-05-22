@@ -239,6 +239,7 @@ body{font-family:system-ui,-apple-system,'Inter','Segoe UI',sans-serif;backgroun
       </div>
       <button class="btn btn-secondary btn-sm" id="saveBtn"><i class="fas fa-floppy-disk"></i> Sauvegarder</button>
       <button class="btn btn-secondary btn-sm" id="exportDiskBtn" style="display:none" title="Exporter vers un fichier sur le disque"><i class="fas fa-download"></i> Exporter</button>
+      <button class="btn btn-secondary btn-sm" id="pwdChangeBtn" title="Changer le mot de passe du coffre"><i class="fas fa-key"></i> Mot de passe</button>
       <span id="fsPathDisplay" class="fs-path" style="display:none"><i class="fas fa-folder"></i> <span id="fsPathText"></span></span>
       <button class="btn btn-secondary btn-sm" id="refreshBtn"><i class="fas fa-rotate"></i> Rafraîchir</button>
     </div>
@@ -338,6 +339,24 @@ body{font-family:system-ui,-apple-system,'Inter','Segoe UI',sans-serif;backgroun
     <div class="flex gap-2 mt-3">
       <button id="pwdModalCancel" class="btn btn-secondary flex-1 justify-center">Annuler</button>
       <button id="pwdModalConfirm" class="btn btn-primary flex-1 justify-center">Confirmer</button>
+    </div>
+  </div>
+</div>
+
+<div id="pwdChangeModal" class="pwd-modal">
+  <div class="pwd-box glass-card">
+    <p class="text-slate-300 text-center">Changer le mot de passe</p>
+    <input type="password" id="pwdChangeCurrent" class="lock-input mb-2" placeholder="Mot de passe actuel" autocomplete="current-password">
+    <input type="password" id="pwdChangeNew" class="lock-input mb-2" placeholder="Nouveau mot de passe" autocomplete="new-password">
+    <input type="password" id="pwdChangeConfirm" class="lock-input mb-2" placeholder="Confirmer le nouveau mot de passe" autocomplete="new-password">
+    <div id="pwdChangeStrength" class="flex items-center gap-2 mt-1" style="display:none">
+      <div class="flex-1 h-1.5 rounded-full bg-white/5"><div id="pwdChangeStrengthFill" class="h-full rounded-full transition-all" style="width:0%;background:#64748b"></div></div>
+      <span id="pwdChangeStrengthLabel" class="text-xs whitespace-nowrap text-slate-500"></span>
+    </div>
+    <p id="pwdChangeError" class="text-xs text-red-400 mt-2 text-center" style="display:none"></p>
+    <div class="flex gap-2 mt-3">
+      <button id="pwdChangeCancelBtn" class="btn btn-secondary flex-1 justify-center">Annuler</button>
+      <button id="pwdChangeConfirmBtn" class="btn btn-primary flex-1 justify-center">Changer</button>
     </div>
   </div>
 </div>
@@ -1138,10 +1157,33 @@ function showGouvModal(config) {
 }
 
 /* Traitements */
+const FINALITE_OPTIONS = [
+  'Gestion de la relation client (CRM)',
+  'Gestion des ressources humaines',
+  'Gestion de la paie et notes de frais',
+  'Gestion des recrutements et candidatures',
+  'Gestion de la formation professionnelle',
+  'Gestion des fournisseurs et sous-traitants',
+  'Gestion comptable et financière',
+  'Gestion des accès et habilitations',
+  'Gestion des badges et contrôle d\'accès',
+  'Vidéosurveillance et sécurité des biens',
+  'Gestion de la sécurité des SI (SSI)',
+  'Journalisation et traçabilité des accès',
+  'Marketing et prospection commerciale',
+  'Gestion des cookies et traceurs',
+  'Gestion des litiges et contentieux',
+  'Archivage et gestion documentaire',
+  'Gestion des demandes de droits RGPD',
+  'Communication institutionnelle / newsletters',
+  'Gestion des espaces collaboratifs',
+  'Gestion des véhicules et déplacements',
+  'Autre'
+];
 function addTraitement() {
   showGouvModal({ title:'Nouveau traitement RGPD', saveLabel:'Ajouter',
     fields:[
-      { key:'finalite', label:'Finalité *' },
+      { key:'finalite', label:'Finalité *', type:'select', options:FINALITE_OPTIONS, value:'Gestion de la relation client (CRM)' },
       { key:'base_legale', label:'Base légale', type:'select', options:['Consentement (Art. 6.1.a)','Exécution d\'un contrat (Art. 6.1.b)','Obligation légale (Art. 6.1.c)','Intérêt vital (Art. 6.1.d)','Mission d\'intérêt public (Art. 6.1.e)','Intérêt légitime (Art. 6.1.f)'], value:'Intérêt légitime (Art. 6.1.f)' },
       { key:'responsable', label:'Responsable de traitement' },
       { key:'categories_donnees', label:'Catégories de données' },
@@ -1158,7 +1200,7 @@ function editTraitement(i) {
   const t = vault.traitements[i]; if (!t) return;
   showGouvModal({ title:'Modifier le traitement', saveLabel:'Enregistrer',
     fields:[
-      { key:'finalite', label:'Finalité *', value:t.finalite },
+      { key:'finalite', label:'Finalité *', type:'select', options:FINALITE_OPTIONS, value:FINALITE_OPTIONS.includes(t.finalite) ? t.finalite : 'Autre' },
       { key:'base_legale', label:'Base légale', type:'select', options:['Consentement (Art. 6.1.a)','Exécution d\'un contrat (Art. 6.1.b)','Obligation légale (Art. 6.1.c)','Intérêt vital (Art. 6.1.d)','Mission d\'intérêt public (Art. 6.1.e)','Intérêt légitime (Art. 6.1.f)','Autre'], value:t.base_legale },
       { key:'responsable', label:'Responsable de traitement', value:t.responsable },
       { key:'categories_donnees', label:'Catégories de données', value:t.categories_donnees },
@@ -2111,6 +2153,120 @@ function askPasswordWithStrength(options) {
   });
 }
 
+async function verifyCurrentPwd(pwd) {
+  if (!_sessionKey || !_sessionSalt) return false;
+  try {
+    const test = { nonce: 'RSSI_PWD_VERIFY_' + Date.now() };
+    const enc = await Crypto.encryptWithKey(test, _sessionKey, _sessionSalt);
+    const dec = await Crypto.decrypt(enc, pwd);
+    return dec && dec.nonce === test.nonce;
+  } catch(e) {
+    return false;
+  }
+}
+
+async function changePassword() {
+  if (!_sessionKey || !_sessionSalt) {
+    notify('Aucun mot de passe en cache. Sauvegardez d\'abord le coffre.', 'info');
+    return;
+  }
+  if (!vault) {
+    notify('Aucun coffre chargé.', 'error');
+    return;
+  }
+
+  const modal = document.getElementById('pwdChangeModal');
+  const currentInp = document.getElementById('pwdChangeCurrent');
+  const newInp = document.getElementById('pwdChangeNew');
+  const confirmInp = document.getElementById('pwdChangeConfirm');
+  const errEl = document.getElementById('pwdChangeError');
+  const strengthBar = document.getElementById('pwdChangeStrength');
+  const strengthFill = document.getElementById('pwdChangeStrengthFill');
+  const strengthLabel = document.getElementById('pwdChangeStrengthLabel');
+  const confirmBtn = document.getElementById('pwdChangeConfirmBtn');
+  const cancelBtn = document.getElementById('pwdChangeCancelBtn');
+
+  currentInp.value = '';
+  newInp.value = '';
+  confirmInp.value = '';
+  errEl.style.display = 'none';
+  strengthBar.style.display = 'none';
+  strengthFill.style.width = '0%';
+  strengthFill.style.background = '#64748b';
+  strengthLabel.textContent = '';
+
+  modal.style.display = 'flex';
+  setTimeout(() => currentInp.focus(), 100);
+
+  function updateStrength() {
+    const pwd = newInp.value;
+    if (!pwd) { strengthBar.style.display = 'none'; return; }
+    strengthBar.style.display = 'flex';
+    const s = checkPwdStrength(pwd);
+    strengthFill.style.width = Math.round(s.score / s.max * 100) + '%';
+    strengthFill.style.background = s.color;
+    strengthLabel.textContent = s.label + ' (' + s.score + '/' + s.max + ')';
+    strengthLabel.style.color = s.color;
+  }
+  newInp.oninput = updateStrength;
+
+  const cleanup = () => {
+    modal.style.display = 'none';
+    currentInp.value = '';
+    newInp.value = '';
+    confirmInp.value = '';
+    newInp.oninput = null;
+  };
+
+  const onConfirm = async () => {
+    const current = currentInp.value;
+    const newPwd = newInp.value;
+    const confirm = confirmInp.value;
+    if (!current || !newPwd || !confirm) {
+      errEl.textContent = 'Tous les champs sont requis.';
+      errEl.style.display = 'block'; return;
+    }
+    if (newPwd !== confirm) {
+      errEl.textContent = 'Les nouveaux mots de passe ne correspondent pas.';
+      errEl.style.display = 'block'; return;
+    }
+    if (newPwd.length < 4) {
+      errEl.textContent = 'Le nouveau mot de passe doit faire au moins 4 caractères.';
+      errEl.style.display = 'block'; return;
+    }
+    if (current === newPwd) {
+      errEl.textContent = 'Le nouveau mot de passe est identique à l\'actuel.';
+      errEl.style.display = 'block'; return;
+    }
+    const ok = await verifyCurrentPwd(current);
+    if (!ok) {
+      errEl.textContent = 'Mot de passe actuel incorrect.';
+      errEl.style.display = 'block'; return;
+    }
+    const newSalt = crypto.getRandomValues(new Uint8Array(16));
+    _sessionKey = await Crypto.deriveKey(newPwd, newSalt);
+    _sessionSalt = newSalt;
+    cleanup();
+    notify('Mot de passe modifié. La prochaine sauvegarde utilisera le nouveau mot de passe.', 'success');
+  };
+
+  const onCancel = () => { cleanup(); };
+  confirmBtn.onclick = onConfirm;
+  cancelBtn.onclick = onCancel;
+  currentInp.onkeydown = e => {
+    if (e.key === 'Enter') newInp.focus();
+    if (e.key === 'Escape') onCancel();
+  };
+  newInp.onkeydown = e => {
+    if (e.key === 'Enter') confirmInp.focus();
+    if (e.key === 'Escape') onCancel();
+  };
+  confirmInp.onkeydown = e => {
+    if (e.key === 'Enter') onConfirm();
+    if (e.key === 'Escape') onCancel();
+  };
+}
+
 async function importVault(file, pwd) {
   try {
     const text = await file.text();
@@ -2369,6 +2525,9 @@ document.addEventListener('DOMContentLoaded', async function() {
   const exportDiskBtn = document.getElementById('exportDiskBtn');
   if (FS.isFileProtocol()) exportDiskBtn.style.display = '';
   exportDiskBtn.addEventListener('click', exportVaultToDisk);
+
+  /* Change password */
+  document.getElementById('pwdChangeBtn').addEventListener('click', changePassword);
 
   /* Refresh */
   document.getElementById('refreshBtn').addEventListener('click', function() {
