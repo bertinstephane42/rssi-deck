@@ -656,7 +656,8 @@ const DEFAULT_VAULT = {
       'Notifier la direction et les équipes concernées',
       'Communiquer vers les clients si impact service',
       'Suivre le RTO et ajuster les communications',
-      'Documenter les causes et actions pour le REX'
+      'Documenter les causes et actions pour le REX',
+      'Analyser les causes racines et mettre à jour le PCA/PRA'
     ]},
     { id:'p4', titre:'Compromission Compte Admin', scenario:'Détection d\'un usage anormal d\'un compte administrateur (AD, cloud, SSH).', severity:'high', date:'', historique:[], checklist:[
       'Révoquer immédiatement les tokens et sessions du compte',
@@ -1643,11 +1644,13 @@ function bindModalEvents() {
     const date = document.getElementById('pbHistoDate').value;
     const contenu = document.getElementById('pbHistoContenu').value.trim();
     if (!date || !contenu) { notify('Date et contenu requis.', 'error'); return; }
+    const checks = vault.playbook_checks[pid] ? [...vault.playbook_checks[pid]] : [];
+    const entry = { date: date, contenu: contenu, checks: checks };
     const isEditing = _histoEditing >= 0 && _histoEditing < pb.historique.length;
     if (isEditing) {
-      pb.historique[_histoEditing] = { date: date, contenu: contenu };
+      pb.historique[_histoEditing] = entry;
     } else {
-      pb.historique.push({ date: date, contenu: contenu });
+      pb.historique.push(entry);
     }
     document.getElementById('pbHistoForm').style.display = 'none';
     document.getElementById('pbHistoAddBtn').style.display = '';
@@ -1690,18 +1693,28 @@ function bindModalEvents() {
 
 function renderHistorique(pb) {
   if (!pb.historique || !pb.historique.length) return '<p class="text-sm text-slate-500">Aucune entrée pour le moment.</p>';
-  return pb.historique.map((h, i) => `
+  return pb.historique.map((h, i) => {
+    const checks = h.checks || [];
+    const done = checks.filter(Boolean).length;
+    const total = checks.length;
+    return `
     <div class="border-b border-white/5 py-2 last:border-0">
       <div class="flex items-center justify-between">
         <span class="text-xs font-semibold text-slate-300">📅 ${esc(h.date)}</span>
-        <div class="flex gap-1">
-          <button class="memo-btn text-amber-400" data-edit-histo="${i}"><i class="fas fa-pencil"></i></button>
-          <button class="memo-btn text-red-400" data-del-histo="${i}"><i class="fas fa-trash-can"></i></button>
+        <div class="flex items-center gap-2">
+          ${total > 0 ? `<span class="text-[0.6rem] font-mono ${done === total ? 'text-emerald-400' : 'text-amber-400'}">✓ ${done}/${total}</span>` : ''}
+          <div class="flex gap-1">
+            <button class="memo-btn text-amber-400" data-edit-histo="${i}"><i class="fas fa-pencil"></i></button>
+            <button class="memo-btn text-red-400" data-del-histo="${i}"><i class="fas fa-trash-can"></i></button>
+          </div>
         </div>
       </div>
       <p class="text-xs text-slate-400 mt-1">${esc(h.contenu)}</p>
-    </div>
-  `).join('');
+      ${total > 0 ? `<div class="flex gap-1 mt-1 flex-wrap">${checks.map((c, ci) => `
+        <span class="inline-block w-2 h-2 rounded-full ${c ? 'bg-emerald-500' : 'bg-white/10'}" title="${esc(pb.checklist[ci] || '')}"></span>
+      `).join('')}</div>` : ''}
+    </div>`;
+  }).join('');
 }
 
 function refreshHistorique(pid) {
