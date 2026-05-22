@@ -150,6 +150,27 @@ body{font-family:system-ui,-apple-system,'Inter','Segoe UI',sans-serif;backgroun
 #sidebar::-webkit-scrollbar-thumb,#modal::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08);border-radius:2px}
 @media(max-width:768px){#sidebar{width:56px;padding:0.5rem}#sidebar .logo{font-size:0;padding:0.5rem}#sidebar .logo::after{content:'\f085';font-family:'Font Awesome 6 Free';font-weight:900;font-size:1.2rem;-webkit-text-fill-color:#60a5fa}.nav-item span{display:none}#main{padding:1rem}.stat-card .stat-value{font-size:1.4rem}.grid-bento{grid-template-columns:1fr}.contact-grid{grid-template-columns:1fr}}
 @media(max-width:480px){#topbar{flex-direction:column;align-items:stretch}.search-wrap{max-width:none}}
+.sub-tabs{display:flex;gap:0;margin-bottom:1.25rem;background:rgba(255,255,255,0.04);border-radius:10px;padding:3px}
+.sub-tab{flex:1;text-align:center;padding:0.55rem 1rem;border-radius:8px;cursor:pointer;font-size:0.8rem;font-weight:500;color:#94a3b8;transition:all 0.2s;border:none;background:none}
+.sub-tab.active{background:rgba(59,130,246,0.2);color:#60a5fa}
+.sub-tab:hover{color:#e2e8f0}
+.gouv-section .gouv-card{background:rgba(255,255,255,0.03);border-radius:10px;border:1px solid rgba(255,255,255,0.06);padding:1rem;margin-bottom:0.75rem}
+.gouv-section .gouv-card:hover{border-color:rgba(59,130,246,0.25)}
+.gouv-table{width:100%;border-collapse:collapse;font-size:0.82rem}
+.gouv-table th{text-align:left;padding:0.5rem 0.4rem;color:#64748b;font-weight:600;text-transform:uppercase;font-size:0.65rem;letter-spacing:0.04em;border-bottom:1px solid rgba(255,255,255,0.06)}
+.gouv-table td{padding:0.5rem 0.4rem;border-bottom:1px solid rgba(255,255,255,0.03);color:#cbd5e1;vertical-align:middle}
+.gouv-table .gouv-actions{white-space:nowrap;text-align:right}
+.gouv-table .gouv-actions button{background:none;border:none;color:#64748b;cursor:pointer;padding:0.2rem 0.35rem;border-radius:4px;font-size:0.75rem;transition:all 0.15s}
+.gouv-table .gouv-actions button:hover{color:#60a5fa;background:rgba(59,130,246,0.1)}
+.gouv-prio-haute{color:#f87171}
+.gouv-prio-moyenne{color:#fbbf24}
+.gouv-prio-basse{color:#94a3b8}
+.status-badge{display:inline-block;padding:0.15rem 0.5rem;border-radius:4px;font-size:0.65rem;font-weight:600}
+.status-actif,.status-ouvert{background:rgba(16,185,129,0.12);color:#6ee7b7}
+.status-archivé,.status-abandonné,.status-fermé{background:rgba(100,116,139,0.12);color:#94a3b8}
+.status-en-cours{background:rgba(59,130,246,0.12);color:#93c5fd}
+.status-fait,.status-résolu{background:rgba(16,185,129,0.12);color:#6ee7b7}
+.status-à-faire{background:rgba(245,158,11,0.12);color:#fcd34d}
 </style>
 </head>
 <body>
@@ -161,10 +182,6 @@ body{font-family:system-ui,-apple-system,'Inter','Segoe UI',sans-serif;backgroun
       <i class="fas fa-shield-halved text-4xl text-blue-400 mb-3"></i>
       <h1>RSSI Secure Command Deck</h1>
       <p class="text-xs text-slate-500 mt-1">Chiffrement AES-GCM 256 bits • PBKDF2 100k itérations</p>
-      <div id="osPathHint" class="text-xs text-slate-500 mt-2 text-center" style="display:none">
-        <i class="fas fa-folder-tree mr-1 text-slate-600"></i>Coffre sur disque&nbsp;:
-        <code id="osPathCode" class="text-blue-400/80" style="font-size:0.7rem;word-break:break-all"></code>
-      </div>
     </div>
     <div class="lock-tabs">
       <button class="lock-tab active" data-tab="create">Créer un coffre</button>
@@ -206,6 +223,7 @@ body{font-family:system-ui,-apple-system,'Inter','Segoe UI',sans-serif;backgroun
     <button class="nav-item" data-view="outils-fonctionnels"><i class="fas fa-briefcase"></i><span>Outils Fonctionnels</span></button>
     <button class="nav-item" data-view="threat-intel"><i class="fas fa-bug"></i><span>Threat Intel</span></button>
     <button class="nav-item" data-view="frameworks"><i class="fas fa-scale-balanced"></i><span>Frameworks</span></button>
+    <button class="nav-item" data-view="gouvernance"><i class="fas fa-landmark"></i><span>Gouvernance</span></button>
     <button class="nav-item" data-view="memos"><i class="fas fa-book"></i><span>Mémos &amp; Playbooks</span></button>
     <div style="flex:1"></div>
     <button class="nav-item text-red-400 hover:text-red-300" id="lockBtn"><i class="fas fa-lock"></i><span>Verrouiller</span></button>
@@ -230,6 +248,7 @@ body{font-family:system-ui,-apple-system,'Inter','Segoe UI',sans-serif;backgroun
     <div id="viewOutilsFonctionnels" class="view"></div>
     <div id="viewThreatIntel" class="view"></div>
     <div id="viewFrameworks" class="view"></div>
+    <div id="viewGouvernance" class="view"></div>
     <div id="viewMemos" class="view"></div>
   </div>
 </div>
@@ -301,6 +320,8 @@ body{font-family:system-ui,-apple-system,'Inter','Segoe UI',sans-serif;backgroun
     </div>
   </div>
 </div>
+
+<div id="gouvModal" class="pwd-modal"><div class="pwd-box glass-card" id="gouvModalContent"></div></div>
 
 <div id="pwdModal" class="pwd-modal">
   <div class="pwd-box glass-card">
@@ -627,7 +648,15 @@ const DEFAULT_VAULT = {
       { nom:'CIS Controls v8', url:'https://www.cisecurity.org/controls', description:'20 contrôles de sécurité prioritaires. Référence internationale pour le hardening et la gouvernance SSI.', icone:'fa-shield-halved' },
       { nom:'NIST CSF 2.0', url:'https://www.nist.gov/cyberframework', description:'Framework de cybersécurité du NIST. 5 fonctions : Identifier, Protéger, Détecter, Répondre, Rétablir.', icone:'fa-building-columns' }
     ]
-  }
+  },
+  traitements: [],
+  plan_actions: [
+    { action:'Mettre à jour la PSSI', priorite:'Haute', responsable:'RSSI', echeance:'', statut:'En cours' },
+    { action:'Réaliser un audit de conformité RGPD', priorite:'Haute', responsable:'DPO', echeance:'', statut:'À faire' },
+    { action:"Déployer l'authentification multi-facteurs (MFA)", priorite:'Haute', responsable:'DSI', echeance:'', statut:'À faire' },
+    { action:'Sensibiliser les collaborateurs à la cybersécurité', priorite:'Moyenne', responsable:'RSSI', echeance:'', statut:'À faire' }
+  ],
+  incidents: []
 };
 
 /* ============================================================
@@ -643,10 +672,15 @@ let sortOutilsTech = 'default';
 let sortOutilsFonc = 'default';
 
 function migrateVault(v) {
-  if (v && v.playbooks) {
-    v.playbooks.forEach(function(p) {
-      if (!p.historique) p.historique = [];
-    });
+  if (v) {
+    if (v.playbooks) {
+      v.playbooks.forEach(function(p) {
+        if (!p.historique) p.historique = [];
+      });
+    }
+    if (!v.traitements) v.traitements = [];
+    if (!v.plan_actions) v.plan_actions = [];
+    if (!v.incidents) v.incidents = [];
   }
   return v;
 }
@@ -685,10 +719,10 @@ function renderView(name) {
     b.classList.toggle('active', b.dataset.view === name);
   });
   const titles = { dashboard:'Dashboard', 'outils-tech':'Outils Techniques', 'outils-fonctionnels':'Outils Fonctionnels',
-    'threat-intel':'Threat Intelligence', frameworks:'Frameworks & Conformité', memos:'Mémos & Playbooks' };
+    'threat-intel':'Threat Intelligence', frameworks:'Frameworks & Conformité', gouvernance:'Gouvernance', memos:'Mémos & Playbooks' };
   document.getElementById('viewTitle').textContent = titles[name] || name;
   const viewMap = { dashboard:'viewDashboard', 'outils-tech':'viewOutilsTech', 'outils-fonctionnels':'viewOutilsFonctionnels',
-    'threat-intel':'viewThreatIntel', frameworks:'viewFrameworks', memos:'viewMemos' };
+    'threat-intel':'viewThreatIntel', frameworks:'viewFrameworks', gouvernance:'viewGouvernance', memos:'viewMemos' };
   const el = document.getElementById(viewMap[name]);
   el.classList.add('active');
   el.innerHTML = renderFn[name]();
@@ -949,6 +983,255 @@ renderFn.frameworks = function() {
       </div>
     </div>`;
 };
+
+/* ---------- GOUVERNANCE ---------- */
+renderFn.gouvernance = function() {
+  const activeSubtab = document.querySelector('.sub-tab.active');
+  const tab = activeSubtab ? activeSubtab.dataset.subtab : 'traitements';
+  const labels = { 'traitements':'Registre des traitements', 'plan-actions':'Plan d\'actions', 'incidents':'Registre des incidents' };
+  const secIds = { 'traitements':'gouvTraitements', 'plan-actions':'gouvPlanActions', 'incidents':'gouvIncidents' };
+  const subTabs = Object.keys(labels).map(t =>
+    `<button class="sub-tab${t===tab?' active':''}" data-subtab="${t}">${labels[t]}</button>`
+  ).join('');
+  const sections = Object.keys(labels).map(t =>
+    `<div id="${secIds[t]}" class="gouv-section" style="display:${t===tab?'block':'none'}">${t===tab ? renderGouvContent(t) : ''}</div>`
+  ).join('');
+  return `<div class="sub-tabs">${subTabs}</div>${sections}`;
+};
+
+function renderGouvContent(tab) {
+  if (tab === 'traitements') return renderTraitements();
+  if (tab === 'plan-actions') return renderPlanActions();
+  return renderIncidents();
+}
+
+function escDate(d) { return d ? new Date(d).toLocaleDateString('fr-FR') : '—'; }
+function statutBadge(s) { return '<span class="status-badge status-' + (s||'').toLowerCase().replace(/\s/g,'-') + '">' + esc(s||'—') + '</span>'; }
+
+function renderTraitements() {
+  const items = vault.traitements || [];
+  return `
+    <div class="flex items-center gap-2 mb-3"><button class="btn btn-primary btn-sm" onclick="addTraitement()"><i class="fas fa-plus"></i> Ajouter</button></div>
+    ${items.length === 0 ? '<div class="empty-state" style="padding:1.5rem"><i class="fa-regular fa-file-lines"></i><p>Aucun traitement enregistré. Ajoutez votre premier traitement RGPD.</p></div>' : `
+    <div style="overflow-x:auto"><table class="gouv-table">
+      <thead><tr><th>Finalité</th><th>Base légale</th><th>Responsable</th><th>Statut</th><th class="gouv-actions"></th></tr></thead>
+      <tbody>${items.map((t,i) => `
+        <tr>
+          <td><strong>${esc(t.finalite||'')}</strong></td>
+          <td>${esc(t.base_legale||'')}</td>
+          <td>${esc(t.responsable||'')}</td>
+          <td>${statutBadge(t.statut||'Actif')}</td>
+          <td class="gouv-actions">
+            <button onclick="editTraitement(${i})" title="Modifier"><i class="fas fa-pencil-alt"></i></button>
+            <button onclick="deleteTraitement(${i})" title="Supprimer"><i class="fas fa-trash"></i></button>
+          </td>
+        </tr>`).join('')}</tbody>
+    </table></div>`}
+    <div class="text-[0.65rem] text-slate-600 mt-2">${items.length} traitement(s) enregistré(s)</div>`;
+}
+
+function renderPlanActions() {
+  const items = vault.plan_actions || [];
+  return `
+    <div class="flex items-center gap-2 mb-3"><button class="btn btn-primary btn-sm" onclick="addPlanAction()"><i class="fas fa-plus"></i> Ajouter</button></div>
+    ${items.length === 0 ? '<div class="empty-state" style="padding:1.5rem"><i class="fa-regular fa-list-check"></i><p>Aucune action planifiée. Créez votre premier plan d\'actions sécurité.</p></div>' : `
+    <div style="overflow-x:auto"><table class="gouv-table">
+      <thead><tr><th>Action</th><th>Priorité</th><th>Responsable</th><th>Échéance</th><th>Statut</th><th class="gouv-actions"></th></tr></thead>
+      <tbody>${items.map((a,i) => {
+        const prioCls = 'gouv-prio-' + (a.priorite||'moyenne').toLowerCase();
+        return `<tr>
+          <td><strong>${esc(a.action||'')}</strong></td>
+          <td><span class="${prioCls}">${esc(a.priorite||'Moyenne')}</span></td>
+          <td>${esc(a.responsable||'')}</td>
+          <td>${escDate(a.echeance)}</td>
+          <td>${statutBadge(a.statut||'À faire')}</td>
+          <td class="gouv-actions">
+            <button onclick="editPlanAction(${i})" title="Modifier"><i class="fas fa-pencil-alt"></i></button>
+            <button onclick="deletePlanAction(${i})" title="Supprimer"><i class="fas fa-trash"></i></button>
+          </td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table></div>`}
+    <div class="text-[0.65rem] text-slate-600 mt-2">${items.length} action(s) planifiée(s)</div>`;
+}
+
+function renderIncidents() {
+  const items = vault.incidents || [];
+  return `
+    <div class="flex items-center gap-2 mb-3"><button class="btn btn-primary btn-sm" onclick="addIncident()"><i class="fas fa-plus"></i> Ajouter</button></div>
+    ${items.length === 0 ? '<div class="empty-state" style="padding:1.5rem"><i class="fa-regular fa-circle-exclamation"></i><p>Aucun incident enregistré. Ajoutez votre premier incident.</p></div>' : `
+    <div style="overflow-x:auto"><table class="gouv-table">
+      <thead><tr><th>Date</th><th>Type</th><th>Description</th><th>Impact</th><th>Statut</th><th class="gouv-actions"></th></tr></thead>
+      <tbody>${items.map((inc,i) => `
+        <tr>
+          <td class="whitespace-nowrap">${escDate(inc.date)}</td>
+          <td>${esc(inc.type||'')}</td>
+          <td>${esc(inc.description||'').length > 60 ? esc(inc.description).slice(0,60)+'…' : esc(inc.description||'')}</td>
+          <td>${esc(inc.impact||'')}</td>
+          <td>${statutBadge(inc.statut||'Ouvert')}</td>
+          <td class="gouv-actions">
+            <button onclick="editIncident(${i})" title="Modifier"><i class="fas fa-pencil-alt"></i></button>
+            <button onclick="deleteIncident(${i})" title="Supprimer"><i class="fas fa-trash"></i></button>
+          </td>
+        </tr>`).join('')}</tbody>
+    </table></div>`}
+    <div class="text-[0.65rem] text-slate-600 mt-2">${items.length} incident(s) enregistré(s)</div>`;
+}
+
+/* ---------- GOUVERNANCE CRUD ---------- */
+function showGouvModal(config) {
+  const fields = config.fields.map(f => {
+    if (f.type === 'select') {
+      const opts = f.options.map(o => `<option value="${esc(o)}"${f.value === o ? ' selected' : ''}>${esc(o)}</option>`).join('');
+      return `<div class="calc-group"><label>${esc(f.label)}</label><select class="lock-input" id="gouvField_${f.key}">${opts}</select></div>`;
+    }
+    return `<div class="calc-group"><label>${esc(f.label)}</label><input class="lock-input" id="gouvField_${f.key}" value="${esc(f.value||'')}"${f.type === 'date' ? ' type="date"' : ' type="text"'}>`;
+  }).join('');
+  const overlay = document.getElementById('gouvModal');
+  const content = document.getElementById('gouvModalContent');
+  content.innerHTML = `<div style="text-align:left">
+    <h3 class="text-sm font-semibold mb-3" style="text-align:center">${esc(config.title)}</h3>
+    ${fields}
+    <div id="gouvEditError" class="text-xs text-red-400 mb-2" style="display:none"></div>
+    <div class="flex gap-2" style="justify-content:center;margin-top:1rem">
+      <button class="btn btn-primary btn-sm" id="gouvEditSave">${esc(config.saveLabel || 'Enregistrer')}</button>
+      <button class="btn btn-secondary btn-sm" id="gouvEditCancel">Annuler</button>
+    </div>
+  </div>`;
+  overlay.style.display = 'flex';
+  const saveBtn = document.getElementById('gouvEditSave');
+  const cancelBtn = document.getElementById('gouvEditCancel');
+  const onCancel = () => { overlay.style.display = 'none'; cancelBtn.removeEventListener('click', onCancel); saveBtn.removeEventListener('click', onSave); };
+  const onSave = () => {
+    const err = document.getElementById('gouvEditError');
+    const data = {};
+    config.fields.forEach(f => {
+      data[f.key] = document.getElementById('gouvField_' + f.key).value.trim() || f.default || '';
+    });
+    if (config.validate) { const e = config.validate(data); if (e) { err.textContent = e; err.style.display = 'block'; return; } }
+    err.style.display = 'none';
+    config.onSave(data);
+    overlay.style.display = 'none';
+    cancelBtn.removeEventListener('click', onCancel);
+    saveBtn.removeEventListener('click', onSave);
+  };
+  cancelBtn.addEventListener('click', onCancel);
+  saveBtn.addEventListener('click', onSave);
+}
+
+/* Traitements */
+function addTraitement() {
+  showGouvModal({ title:'Nouveau traitement RGPD', saveLabel:'Ajouter',
+    fields:[
+      { key:'finalite', label:'Finalité *' },
+      { key:'base_legale', label:'Base légale', type:'select', options:['Consentement (Art. 6.1.a)','Exécution d\'un contrat (Art. 6.1.b)','Obligation légale (Art. 6.1.c)','Intérêt vital (Art. 6.1.d)','Mission d\'intérêt public (Art. 6.1.e)','Intérêt légitime (Art. 6.1.f)'], value:'Intérêt légitime (Art. 6.1.f)' },
+      { key:'responsable', label:'Responsable de traitement' },
+      { key:'categories_donnees', label:'Catégories de données' },
+      { key:'categories_personnes', label:'Catégories de personnes' },
+      { key:'destinataires', label:'Destinataires' },
+      { key:'mesures_securite', label:'Mesures de sécurité' },
+      { key:'statut', label:'Statut', type:'select', options:['Actif','Archivé'], value:'Actif' }
+    ],
+    validate: d => d.finalite ? null : 'La finalité est obligatoire.',
+    onSave: d => { vault.traitements.push(d); setDirty(); renderGouvSubtab('traitements'); notify('Traitement ajouté.','success'); }
+  });
+}
+function editTraitement(i) {
+  const t = vault.traitements[i]; if (!t) return;
+  showGouvModal({ title:'Modifier le traitement', saveLabel:'Enregistrer',
+    fields:[
+      { key:'finalite', label:'Finalité *', value:t.finalite },
+      { key:'base_legale', label:'Base légale', type:'select', options:['Consentement (Art. 6.1.a)','Exécution d\'un contrat (Art. 6.1.b)','Obligation légale (Art. 6.1.c)','Intérêt vital (Art. 6.1.d)','Mission d\'intérêt public (Art. 6.1.e)','Intérêt légitime (Art. 6.1.f)','Autre'], value:t.base_legale },
+      { key:'responsable', label:'Responsable de traitement', value:t.responsable },
+      { key:'categories_donnees', label:'Catégories de données', value:t.categories_donnees },
+      { key:'categories_personnes', label:'Catégories de personnes', value:t.categories_personnes },
+      { key:'destinataires', label:'Destinataires', value:t.destinataires },
+      { key:'mesures_securite', label:'Mesures de sécurité', value:t.mesures_securite },
+      { key:'statut', label:'Statut', type:'select', options:['Actif','Archivé'], value:t.statut || 'Actif' }
+    ],
+    validate: d => d.finalite ? null : 'La finalité est obligatoire.',
+    onSave: d => { vault.traitements[i] = d; setDirty(); renderGouvSubtab('traitements'); notify('Traitement mis à jour.','success'); }
+  });
+}
+function deleteTraitement(i) {
+  if (!confirm('Supprimer ce traitement RGPD ?')) return;
+  vault.traitements.splice(i,1); setDirty(); renderGouvSubtab('traitements'); notify('Traitement supprimé.','success');
+}
+
+/* Plan d'actions */
+function addPlanAction() {
+  showGouvModal({ title:'Nouvelle action sécurité', saveLabel:'Ajouter',
+    fields:[
+      { key:'action', label:'Action *' },
+      { key:'priorite', label:'Priorité', type:'select', options:['Haute','Moyenne','Basse'], value:'Moyenne' },
+      { key:'responsable', label:'Responsable' },
+      { key:'echeance', label:'Échéance', type:'date' },
+      { key:'statut', label:'Statut', type:'select', options:['À faire','En cours','Fait','Abandonné'], value:'À faire' }
+    ],
+    validate: d => d.action ? null : 'L\'action est obligatoire.',
+    onSave: d => { vault.plan_actions.push(d); setDirty(); renderGouvSubtab('plan-actions'); notify('Action ajoutée.','success'); }
+  });
+}
+function editPlanAction(i) {
+  const a = vault.plan_actions[i]; if (!a) return;
+  showGouvModal({ title:'Modifier l\'action', saveLabel:'Enregistrer',
+    fields:[
+      { key:'action', label:'Action *', value:a.action },
+      { key:'priorite', label:'Priorité', type:'select', options:['Haute','Moyenne','Basse'], value:a.priorite || 'Moyenne' },
+      { key:'responsable', label:'Responsable', value:a.responsable },
+      { key:'echeance', label:'Échéance', type:'date', value:a.echeance || '' },
+      { key:'statut', label:'Statut', type:'select', options:['À faire','En cours','Fait','Abandonné'], value:a.statut || 'À faire' }
+    ],
+    validate: d => d.action ? null : 'L\'action est obligatoire.',
+    onSave: d => { vault.plan_actions[i] = d; setDirty(); renderGouvSubtab('plan-actions'); notify('Action mise à jour.','success'); }
+  });
+}
+function deletePlanAction(i) {
+  if (!confirm('Supprimer cette action ?')) return;
+  vault.plan_actions.splice(i,1); setDirty(); renderGouvSubtab('plan-actions'); notify('Action supprimée.','success');
+}
+
+/* Incidents */
+function addIncident() {
+  showGouvModal({ title:'Nouvel incident de sécurité', saveLabel:'Ajouter',
+    fields:[
+      { key:'date', label:'Date', type:'date', value:new Date().toISOString().slice(0,10) },
+      { key:'type', label:'Type d\'incident *', type:'select', options:['Ransomware / Rançongiciel','Phishing / Hameçonnage','Fuite de données','Déni de service (DDoS)','Compromission de compte','Intrusion réseau','Malware','Ingénierie sociale','Fraude au président (FOVI)','Chaîne d\'approvisionnement','Défaillance matérielle','Erreur humaine / Mauvaise configuration','Menace interne','Atteinte physique / Intrusion','Autre'], value:'Phishing / Hameçonnage' },
+      { key:'description', label:'Description' },
+      { key:'impact', label:'Impact' },
+      { key:'statut', label:'Statut', type:'select', options:['Ouvert','En cours','Résolu','Fermé'], value:'Ouvert' },
+      { key:'date_resolution', label:'Date de résolution', type:'date' }
+    ],
+    validate: d => d.type ? null : 'Le type d\'incident est obligatoire.',
+    onSave: d => { vault.incidents.push(d); setDirty(); renderGouvSubtab('incidents'); notify('Incident ajouté.','success'); }
+  });
+}
+function editIncident(i) {
+  const inc = vault.incidents[i]; if (!inc) return;
+  showGouvModal({ title:'Modifier l\'incident', saveLabel:'Enregistrer',
+    fields:[
+      { key:'date', label:'Date', type:'date', value:inc.date || '' },
+      { key:'type', label:'Type d\'incident *', type:'select', options:['Ransomware / Rançongiciel','Phishing / Hameçonnage','Fuite de données','Déni de service (DDoS)','Compromission de compte','Intrusion réseau','Malware','Ingénierie sociale','Fraude au président (FOVI)','Chaîne d\'approvisionnement','Défaillance matérielle','Erreur humaine / Mauvaise configuration','Menace interne','Atteinte physique / Intrusion','Autre'], value:inc.type },
+      { key:'description', label:'Description', value:inc.description },
+      { key:'impact', label:'Impact', value:inc.impact },
+      { key:'statut', label:'Statut', type:'select', options:['Ouvert','En cours','Résolu','Fermé'], value:inc.statut || 'Ouvert' },
+      { key:'date_resolution', label:'Date de résolution', type:'date', value:inc.date_resolution || '' }
+    ],
+    validate: d => d.type ? null : 'Le type d\'incident est obligatoire.',
+    onSave: d => { vault.incidents[i] = d; setDirty(); renderGouvSubtab('incidents'); notify('Incident mis à jour.','success'); }
+  });
+}
+function deleteIncident(i) {
+  if (!confirm('Supprimer cet incident ?')) return;
+  vault.incidents.splice(i,1); setDirty(); renderGouvSubtab('incidents'); notify('Incident supprimé.','success');
+}
+
+function renderGouvSubtab(tab) {
+  document.querySelectorAll('.gouv-section').forEach(s => s.style.display = 'none');
+  const map = { 'traitements':'gouvTraitements', 'plan-actions':'gouvPlanActions', 'incidents':'gouvIncidents' };
+  document.getElementById(map[tab]).style.display = 'block';
+  document.getElementById(map[tab]).innerHTML = renderGouvContent(tab);
+}
 
 /* ---------- MEMOS & PLAYBOOKS ---------- */
 renderFn.memos = function() {
@@ -1422,6 +1705,17 @@ function bindViewEvents(name) {
     });
   }
 
+  /* Gouvernance sub-tab switching */
+  if (name === 'gouvernance') {
+    document.querySelectorAll('.sub-tab').forEach(tab => {
+      tab.onclick = function() {
+        document.querySelectorAll('.sub-tab').forEach(t => t.classList.remove('active'));
+        this.classList.add('active');
+        renderGouvSubtab(this.dataset.subtab);
+      };
+    });
+  }
+
   /* Tooltips & Modals - event delegation */
   const main = document.getElementById('main');
   main.onmouseover = function(e) {
@@ -1749,15 +2043,8 @@ document.addEventListener('DOMContentLoaded', async function() {
   /* Migrate old (v1) vaultHandle from IDB */
   await FS.migrateOldHandle();
 
-  /* OS path hint on lock screen */
-  const osPathCode = document.getElementById('osPathCode');
-  const osPathHint = document.getElementById('osPathHint');
+  /* Load tab hint for file:// */
   const loadTabHint = document.getElementById('loadTabHint');
-  if (osPathCode) {
-    const sep = OS.isWin ? '\\' : '/';
-    osPathCode.textContent = OS.getDirLabel() + sep + 'rssi_coffre.json';
-    osPathHint.style.display = 'block';
-  }
   if (loadTabHint && FS.isFileProtocol()) {
     loadTabHint.textContent = 'Charger le coffre depuis le stockage navigateur (IndexedDB)';
   }
@@ -1781,6 +2068,13 @@ document.addEventListener('DOMContentLoaded', async function() {
     const confirm = document.getElementById('lockPwdConfirm').value;
     if (!pwd || pwd.length < 4) { document.getElementById('lockError').textContent = 'Mot de passe : minimum 4 caractères.'; document.getElementById('lockError').style.display = 'block'; return; }
     if (pwd !== confirm) { document.getElementById('lockError').textContent = 'Les mots de passe ne correspondent pas.'; document.getElementById('lockError').style.display = 'block'; return; }
+
+    // Warn if existing vault will be overwritten
+    const existing = await FS.readIdb();
+    if (existing !== null) {
+      if (!confirm('Un coffre existe déjà dans le navigateur. Créer un nouveau coffre effacera définitivement les données existantes. Continuer ?')) return;
+      await FS.clearIdb();
+    }
 
     // Pick directory if FSA available (http://), skip for file://
     let dirHandle = null;
