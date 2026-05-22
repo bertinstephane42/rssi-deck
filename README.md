@@ -1,6 +1,6 @@
 # RSSI Secure Command Deck
 
-Application web chiffrée destinée aux RSSI et professionnels de la cybersécurité. Tableau de bord, outils techniques/GRC, threat intelligence, playbooks avec historique, calculateurs RPO/RTO/amende, et persistance locale — le tout dans un seul fichier HTML.
+Application web chiffrée destinée aux RSSI et professionnels de la cybersécurité. Tableau de bord, outils techniques/GRC, threat intelligence, gouvernance (RGPD, plan d'actions, incidents), playbooks avec historique, calculateurs RPO/RTO/amende RGPD, et persistance locale — le tout dans un seul fichier HTML.
 
 ## Fonctionnalités
 
@@ -9,8 +9,12 @@ Application web chiffrée destinée aux RSSI et professionnels de la cybersécur
 - **Outils Fonctionnels (GRC)** — 14 fiches (TheHive, MISP, Eramba, GLPI, Obsidian, Bitwarden…)
 - **Threat Intel** — Sources OSINT, flux CISA/ANSSI, modèles conceptuels (Kill Chain, Diamond Model)
 - **Frameworks & Normes** — 7 référentiels (RGPD, NIS 2, DORA, ISO 27001/27002, CIS Controls v8, NIST CSF 2.0)
-- **Calculateurs** — Amende RGPD, grille de risque EBIOS, **RPO/RTO avec coût d'arrêt horaire**
-- **Mémos & Playbooks** — 4 playbooks (Ransomware, Fuite RGPD, Panne Datacenter, Compromission Admin) avec historique des exercices, éditeur de notes Markdown, vue/édition/suppression
+- **Calculateurs** — Amende RGPD (paramétrable de 0€ au plafond légal), grille de risque EBIOS, **RPO/RTO avec coût d'arrêt horaire**
+- **Gouvernance** — 3 sous-onglets :
+  - **Registre des traitements RGPD** (Art. 30) — Finalité, base légale (6 options Art. 6), responsable, catégories de données/personnes, destinataires, mesures de sécurité, statut
+  - **Plan d'actions Sécurité** — Actions pré-remplies (PSSI, audit RGPD, MFA, sensibilisation), priorité, responsable, échéance, statut
+  - **Registre des incidents** — Taxonomie ENISA/ANSSI (15 types : ransomware, phishing, fuite de données, DDoS, compromission, intrusion, malware, FOVI…), impact, statut, date de résolution
+- **Mémos & Playbooks** — 4 playbooks (Ransomware, Fuite RGPD, Panne Datacenter, Compromission Admin) avec historique des exercices, date, éditeur de notes Markdown, vue/édition/suppression
 - **Contacts d'Urgence** — 4 fiches modifiables (assurance, avocat, hébergeur, direction)
 - **Recherche globale** — Filtrage instantané de toutes les fiches
 - **Tri par priorité** — Essentiel / Important / Complémentaire avec badges colorés
@@ -23,6 +27,7 @@ Application web chiffrée destinée aux RSSI et professionnels de la cybersécur
 - Aucune clé en clair conservée en mémoire persistante
 - Coffre déchiffré uniquement en mémoire vive, pendant la session
 - Mot de passe saisi via **modale DOM** (plus de `prompt()`)
+- Alerte de confirmation avant écrasement d'un coffre existant à la création
 
 ## Stockage
 
@@ -35,13 +40,9 @@ Deux couches de persistance :
 
 - **http://** : `showDirectoryPicker` → choisir `.rssi_deck/rssi_coffre.json` + copie IDB
 - **file://** : IndexedDB automatique + bouton "Exporter" pour copie fichier manuelle
-- **Export** : Téléchargement du fichier `.json` chiffré (nom horodaté : `rssi_coffre_2026-05-22_08_30.json`)
+- **Export** : Téléchargement du fichier `.json` chiffré (nom horodaté)
 - **Import** : Chargement depuis un fichier `.json` externe (toujours disponible)
-
-Le chemin fichier attendu sur le disque est affiché sur l'écran de verrouillage :
-- Windows : `C:\Users\<USER>\AppData\Local\.rssi_deck\rssi_coffre.json`
-- Linux   : `~/.rssi_deck/rssi_coffre.json`
-- macOS   : `~/.rssi_deck/rssi_coffre.json`
+- **Migration automatique** : Ajout des champs manquants (historique playbooks, registres gouvernance) au chargement des coffres existants
 
 ## Utilisation
 
