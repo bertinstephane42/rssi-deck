@@ -68,6 +68,9 @@ body{font-family:system-ui,-apple-system,'Inter','Segoe UI',sans-serif;backgroun
 #modal.lexicon-mode{max-width:720px}
 @media(max-width:780px){#modal.lexicon-mode{max-width:100%}}
 @media(max-width:560px){.lexicon-grid{grid-template-columns:1fr}}
+.search-hl{background:rgba(250,204,21,0.3);color:#fef08a;border-radius:3px;padding:0 2px}
+#searchCount{display:none;font-size:0.7rem;color:#64748b;margin-left:0.3rem;white-space:nowrap}
+#searchCount.visible{display:inline}
 
 .help-content p{margin-bottom:0.75rem}
 .help-content strong{color:#f1f5f9}
@@ -263,6 +266,7 @@ body{font-family:system-ui,-apple-system,'Inter','Segoe UI',sans-serif;backgroun
       <div class="search-wrap">
         <i class="fas fa-search"></i>
         <input type="text" id="globalSearch" placeholder="Rechercher outils, playbooks, notes…">
+        <span id="searchCount"></span>
       </div>
       <button class="btn btn-secondary btn-sm" id="saveBtn"><i class="fas fa-floppy-disk"></i> Sauvegarder</button>
       <button class="btn btn-secondary btn-sm" id="exportDiskBtn" style="display:none" title="Exporter vers un fichier sur le disque"><i class="fas fa-download"></i> Exporter</button>
@@ -916,6 +920,12 @@ function renderAll() {
 }
 
 function renderView(name) {
+  if (currentView !== name) {
+    searchQuery = '';
+    const searchInput = document.getElementById('globalSearch');
+    if (searchInput && searchInput.value) searchInput.value = '';
+    document.getElementById('searchCount').className = '';
+  }
   currentView = name;
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.querySelectorAll('.nav-item[data-view]').forEach(b => {
@@ -970,25 +980,32 @@ renderFn.dashboard = function() {
       </div>
       <div class="glass-card">
         <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3"><i class="fas fa-star mr-1"></i> Favoris Récents</h3>
-        <div id="favList">${nFav === 0 ? '<div class="empty-state" style="padding:1.5rem"><i class="fa-regular fa-star" style="font-size:1.5rem"></i><p>Aucun favori. Cliquez sur ☆ dans les fiches outils.</p></div>' : vault.favorites.map(id => {
-          const item = findItem(id);
-          return item ? `<div class="flex items-center gap-3 py-2 border-b border-white/5 last:border-0"><i class="fas ${item.icone || 'fa-cube'} text-blue-400 w-5 text-center"></i><span class="text-sm">${esc(item.nom)}</span><span class="text-xs text-slate-500 ml-auto">${item.categorie || ''}</span></div>` : '';
-        }).join('')}</div>
+        <div id="favList">${nFav === 0 ? '<div class="empty-state" style="padding:1.5rem"><i class="fa-regular fa-star" style="font-size:1.5rem"></i><p>Aucun favori. Cliquez sur ☆ dans les fiches outils.</p></div>' : (() => {
+          const favItems = vault.favorites.map(id => findItem(id)).filter(Boolean);
+          const filtered = searchFilter(favItems, ['nom','categorie']);
+          if (!filtered.length && searchQuery) return '<div class="empty-state" style="padding:1.5rem"><i class="fa-regular fa-star" style="font-size:1.5rem"></i><p>Aucun favori ne correspond à la recherche.</p></div>';
+          return filtered.map(item => `<div class="flex items-center gap-3 py-2 border-b border-white/5 last:border-0"><i class="fas ${item.icone || 'fa-cube'} text-blue-400 w-5 text-center"></i><span class="text-sm">${filterText(esc(item.nom))}</span><span class="text-xs text-slate-500 ml-auto">${filterText(esc(item.categorie || ''))}</span></div>`).join('');
+        })()}</div>
       </div>
     </div>
     <div class="glass-card mt-4">
       <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3"><i class="fas fa-chart-line mr-1"></i> KPIs Personnalisés ${(vault.indicateurs||[]).length > 0 ? `<span class="text-slate-600 font-normal">(${vault.indicateurs.length})</span>` : ''}<button class="float-right btn btn-primary btn-xs" onclick="addKpi()"><i class="fas fa-plus"></i> Ajouter</button></h3>
-      ${(vault.indicateurs||[]).length === 0 ? '<div class="empty-state" style="padding:1rem"><i class="fa-regular fa-chart-bar" style="font-size:1.5rem"></i><p>Aucun KPI personnalisé. Créez vos propres indicateurs de pilotage RSSI.</p></div>' : vault.indicateurs.map((k,i) => {
+      ${(vault.indicateurs||[]).length === 0 ? '<div class="empty-state" style="padding:1rem"><i class="fa-regular fa-chart-bar" style="font-size:1.5rem"></i><p>Aucun KPI personnalisé. Créez vos propres indicateurs de pilotage RSSI.</p></div>' : (() => {
+        const filteredKpis = searchFilter(vault.indicateurs, ['nom','unite']);
+        if (!filteredKpis.length && searchQuery) return '<div class="empty-state" style="padding:1rem"><i class="fa-regular fa-chart-bar" style="font-size:1.5rem"></i><p>Aucun KPI ne correspond à la recherche.</p></div>';
+        return filteredKpis.map((k,i) => {
+        const idx = vault.indicateurs.indexOf(k);
         const pct = Math.min(100, Math.round((k.valeur / (k.cible || 1)) * 100));
         return `<div class="flex items-center gap-3 py-1.5 border-b border-white/5 last:border-0">
           <div style="min-width:0;flex:1">
-            <div class="flex justify-between text-xs"><span class="text-slate-300">${esc(k.nom||'Indicateur')}</span><span class="text-slate-400">${k.valeur}${k.unite||''} / ${k.cible}${k.unite||''}</span></div>
+            <div class="flex justify-between text-xs"><span class="text-slate-300">${filterText(esc(k.nom||'Indicateur'))}</span><span class="text-slate-400">${k.valeur}${k.unite||''} / ${k.cible}${k.unite||''}</span></div>
             <div class="h-1.5 rounded-full bg-white/5 mt-1 overflow-hidden"><div class="h-full rounded-full transition-all" style="width:${pct}%;background:${k.couleur||'#3b82f6'}"></div></div>
           </div>
-          <button class="text-xs text-slate-600 hover:text-slate-300 transition-colors" onclick="editKpi(${i})" title="Modifier"><i class="fas fa-pencil-alt"></i></button>
-          <button class="text-xs text-slate-600 hover:text-red-400 transition-colors" onclick="deleteKpi(${i})" title="Supprimer"><i class="fas fa-times"></i></button>
+          <button class="text-xs text-slate-600 hover:text-slate-300 transition-colors" onclick="editKpi(${idx})" title="Modifier"><i class="fas fa-pencil-alt"></i></button>
+          <button class="text-xs text-slate-600 hover:text-red-400 transition-colors" onclick="deleteKpi(${idx})" title="Supprimer"><i class="fas fa-times"></i></button>
         </div>`;
-      }).join('')}
+      }).join('');
+      })()}
     </div>
     <div class="flex justify-center mt-4"><button class="btn btn-primary btn-sm" onclick="genererRapportExecutif()"><i class="fas fa-file-pdf"></i> Générer un rapport exécutif</button></div>`;
 };
@@ -1018,7 +1035,7 @@ function initDashboardChart() {
 
 /* ---------- OUTILS TECH ---------- */
 renderFn['outils-tech'] = function() {
-  const items = sortTools(vault.outils_techniques, sortOutilsTech);
+  const items = sortTools(searchFilter(vault.outils_techniques, ['nom','description','categorie','commandes']), sortOutilsTech);
   const cats = {};
   items.forEach(t => { (cats[t.categorie] = cats[t.categorie] || []).push(t); });
   const sb = (m, l) => `<button class="sort-btn${sortOutilsTech===m?' active':''}" data-sort="${m}">${l}</button>`;
@@ -1030,7 +1047,7 @@ renderFn['outils-tech'] = function() {
 };
 
 renderFn['outils-fonctionnels'] = function() {
-  const items = sortTools(vault.outils_fonctionnels, sortOutilsFonc);
+  const items = sortTools(searchFilter(vault.outils_fonctionnels, ['nom','description','categorie','commandes']), sortOutilsFonc);
   const cats = {};
   items.forEach(t => { (cats[t.categorie] = cats[t.categorie] || []).push(t); });
   const sb = (m, l) => `<button class="sort-btn${sortOutilsFonc===m?' active':''}" data-sort="${m}">${l}</button>`;
@@ -1063,7 +1080,7 @@ function toolCard(t, ns) {
       </div>
     </div>
     <div class="flex gap-1 flex-wrap mt-2">
-      ${(t.commandes || []).slice(0,2).map(c => `<span class="tool-chip"><i class="fas fa-terminal mr-1" style="font-size:0.6rem"></i>${esc(c)}</span>`).join('')}
+      ${(t.commandes || []).slice(0,2).map(c => `<span class="tool-chip"><i class="fas fa-terminal mr-1" style="font-size:0.6rem"></i>${filterText(esc(c))}</span>`).join('')}
     </div>
   </div>`;
 }
@@ -1071,6 +1088,10 @@ function toolCard(t, ns) {
 /* ---------- THREAT INTEL ---------- */
 renderFn['threat-intel'] = function() {
   const ti = vault.threat_intel;
+  const frameworks = searchFilter(ti.frameworks, ['nom','description']);
+  const modeles = searchFilter(ti.modeles, ['nom','description']);
+  const sources = searchFilter(ti.sources, ['nom','description']);
+  const osint = searchFilter(ti.osint, ['nom','description']);
   return `
     <div class="glass-card mb-4">
       <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2"><i class="fas fa-search mr-1"></i> Recherche CVE</h3>
@@ -1078,16 +1099,16 @@ renderFn['threat-intel'] = function() {
         <input type="text" class="lock-input flex-1" id="cveSearch" placeholder="CVE-2026-XXXXX ou mot-clé…" style="font-size:0.85rem">
         <a href="https://nvd.nist.gov/" target="_blank" class="btn btn-primary btn-sm self-start" id="cveSearchBtn"><i class="fas fa-arrow-up-right-from-square"></i> NVD</a>
       </div>
-      <p class="text-xs text-slate-500 mt-2">${esc(ti.cve.nom)} — Recherche directe dans la base NIST.</p>
+      <p class="text-xs text-slate-500 mt-2">${filterText(esc(ti.cve.nom))} — Recherche directe dans la base NIST.</p>
     </div>
     <div class="category-label"><i class="fas fa-book-skull mr-1"></i> Frameworks de Menaces</div>
-    <div class="grid-bento mb-4">${ti.frameworks.map((f,i) => threatCard(f, 'threat_intel.frameworks.' + i)).join('')}</div>
+    <div class="grid-bento mb-4">${frameworks.length ? frameworks.map(f => threatCard(f, 'threat_intel.frameworks.' + ti.frameworks.indexOf(f))).join('') : '<div class="empty-state" style="padding:1rem"><i class="fa-regular fa-book-skull"></i><p>Aucun framework trouvé.</p></div>'}</div>
     <div class="category-label"><i class="fas fa-puzzle-piece mr-1"></i> Modèles Conceptuels</div>
-    <div class="grid-bento mb-4">${ti.modeles.map((f,i) => threatCard(f, 'threat_intel.modeles.' + i)).join('')}</div>
+    <div class="grid-bento mb-4">${modeles.length ? modeles.map(f => threatCard(f, 'threat_intel.modeles.' + ti.modeles.indexOf(f))).join('') : '<div class="empty-state" style="padding:1rem"><i class="fa-regular fa-puzzle-piece"></i><p>Aucun modèle trouvé.</p></div>'}</div>
     <div class="category-label"><i class="fas fa-rss mr-1"></i> Sources & Veille</div>
-    <div class="grid-bento mb-4">${ti.sources.map((f,i) => threatCard(f, 'threat_intel.sources.' + i)).join('')}</div>
+    <div class="grid-bento mb-4">${sources.length ? sources.map(f => threatCard(f, 'threat_intel.sources.' + ti.sources.indexOf(f))).join('') : '<div class="empty-state" style="padding:1rem"><i class="fa-regular fa-rss"></i><p>Aucune source trouvée.</p></div>'}</div>
     <div class="category-label"><i class="fas fa-eye mr-1"></i> OSINT</div>
-    <div class="grid-bento">${ti.osint.map((f,i) => threatCard(f, 'threat_intel.osint.' + i)).join('')}</div>`;
+    <div class="grid-bento">${osint.length ? osint.map(f => threatCard(f, 'threat_intel.osint.' + ti.osint.indexOf(f))).join('') : '<div class="empty-state" style="padding:1rem"><i class="fa-regular fa-eye"></i><p>Aucun outil OSINT trouvé.</p></div>'}</div>`;
 };
 
 function threatCard(item, path) {
@@ -1096,8 +1117,8 @@ function threatCard(item, path) {
     <div class="flex items-start gap-3">
       <div class="card-icon bg-blue-500/10"><i class="fas ${item.icone || 'fa-link'} text-blue-400"></i></div>
       <div>
-        <div class="text-sm font-semibold text-slate-100 mb-1">${esc(item.nom)}</div>
-        <p class="text-xs text-slate-400 leading-relaxed">${esc(item.description)}</p>
+        <div class="text-sm font-semibold text-slate-100 mb-1">${filterText(esc(item.nom))}</div>
+        <p class="text-xs text-slate-400 leading-relaxed">${filterText(esc(item.description))}</p>
       </div>
     </div>
   </a>`;
@@ -1153,21 +1174,22 @@ function editThreatUrl(path) {
 
 /* ---------- FRAMEWORKS ---------- */
 renderFn.frameworks = function() {
-  const norms = vault.cadre_legal.normes;
+  const norms = searchFilter(vault.cadre_legal.normes, ['nom','description']);
   return `
     <div class="category-label"><i class="fas fa-scale-balanced mr-1"></i> Normes & Référentiels</div>
-    <div class="grid-bento mb-6">${norms.map((n,i) => `
-      <a href="${esc(n.url)}" target="_blank" class="glass-card block no-underline relative threat-card">
-        <button class="threat-edit-btn" data-ti-path="cadre_legal.normes.${i}" onclick="event.preventDefault();editThreatUrl(this.dataset.tiPath)" title="Modifier l'URL"><i class="fas fa-pencil-alt"></i></button>
+    <div class="grid-bento mb-6">${!norms.length && searchQuery ? '<div class="empty-state" style="padding:1rem"><i class="fa-regular fa-scale-balanced"></i><p>Aucune norme trouvée.</p></div>' : norms.map(n => {
+      const idx = vault.cadre_legal.normes.indexOf(n);
+      return `<a href="${esc(n.url)}" target="_blank" class="glass-card block no-underline relative threat-card">
+        <button class="threat-edit-btn" data-ti-path="cadre_legal.normes.${idx}" onclick="event.preventDefault();editThreatUrl(this.dataset.tiPath)" title="Modifier l'URL"><i class="fas fa-pencil-alt"></i></button>
         <div class="flex items-start gap-3">
           <div class="card-icon bg-blue-500/10"><i class="fas ${n.icone || 'fa-book'} text-blue-400"></i></div>
           <div>
-            <div class="text-sm font-semibold text-slate-100 mb-1">${esc(n.nom)}</div>
-            <p class="text-xs text-slate-400 leading-relaxed">${esc(n.description)}</p>
+            <div class="text-sm font-semibold text-slate-100 mb-1">${filterText(esc(n.nom))}</div>
+            <p class="text-xs text-slate-400 leading-relaxed">${filterText(esc(n.description))}</p>
           </div>
         </div>
-      </a>
-    `).join('')}</div>
+      </a>`;
+    }).join('')}</div>
     <div class="grid-bento-wide gap-4">
       <div class="glass-card">
         <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3"><i class="fas fa-calculator mr-1"></i> Estimation Amende RGPD</h3>
@@ -1247,75 +1269,81 @@ function escDate(d) { return d ? new Date(d).toLocaleDateString('fr-FR') : '—'
 function statutBadge(s) { return '<span class="status-badge status-' + (s||'').toLowerCase().replace(/\s/g,'-') + '">' + esc(s||'—') + '</span>'; }
 
 function renderTraitements() {
-  const items = vault.traitements || [];
+  const items = searchFilter(vault.traitements || [], ['finalite','base_legale','responsable','statut']);
   return `
     <div class="flex items-center gap-2 mb-3"><button class="btn btn-primary btn-sm" onclick="addTraitement()"><i class="fas fa-plus"></i> Ajouter</button></div>
-    ${items.length === 0 ? '<div class="empty-state" style="padding:1.5rem"><i class="fa-regular fa-file-lines"></i><p>Aucun traitement enregistré. Ajoutez votre premier traitement RGPD.</p></div>' : `
+    ${!items.length ? (searchQuery ? '<div class="empty-state" style="padding:1.5rem"><i class="fa-regular fa-file-lines"></i><p>Aucun traitement trouvé.</p></div>' : '<div class="empty-state" style="padding:1.5rem"><i class="fa-regular fa-file-lines"></i><p>Aucun traitement enregistré. Ajoutez votre premier traitement RGPD.</p></div>') : `
     <div style="overflow-x:auto"><table class="gouv-table">
       <thead><tr><th>Finalité</th><th>Base légale</th><th>Responsable</th><th>Statut</th><th class="gouv-actions"></th></tr></thead>
-      <tbody>${items.map((t,i) => `
-        <tr>
-          <td><strong>${esc(t.finalite||'')}</strong></td>
-          <td>${esc(t.base_legale||'')}</td>
-          <td>${esc(t.responsable||'')}</td>
+      <tbody>${items.map(t => {
+        const idx = vault.traitements.indexOf(t);
+        return `<tr>
+          <td><strong>${filterText(esc(t.finalite||''))}</strong></td>
+          <td>${filterText(esc(t.base_legale||''))}</td>
+          <td>${filterText(esc(t.responsable||''))}</td>
           <td>${statutBadge(t.statut||'Actif')}</td>
           <td class="gouv-actions">
-            <button onclick="editTraitement(${i})" title="Modifier"><i class="fas fa-pencil-alt"></i></button>
-            <button onclick="deleteTraitement(${i})" title="Supprimer"><i class="fas fa-trash"></i></button>
-          </td>
-        </tr>`).join('')}</tbody>
-    </table></div>`}
-    <div class="text-[0.65rem] text-slate-600 mt-2">${items.length} traitement(s) enregistré(s)</div>`;
-}
-
-function renderPlanActions() {
-  const items = vault.plan_actions || [];
-  return `
-    <div class="flex items-center gap-2 mb-3"><button class="btn btn-primary btn-sm" onclick="addPlanAction()"><i class="fas fa-plus"></i> Ajouter</button></div>
-    ${items.length === 0 ? '<div class="empty-state" style="padding:1.5rem"><i class="fa-regular fa-list-check"></i><p>Aucune action planifiée. Créez votre premier plan d\'actions sécurité.</p></div>' : `
-    <div style="overflow-x:auto"><table class="gouv-table">
-      <thead><tr><th>Action</th><th>Priorité</th><th>Responsable</th><th>Échéance</th><th>Statut</th><th class="gouv-actions"></th></tr></thead>
-      <tbody>${items.map((a,i) => {
-        const prioCls = 'gouv-prio-' + (a.priorite||'moyenne').toLowerCase();
-        return `<tr>
-          <td><strong>${esc(a.action||'')}</strong></td>
-          <td><span class="${prioCls}">${esc(a.priorite||'Moyenne')}</span></td>
-          <td>${esc(a.responsable||'')}</td>
-          <td>${escDate(a.echeance)}</td>
-          <td>${statutBadge(a.statut||'À faire')}</td>
-          <td class="gouv-actions">
-            <button onclick="editPlanAction(${i})" title="Modifier"><i class="fas fa-pencil-alt"></i></button>
-            <button onclick="deletePlanAction(${i})" title="Supprimer"><i class="fas fa-trash"></i></button>
+            <button onclick="editTraitement(${idx})" title="Modifier"><i class="fas fa-pencil-alt"></i></button>
+            <button onclick="deleteTraitement(${idx})" title="Supprimer"><i class="fas fa-trash"></i></button>
           </td>
         </tr>`;
       }).join('')}</tbody>
     </table></div>`}
-    <div class="text-[0.65rem] text-slate-600 mt-2">${items.length} action(s) planifiée(s)</div>`;
+    <div class="text-[0.65rem] text-slate-600 mt-2">${items.length} traitement(s) affiché(s)</div>`;
+}
+
+function renderPlanActions() {
+  const items = searchFilter(vault.plan_actions || [], ['action','priorite','responsable','statut']);
+  return `
+    <div class="flex items-center gap-2 mb-3"><button class="btn btn-primary btn-sm" onclick="addPlanAction()"><i class="fas fa-plus"></i> Ajouter</button></div>
+    ${!items.length ? (searchQuery ? '<div class="empty-state" style="padding:1.5rem"><i class="fa-regular fa-list-check"></i><p>Aucune action trouvée.</p></div>' : '<div class="empty-state" style="padding:1.5rem"><i class="fa-regular fa-list-check"></i><p>Aucune action planifiée. Créez votre premier plan d\'actions sécurité.</p></div>') : `
+    <div style="overflow-x:auto"><table class="gouv-table">
+      <thead><tr><th>Action</th><th>Priorité</th><th>Responsable</th><th>Échéance</th><th>Statut</th><th class="gouv-actions"></th></tr></thead>
+      <tbody>${items.map(a => {
+        const idx = vault.plan_actions.indexOf(a);
+        const prioCls = 'gouv-prio-' + (a.priorite||'moyenne').toLowerCase();
+        return `<tr>
+          <td><strong>${filterText(esc(a.action||''))}</strong></td>
+          <td><span class="${prioCls}">${filterText(esc(a.priorite||'Moyenne'))}</span></td>
+          <td>${filterText(esc(a.responsable||''))}</td>
+          <td>${escDate(a.echeance)}</td>
+          <td>${statutBadge(a.statut||'À faire')}</td>
+          <td class="gouv-actions">
+            <button onclick="editPlanAction(${idx})" title="Modifier"><i class="fas fa-pencil-alt"></i></button>
+            <button onclick="deletePlanAction(${idx})" title="Supprimer"><i class="fas fa-trash"></i></button>
+          </td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table></div>`}
+    <div class="text-[0.65rem] text-slate-600 mt-2">${items.length} action(s) affichée(s)</div>`;
 }
 
 function renderIncidents() {
-  const items = vault.incidents || [];
+  const items = searchFilter(vault.incidents || [], ['type','description','impact','perimetre','risque_type','statut']);
   return `
     <div class="flex items-center gap-2 mb-3"><button class="btn btn-primary btn-sm" onclick="addIncident()"><i class="fas fa-plus"></i> Ajouter</button></div>
-    ${items.length === 0 ? '<div class="empty-state" style="padding:1.5rem"><i class="fa-regular fa-circle-exclamation"></i><p>Aucun incident enregistré. Ajoutez votre premier incident.</p></div>' : `
+    ${!items.length ? (searchQuery ? '<div class="empty-state" style="padding:1.5rem"><i class="fa-regular fa-circle-exclamation"></i><p>Aucun incident trouvé.</p></div>' : '<div class="empty-state" style="padding:1.5rem"><i class="fa-regular fa-circle-exclamation"></i><p>Aucun incident enregistré. Ajoutez votre premier incident.</p></div>') : `
     <div style="overflow-x:auto"><table class="gouv-table">
       <thead><tr><th>Date</th><th>Type</th><th>Description</th><th>Impact</th><th>Périmètre</th><th>Risque</th><th>Statut</th><th class="gouv-actions"></th></tr></thead>
-      <tbody>${items.map((inc,i) => `
-        <tr>
+      <tbody>${items.map(inc => {
+        const idx = vault.incidents.indexOf(inc);
+        const desc = filterText(esc(inc.description||''));
+        return `<tr>
           <td class="whitespace-nowrap">${escDate(inc.date)}</td>
-          <td>${esc(inc.type||'')}</td>
-          <td>${esc(inc.description||'').length > 60 ? esc(inc.description).slice(0,60)+'…' : esc(inc.description||'')}</td>
-          <td>${esc(inc.impact||'')}</td>
-          <td>${esc(inc.perimetre||'')}</td>
-          <td>${esc(inc.risque_type||'')}</td>
+          <td>${filterText(esc(inc.type||''))}</td>
+          <td>${desc.length > 60 ? desc.slice(0,60)+'…' : desc}</td>
+          <td>${filterText(esc(inc.impact||''))}</td>
+          <td>${filterText(esc(inc.perimetre||''))}</td>
+          <td>${filterText(esc(inc.risque_type||''))}</td>
           <td>${statutBadge(inc.statut||'Ouvert')}</td>
           <td class="gouv-actions">
-            <button onclick="editIncident(${i})" title="Modifier"><i class="fas fa-pencil-alt"></i></button>
-            <button onclick="deleteIncident(${i})" title="Supprimer"><i class="fas fa-trash"></i></button>
+            <button onclick="editIncident(${idx})" title="Modifier"><i class="fas fa-pencil-alt"></i></button>
+            <button onclick="deleteIncident(${idx})" title="Supprimer"><i class="fas fa-trash"></i></button>
           </td>
-        </tr>`).join('')}</tbody>
+        </tr>`;
+      }).join('')}</tbody>
     </table></div>`}
-    <div class="text-[0.65rem] text-slate-600 mt-2">${items.length} incident(s) enregistré(s)</div>`;
+    <div class="text-[0.65rem] text-slate-600 mt-2">${items.length} incident(s) affiché(s)</div>`;
 }
 
 /* ---------- GOUVERNANCE CRUD ---------- */
@@ -1626,29 +1654,30 @@ const CRITICITE_ACTIFS = ['Haute','Moyenne','Basse'];
 const STATUTS_ACTIFS = ['Actif','Inactif','Décommissionné'];
 
 function renderActifs() {
-  const items = vault.actifs || [];
+  const items = searchFilter(vault.actifs || [], ['nom','type','proprietaire','criticite','localisation','statut']);
   return `
     <div class="flex items-center gap-2 mb-3"><button class="btn btn-primary btn-sm" onclick="addActif()"><i class="fas fa-plus"></i> Ajouter</button></div>
-    ${items.length === 0 ? '<div class="empty-state" style="padding:1.5rem"><i class="fa-regular fa-server"></i><p>Aucun actif enregistré. Ajoutez votre premier actif informatique.</p></div>' : `
+    ${!items.length ? (searchQuery ? '<div class="empty-state" style="padding:1.5rem"><i class="fa-regular fa-server"></i><p>Aucun actif trouvé.</p></div>' : '<div class="empty-state" style="padding:1.5rem"><i class="fa-regular fa-server"></i><p>Aucun actif enregistré. Ajoutez votre premier actif informatique.</p></div>') : `
     <div style="overflow-x:auto"><table class="gouv-table">
       <thead><tr><th>Nom</th><th>Type</th><th>Propriétaire</th><th>Criticité</th><th>Localisation</th><th>Statut</th><th class="gouv-actions"></th></tr></thead>
-      <tbody>${items.map((a,i) => {
+      <tbody>${items.map(a => {
+        const idx = vault.actifs.indexOf(a);
         const critCls = 'gouv-prio-' + (a.criticite||'moyenne').toLowerCase();
         return `<tr>
-          <td><strong>${esc(a.nom||'')}</strong></td>
-          <td>${esc(a.type||'')}</td>
-          <td>${esc(a.proprietaire||'')}</td>
-          <td><span class="${critCls}">${esc(a.criticite||'Moyenne')}</span></td>
-          <td>${esc(a.localisation||'')}</td>
+          <td><strong>${filterText(esc(a.nom||''))}</strong></td>
+          <td>${filterText(esc(a.type||''))}</td>
+          <td>${filterText(esc(a.proprietaire||''))}</td>
+          <td><span class="${critCls}">${filterText(esc(a.criticite||'Moyenne'))}</span></td>
+          <td>${filterText(esc(a.localisation||''))}</td>
           <td>${statutBadge(a.statut||'Actif')}</td>
           <td class="gouv-actions">
-            <button onclick="editActif(${i})" title="Modifier"><i class="fas fa-pencil-alt"></i></button>
-            <button onclick="deleteActif(${i})" title="Supprimer"><i class="fas fa-trash"></i></button>
+            <button onclick="editActif(${idx})" title="Modifier"><i class="fas fa-pencil-alt"></i></button>
+            <button onclick="deleteActif(${idx})" title="Supprimer"><i class="fas fa-trash"></i></button>
           </td>
         </tr>`;
       }).join('')}</tbody>
     </table></div>`}
-    <div class="text-[0.65rem] text-slate-600 mt-2">${items.length} actif(s) enregistré(s)</div>`;
+    <div class="text-[0.65rem] text-slate-600 mt-2">${items.length} actif(s) affiché(s)</div>`;
 }
 function addActif() {
   showGouvModal({ title:'Nouvel actif', saveLabel:'Ajouter',
@@ -1688,31 +1717,32 @@ async function deleteActif(i) {
 const TRAITEMENTS_RISQUE = ['Accepté','Réduit','Transféré','Évité'];
 
 function renderRisques() {
-  const items = vault.risques || [];
+  const items = searchFilter(vault.risques || [], ['menace','actif_concerne','traitement','responsable']);
   return `
     <div class="flex items-center gap-2 mb-3"><button class="btn btn-primary btn-sm" onclick="addRisque()"><i class="fas fa-plus"></i> Ajouter</button></div>
-    ${items.length === 0 ? '<div class="empty-state" style="padding:1.5rem"><i class="fa-regular fa-triangle-exclamation"></i><p>Aucun risque enregistré. Ajoutez votre première analyse de risque.</p></div>' : `
+    ${!items.length ? (searchQuery ? '<div class="empty-state" style="padding:1.5rem"><i class="fa-regular fa-triangle-exclamation"></i><p>Aucun risque trouvé.</p></div>' : '<div class="empty-state" style="padding:1.5rem"><i class="fa-regular fa-triangle-exclamation"></i><p>Aucun risque enregistré. Ajoutez votre première analyse de risque.</p></div>') : `
     <div style="overflow-x:auto"><table class="gouv-table">
       <thead><tr><th>Menace / Scénario</th><th>Actif</th><th>Vrais.</th><th>Grav.</th><th>Niveau</th><th>Traitement</th><th>Responsable</th><th class="gouv-actions"></th></tr></thead>
-      <tbody>${items.map((r,i) => {
+      <tbody>${items.map(r => {
+        const idx = vault.risques.indexOf(r);
         const lvl = (r.vraisemblance||3) * (r.gravite||3);
         const cls = lvl <= 4 ? 'gouv-prio-basse' : lvl <= 9 ? 'gouv-prio-moyenne' : lvl <= 15 ? 'gouv-prio-haute' : 'gouv-prio-critique';
         return `<tr>
-          <td><strong>${esc(r.menace||'')}</strong></td>
-          <td>${esc(r.actif_concerne||'')}</td>
+          <td><strong>${filterText(esc(r.menace||''))}</strong></td>
+          <td>${filterText(esc(r.actif_concerne||''))}</td>
           <td>${r.vraisemblance||3}/5</td>
           <td>${r.gravite||3}/5</td>
           <td><span class="${cls}">${lvl}/25</span></td>
           <td>${statutBadge(r.traitement||'Accepté')}</td>
-          <td>${esc(r.responsable||'')}</td>
+          <td>${filterText(esc(r.responsable||''))}</td>
           <td class="gouv-actions">
-            <button onclick="editRisque(${i})" title="Modifier"><i class="fas fa-pencil-alt"></i></button>
-            <button onclick="deleteRisque(${i})" title="Supprimer"><i class="fas fa-trash"></i></button>
+            <button onclick="editRisque(${idx})" title="Modifier"><i class="fas fa-pencil-alt"></i></button>
+            <button onclick="deleteRisque(${idx})" title="Supprimer"><i class="fas fa-trash"></i></button>
           </td>
         </tr>`;
       }).join('')}</tbody>
     </table></div>`}
-    <div class="text-[0.65rem] text-slate-600 mt-2">${items.length} risque(s) enregistré(s)</div>`;
+    <div class="text-[0.65rem] text-slate-600 mt-2">${items.length} risque(s) affiché(s)</div>`;
 }
 function addRisque() {
   showGouvModal({ title:'Nouveau risque', saveLabel:'Ajouter',
@@ -1908,7 +1938,7 @@ const CLAUSES_PSSI = {
 
 function renderPssi() {
   const p = (vault.pssi || { organisation:'', approuve_par:'', version:'1.0', date_validation:'', date_prochaine_revue:'', sections:[] });
-  const sections = p.sections || [];
+  const sections = searchFilter(p.sections || [], ['titre','statut']);
   const completed = sections.filter(s => s.statut === 'Publié').length;
   const prct = sections.length ? Math.round(completed/sections.length*100) : 0;
   const globalCls = prct === 100 ? 'text-emerald-400' : prct >= 50 ? 'text-amber-400' : 'text-blue-400';
@@ -1917,9 +1947,9 @@ function renderPssi() {
       <div class="flex-1 min-w-0">
         <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2"><i class="fas fa-file-shield mr-1"></i> Politique de Sécurité des Systèmes d'Information</h3>
         <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-400">
-          <span>Organisation : <strong class="text-slate-300">${esc(p.organisation||'Non renseignée')}</strong></span>
+          <span>Organisation : <strong class="text-slate-300">${filterText(esc(p.organisation||'Non renseignée'))}</strong></span>
           <span>Version : <strong class="text-slate-300">${esc(p.version||'1.0')}</strong></span>
-          <span>Approuvé par : <strong class="text-slate-300">${esc(p.approuve_par||'—')}</strong></span>
+          <span>Approuvé par : <strong class="text-slate-300">${filterText(esc(p.approuve_par||'—'))}</strong></span>
           <span>Validé le : <strong class="text-slate-300">${p.date_validation ? new Date(p.date_validation).toLocaleDateString('fr-FR') : '—'}</strong></span>
           <span>Prochaine revue : <strong class="text-slate-300">${p.date_prochaine_revue ? new Date(p.date_prochaine_revue).toLocaleDateString('fr-FR') : '—'}</strong></span>
         </div>
@@ -1935,15 +1965,16 @@ function renderPssi() {
       </div>
     </div>
     <div id="pssiListView">
-    ${sections.length === 0 ? '<div class="empty-state" style="padding:1.5rem"><i class="fa-regular fa-file-lines"></i><p>Aucune section. Créez votre première section de politique de sécurité.</p></div>' : sections.map((s, i) => {
+    ${!sections.length ? (searchQuery ? '<div class="empty-state" style="padding:1.5rem"><i class="fa-regular fa-file-lines"></i><p>Aucune section trouvée.</p></div>' : '<div class="empty-state" style="padding:1.5rem"><i class="fa-regular fa-file-lines"></i><p>Aucune section. Créez votre première section de politique de sécurité.</p></div>') : sections.map(s => {
+      const idx = (p.sections||[]).indexOf(s);
       const dot = s.statut === 'Publié' ? 'bg-emerald-500' : s.statut === 'Validé' ? 'bg-blue-500' : s.statut === 'En révision' ? 'bg-amber-500' : 'bg-slate-500';
       return `<div class="flex items-center gap-3 py-2 border-b border-white/5 last:border-0">
         <span class="w-2 h-2 rounded-full flex-shrink-0 ${dot}"></span>
-        <span class="text-sm text-slate-300 flex-1 min-w-0 truncate">${esc(s.titre || 'Section sans titre')}</span>
-        <span class="text-xs text-slate-500">${s.statut||'Rédaction'}</span>
+        <span class="text-sm text-slate-300 flex-1 min-w-0 truncate">${filterText(esc(s.titre || 'Section sans titre'))}</span>
+        <span class="text-xs text-slate-500">${filterText(esc(s.statut||'Rédaction'))}</span>
         <div class="flex gap-1">
-          <button class="text-xs text-slate-600 hover:text-slate-300 transition-colors" onclick="editPssiSection(${i})" title="Modifier"><i class="fas fa-pencil-alt"></i></button>
-          <button class="text-xs text-slate-600 hover:text-red-400 transition-colors" onclick="deletePssiSection(${i})" title="Supprimer"><i class="fas fa-times"></i></button>
+          <button class="text-xs text-slate-600 hover:text-slate-300 transition-colors" onclick="editPssiSection(${idx})" title="Modifier"><i class="fas fa-pencil-alt"></i></button>
+          <button class="text-xs text-slate-600 hover:text-red-400 transition-colors" onclick="deletePssiSection(${idx})" title="Supprimer"><i class="fas fa-times"></i></button>
         </div>
       </div>`;
     }).join('')}
@@ -2064,6 +2095,7 @@ function renderGouvSubtab(tab) {
   const map = { 'traitements':'gouvTraitements', 'plan-actions':'gouvPlanActions', 'incidents':'gouvIncidents', 'actifs':'gouvActifs', 'risques':'gouvRisques', 'pssi':'gouvPssi', 'raci':'gouvRaci', 'aipd':'gouvAipd', 'maturite':'gouvMaturite', 'prestataires':'gouvPrestataires' };
   document.getElementById(map[tab]).style.display = 'block';
   document.getElementById(map[tab]).innerHTML = renderGouvContent(tab);
+  setTimeout(updateSearchCount, 50);
 }
 
 /* ---------- RACI MATRIX ---------- */
@@ -2079,37 +2111,41 @@ function raciBadge(val) {
 const RACI_CYCLE = { 'R':'A', 'A':'C', 'C':'I', 'I':'—', '—':'R' };
 
 function renderRaci() {
-  const r = vault.raci || { roles:[], activites:[] };
-  const roles = r.roles || [];
-  const activites = r.activites || [];
-  if (!roles.length) return `
+  const allRoles = (vault.raci && vault.raci.roles) || [];
+  const allActivites = (vault.raci && vault.raci.activites) || [];
+  const hasRoles = allRoles.length > 0;
+  if (!hasRoles) return `
     <div class="flex items-center gap-2 mb-3"><button class="btn btn-primary btn-sm" onclick="addRaciRole()"><i class="fas fa-plus"></i> Ajouter un rôle</button></div>
     <div class="empty-state" style="padding:1.5rem"><i class="fa-regular fa-table-cells"></i><p>Matrice RACI vide. Ajoutez d'abord des rôles (intervenants), puis des activités.</p></div>`;
+  const roles = allRoles;
+  const activites = searchFilter(allActivites, ['activite']);
   return `
     <div class="flex items-center gap-2 mb-3 flex-wrap">
       <button class="btn btn-primary btn-sm" onclick="addRaciActivite()"><i class="fas fa-plus"></i> Activité</button>
       <button class="btn btn-primary btn-sm" onclick="addRaciRole()"><i class="fas fa-user-plus"></i> Rôle</button>
       <button class="btn btn-secondary btn-sm" onclick="resetRaci()"><i class="fas fa-rotate-left"></i> Réinitialiser</button>
     </div>
-    ${activites.length === 0 ? '<div class="empty-state" style="padding:1.5rem"><i class="fa-regular fa-table-cells"></i><p>Aucune activité. Ajoutez-en une.</p></div>' : `
+    ${!activites.length ? (searchQuery ? '<div class="empty-state" style="padding:1.5rem"><i class="fa-regular fa-table-cells"></i><p>Aucune activité trouvée.</p></div>' : '<div class="empty-state" style="padding:1.5rem"><i class="fa-regular fa-table-cells"></i><p>Aucune activité. Ajoutez-en une.</p></div>') : `
     <div style="overflow-x:auto"><table class="gouv-table">
       <thead><tr><th style="min-width:14rem">Activité</th>${roles.map((r, ri) => `<th style="text-align:center;min-width:3rem;position:relative">${esc(r)}
             <span style="position:absolute;top:0;right:0;white-space:nowrap">
               <button onclick="event.stopPropagation();editRaciRole(${ri})" title="Renommer le rôle" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:0.6rem;line-height:1;padding:1px 3px;border-radius:2px;opacity:0.5;transition:opacity 0.15s" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.5"><i class="fas fa-pencil-alt"></i></button>
               <button onclick="event.stopPropagation();deleteRaciRole(${ri})" title="Supprimer le rôle" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:0.55rem;line-height:1;padding:1px 3px;border-radius:2px;opacity:0.4;transition:opacity 0.15s" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.4">&times;</button>
             </span></th>`).join('')}<th class="gouv-actions" style="min-width:3.5rem"></th></tr></thead>
-      <tbody>${activites.map((a,i) => `
-        <tr>
-          <td><strong>${esc(a.activite)}</strong></td>
+      <tbody>${activites.map(a => {
+        const idx = allActivites.indexOf(a);
+        return `<tr>
+          <td><strong>${filterText(esc(a.activite))}</strong></td>
           ${roles.map((role, ri) => {
             const val = a.assign[role] || '—';
-            return `<td style="text-align:center" onclick="cycleRaci(${i},${ri})">${raciBadge(val)}</td>`;
+            return `<td style="text-align:center" onclick="cycleRaci(${idx},${ri})">${raciBadge(val)}</td>`;
           }).join('')}
           <td class="gouv-actions">
-            <button onclick="editRaciActivite(${i})" title="Renommer"><i class="fas fa-pencil-alt"></i></button>
-            <button onclick="deleteRaciActivite(${i})" title="Supprimer"><i class="fas fa-trash"></i></button>
+            <button onclick="editRaciActivite(${idx})" title="Renommer"><i class="fas fa-pencil-alt"></i></button>
+            <button onclick="deleteRaciActivite(${idx})" title="Supprimer"><i class="fas fa-trash"></i></button>
           </td>
-        </tr>`).join('')}</tbody>
+        </tr>`;
+      }).join('')}</tbody>
     </table></div>`}
     <div class="flex items-center gap-3 mt-2 text-[0.65rem] text-slate-600 flex-wrap">
       <span>${activites.length} activité(s), ${roles.length} rôle(s)</span>
@@ -2206,32 +2242,33 @@ const TYPES_TRAITEMENT_AIPD = ['Données clients / CRM','Gestion RH / paie','Vid
 const BASES_JURIDIQUES_AIPD = ['Exécution contractuelle (art. 6.1.b)','Obligation légale (art. 6.1.c)','Intérêt légitime (art. 6.1.f)','Mission d\'intérêt public (art. 6.1.e)','Consentement (art. 6.1.a)','Autre'];
 const GRAVITE_RISQUE_AIPD = ['Faible','Moyen','Élevé','Critique'];
 function renderAipd() {
-  const items = vault.aipd || [];
+  const items = searchFilter(vault.aipd || [], ['traitement','type_traitement','base_juridique','responsable','gravite_risque','description_risques','mesures','statut']);
   return `
     <div class="flex items-center gap-2 mb-3"><button class="btn btn-primary btn-sm" onclick="addAipd()"><i class="fas fa-plus"></i> Ajouter</button></div>
-    ${items.length === 0 ? '<div class="empty-state" style="padding:1.5rem"><i class="fa-regular fa-file-shield"></i><p>Aucune AIPD enregistrée. Ajoutez votre première analyse d\'impact.</p></div>' : `
+    ${!items.length ? (searchQuery ? '<div class="empty-state" style="padding:1.5rem"><i class="fa-regular fa-file-shield"></i><p>Aucune AIPD trouvée.</p></div>' : '<div class="empty-state" style="padding:1.5rem"><i class="fa-regular fa-file-shield"></i><p>Aucune AIPD enregistrée. Ajoutez votre première analyse d\'impact.</p></div>') : `
     <div style="overflow-x:auto"><table class="gouv-table">
       <thead><tr><th>Traitement</th><th>Type</th><th>Base juridique</th><th>Responsable</th><th>Gravité</th><th>Risques</th><th>Mesures</th><th>Statut</th><th>Évaluation</th><th>Révision</th><th class="gouv-actions"></th></tr></thead>
-      <tbody>${items.map((a,i) => {
-        const descR = esc(a.description_risques||''); const mesures = esc(a.mesures||'');
+      <tbody>${items.map(a => {
+        const idx = vault.aipd.indexOf(a);
+        const descR = filterText(esc(a.description_risques||'')); const mesures = filterText(esc(a.mesures||''));
         return `<tr>
-          <td><strong>${esc(a.traitement||'')}</strong></td>
-          <td class="text-slate-400">${esc(a.type_traitement||'—')}</td>
-          <td class="text-slate-400">${esc(a.base_juridique||'—')}</td>
-          <td>${esc(a.responsable||'')}</td>
-          <td>${a.gravite_risque ? '<span class="gravite-badge gravite-'+esc(a.gravite_risque).toLowerCase()+'">'+esc(a.gravite_risque)+'</span>' : '—'}</td>
+          <td><strong>${filterText(esc(a.traitement||''))}</strong></td>
+          <td class="text-slate-400">${filterText(esc(a.type_traitement||'—'))}</td>
+          <td class="text-slate-400">${filterText(esc(a.base_juridique||'—'))}</td>
+          <td>${filterText(esc(a.responsable||''))}</td>
+          <td>${a.gravite_risque ? '<span class="gravite-badge gravite-'+esc(a.gravite_risque).toLowerCase()+'">'+filterText(esc(a.gravite_risque))+'</span>' : '—'}</td>
           <td>${(descR.length > 50 ? descR.slice(0,50)+'\u2026' : descR)}</td>
           <td>${(mesures.length > 50 ? mesures.slice(0,50)+'\u2026' : mesures)}</td>
           <td>${statutBadge(a.statut||'En cours')}</td>
           <td>${escDate(a.date_evaluation)}</td>
           <td>${escDate(a.date_revision)}</td>
           <td class="gouv-actions">
-            <button onclick="editAipd(${i})" title="Modifier"><i class="fas fa-pencil-alt"></i></button>
-            <button onclick="deleteAipd(${i})" title="Supprimer"><i class="fas fa-trash"></i></button>
+            <button onclick="editAipd(${idx})" title="Modifier"><i class="fas fa-pencil-alt"></i></button>
+            <button onclick="deleteAipd(${idx})" title="Supprimer"><i class="fas fa-trash"></i></button>
           </td>
         </tr>`;}).join('')}</tbody>
     </table></div>`}
-    <div class="text-[0.65rem] text-slate-600 mt-2">${items.length} AIPD(s) enregistr\u00e9e(s)</div>`;
+    <div class="text-[0.65rem] text-slate-600 mt-2">${items.length} AIPD(s) affichée(s)</div>`;
 }
 function addAipd() {
   if (!Array.isArray(vault.aipd)) vault.aipd = [];
@@ -2295,12 +2332,13 @@ function populateSousDomaine() {
   sdSelect.innerHTML = options.map(function(o) { return '<option value="'+esc(o)+'">'+esc(o)+'</option>'; }).join('');
 }
 function renderMaturite() {
-  const items = vault.maturite || [];
-  const globalPct = items.length ? Math.round(items.reduce(function(s,m){return s+((m.niveau_actuel||1)/(m.niveau_cible||3));},0)/items.length*100) : 0;
+  const allItems = vault.maturite || [];
+  const items = searchFilter(allItems, ['domaine','sous_domaine','observations']);
+  const globalPct = allItems.length ? Math.round(allItems.reduce(function(s,m){return s+((m.niveau_actuel||1)/(m.niveau_cible||3));},0)/allItems.length*100) : 0;
   return `
     <div class="flex items-center gap-2 mb-3 flex-wrap">
       <button class="btn btn-primary btn-sm" onclick="addMaturiteDomaine()"><i class="fas fa-plus"></i> Domaine</button>
-      ${items.length > 0 ? '<span class="text-xs text-slate-500 flex items-center gap-2"><span class="text-slate-400">Maturit\u00e9 globale</span><span class="text-lg font-bold '+(globalPct>=80?'text-emerald-400':globalPct>=50?'text-amber-400':'text-blue-400')+'">'+globalPct+'%</span></span>' : ''}
+      ${allItems.length > 0 ? '<span class="text-xs text-slate-500 flex items-center gap-2"><span class="text-slate-400">Maturit\u00e9 globale</span><span class="text-lg font-bold '+(globalPct>=80?'text-emerald-400':globalPct>=50?'text-amber-400':'text-blue-400')+'">'+globalPct+'%</span></span>' : ''}
     </div>
     <div class="mb-2 flex gap-4 flex-wrap text-[0.65rem] text-slate-600">
       <span>\ud83d\udd35 1 = Initial</span>
@@ -2309,16 +2347,17 @@ function renderMaturite() {
       <span>\ud83d\udfe2 4 = Quantifi\u00e9</span>
       <span>\u2b50 5 = Optimis\u00e9</span>
     </div>
-    ${items.length === 0 ? '<div class="empty-state" style="padding:1.5rem"><i class="fa-regular fa-chart-line"></i><p>Aucun domaine \u00e9valu\u00e9. Ajoutez un domaine NIST CSF ou un domaine personnalis\u00e9.</p></div>' : `
+    ${!items.length ? (searchQuery ? '<div class="empty-state" style="padding:1.5rem"><i class="fa-regular fa-chart-line"></i><p>Aucun domaine trouvé.</p></div>' : '<div class="empty-state" style="padding:1.5rem"><i class="fa-regular fa-chart-line"></i><p>Aucun domaine \u00e9valu\u00e9. Ajoutez un domaine NIST CSF ou un domaine personnalis\u00e9.</p></div>') : `
     <div style="overflow-x:auto"><table class="gouv-table">
       <thead><tr><th>Domaine</th><th>Sous-domaine</th><th>Niveau actuel</th><th>Niveau cible</th><th>Progression</th><th>Observations</th><th class="gouv-actions"></th></tr></thead>
-      <tbody>${items.map(function(m,i) {
+      <tbody>${items.map(function(m) {
+        const idx = allItems.indexOf(m);
         const pct = Math.min(100, Math.round(((m.niveau_actuel||1) / (m.niveau_cible||3)) * 100));
         const color = pct >= 80 ? '#10b981' : pct >= 50 ? '#f59e0b' : '#3b82f6';
-        return '<tr><td><strong>'+esc(m.domaine||'')+'</strong></td><td class="text-slate-400">'+(esc(m.sous_domaine||'')||'\u2014')+'</td><td>'+(m.niveau_actuel||1)+'/5</td><td>'+(m.niveau_cible||3)+'/5</td><td style="min-width:120px"><div class="h-1.5 rounded-full bg-white/5 overflow-hidden"><div class="h-full rounded-full" style="width:'+pct+'%;background:'+color+'"></div></div> <span class="text-[0.6rem] text-slate-500">'+pct+'%</span></td><td>'+(esc(m.observations||'').length > 40 ? esc(m.observations).slice(0,40)+'\u2026' : esc(m.observations||''))+'</td><td class="gouv-actions"><button onclick="editMaturiteDomaine('+i+')" title="Modifier"><i class="fas fa-pencil-alt"></i></button><button onclick="deleteMaturiteDomaine('+i+')" title="Supprimer"><i class="fas fa-trash"></i></button></td></tr>';
+        return '<tr><td><strong>'+filterText(esc(m.domaine||''))+'</strong></td><td class="text-slate-400">'+(filterText(esc(m.sous_domaine||''))||'\u2014')+'</td><td>'+(m.niveau_actuel||1)+'/5</td><td>'+(m.niveau_cible||3)+'/5</td><td style="min-width:120px"><div class="h-1.5 rounded-full bg-white/5 overflow-hidden"><div class="h-full rounded-full" style="width:'+pct+'%;background:'+color+'"></div></div> <span class="text-[0.6rem] text-slate-500">'+pct+'%</span></td><td>'+(filterText(esc(m.observations||'')).length > 40 ? filterText(esc(m.observations)).slice(0,40)+'\u2026' : filterText(esc(m.observations||'')))+'</td><td class="gouv-actions"><button onclick="editMaturiteDomaine('+idx+')" title="Modifier"><i class="fas fa-pencil-alt"></i></button><button onclick="deleteMaturiteDomaine('+idx+')" title="Supprimer"><i class="fas fa-trash"></i></button></td></tr>';
       }).join('')}</tbody>
     </table></div>`}
-    <div class="text-[0.65rem] text-slate-600 mt-2">${items.length} domaine(s) \u00e9valu\u00e9(s)</div>`;
+    <div class="text-[0.65rem] text-slate-600 mt-2">${items.length} domaine(s) affiché(s)</div>`;
 }
 function addMaturiteDomaine() {
   const defaultSd = SOUS_DOMAINES_MATURITE[DOMAINES_MATURITE[0]] || [];
@@ -2363,18 +2402,19 @@ async function deleteMaturiteDomaine(i) {
 const CRITICITE_PRESTATAIRE = ['Haute','Moyenne','Basse'];
 const STATUTS_CONFORMITE = ['Conforme','Non conforme',"En cours d'\u00e9valuation",'Audit programm\u00e9'];
 function renderPrestataires() {
-  const items = vault.prestataires || [];
+  const items = searchFilter(vault.prestataires || [], ['nom','contact','service','criticite','statut_conformite']);
   return `
     <div class="flex items-center gap-2 mb-3"><button class="btn btn-primary btn-sm" onclick="addPrestataire()"><i class="fas fa-plus"></i> Ajouter</button></div>
-    ${items.length === 0 ? '<div class="empty-state" style="padding:1.5rem"><i class="fa-regular fa-handshake"></i><p>Aucun prestataire enregistr\u00e9. Ajoutez votre premier prestataire ou sous-traitant.</p></div>' : `
+    ${!items.length ? (searchQuery ? '<div class="empty-state" style="padding:1.5rem"><i class="fa-regular fa-handshake"></i><p>Aucun prestataire trouvé.</p></div>' : '<div class="empty-state" style="padding:1.5rem"><i class="fa-regular fa-handshake"></i><p>Aucun prestataire enregistr\u00e9. Ajoutez votre premier prestataire ou sous-traitant.</p></div>') : `
     <div style="overflow-x:auto"><table class="gouv-table">
       <thead><tr><th>Prestataire</th><th>Contact</th><th>Service</th><th>Criticit\u00e9</th><th>Conformit\u00e9</th><th>Dernier audit</th><th>Prochain audit</th><th class="gouv-actions"></th></tr></thead>
-      <tbody>${items.map(function(p,i) {
+      <tbody>${items.map(function(p) {
+        const idx = vault.prestataires.indexOf(p);
         const critCls = 'gouv-prio-'+(p.criticite||'moyenne').toLowerCase();
-        return '<tr><td><strong>'+esc(p.nom||'')+'</strong></td><td>'+esc(p.contact||'')+'</td><td>'+esc(p.service||'')+'</td><td><span class="'+critCls+'">'+esc(p.criticite||'Moyenne')+'</span></td><td>'+statutBadge(p.statut_conformite||"En cours d'\u00e9valuation")+'</td><td>'+escDate(p.date_audit)+'</td><td>'+escDate(p.date_prochain_audit)+'</td><td class="gouv-actions"><button onclick="editPrestataire('+i+')" title="Modifier"><i class="fas fa-pencil-alt"></i></button><button onclick="deletePrestataire('+i+')" title="Supprimer"><i class="fas fa-trash"></i></button></td></tr>';
+        return '<tr><td><strong>'+filterText(esc(p.nom||''))+'</strong></td><td>'+filterText(esc(p.contact||''))+'</td><td>'+filterText(esc(p.service||''))+'</td><td><span class="'+critCls+'">'+filterText(esc(p.criticite||'Moyenne'))+'</span></td><td>'+statutBadge(p.statut_conformite||"En cours d'\u00e9valuation")+'</td><td>'+escDate(p.date_audit)+'</td><td>'+escDate(p.date_prochain_audit)+'</td><td class="gouv-actions"><button onclick="editPrestataire('+idx+')" title="Modifier"><i class="fas fa-pencil-alt"></i></button><button onclick="deletePrestataire('+idx+')" title="Supprimer"><i class="fas fa-trash"></i></button></td></tr>';
       }).join('')}</tbody>
     </table></div>`}
-    <div class="text-[0.65rem] text-slate-600 mt-2">${items.length} prestataire(s) enregistr\u00e9(s)</div>`;
+    <div class="text-[0.65rem] text-slate-600 mt-2">${items.length} prestataire(s) affiché(s)</div>`;
 }
 function addPrestataire() {
   showGouvModal({ title:'Nouveau prestataire', saveLabel:'Ajouter',
@@ -2416,7 +2456,9 @@ async function deletePrestataire(i) {
 renderFn.memos = function() {
   return `
     <div class="category-label"><i class="fas fa-tower-broadcast mr-1"></i> Playbooks de Réponse</div>
-    <div class="grid-bento mb-6">${vault.playbooks.map(p => {
+    <div class="grid-bento mb-6">${(() => {
+      const playbooks = searchFilter(vault.playbooks, ['titre','scenario']);
+      return !playbooks.length && searchQuery ? '<div class="empty-state" style="padding:1rem"><i class="fa-regular fa-tower-broadcast"></i><p>Aucun playbook trouvé.</p></div>' : playbooks.map(p => {
       const checks = vault.playbook_checks[p.id] || [];
       const done = checks.filter(Boolean).length;
       const total = p.checklist.length;
@@ -2425,10 +2467,10 @@ renderFn.memos = function() {
           <div class="card-icon ${p.severity === 'crit' ? 'bg-red-500/10' : 'bg-amber-500/10'}"><i class="fas fa-${p.severity === 'crit' ? 'skull' : 'triangle-exclamation'} ${p.severity === 'crit' ? 'text-red-400' : 'text-amber-400'}"></i></div>
           <div style="min-width:0">
             <div class="flex items-center gap-2 mb-1">
-              <span class="text-sm font-semibold text-slate-100">${esc(p.titre)}</span>
+              <span class="text-sm font-semibold text-slate-100">${filterText(esc(p.titre))}</span>
               <span class="${p.severity === 'crit' ? 'badge-crit' : 'badge-high'}">${p.severity === 'crit' ? 'CRITIQUE' : 'HAUTE'}</span>
             </div>
-            <p class="text-xs text-slate-400">${esc(p.scenario)}</p>
+            <p class="text-xs text-slate-400">${filterText(esc(p.scenario))}</p>
             <div class="flex items-center gap-2 mt-2">
               <div class="flex-1 h-1 rounded-full bg-white/5"><div class="h-full rounded-full ${done === total ? 'bg-emerald-500' : 'bg-blue-500'}" style="width:${total ? Math.round(done/total*100) : 0}%"></div></div>
               <span class="text-xs text-slate-500 font-mono">${done}/${total}</span>
@@ -2437,15 +2479,15 @@ renderFn.memos = function() {
           </div>
         </div>
       </div>`;
-    }).join('')}</div>
+    }).join('')})()}</div>
     <div class="category-label"><i class="fas fa-notes-medical mr-1"></i> Contacts d'Urgence</div>
     <div class="contact-grid mb-6">${Object.entries(vault.contacts_urgence).map(([k,v]) => `
       <div class="contact-card" style="position:relative">
         <button class="memo-btn text-amber-400" data-edit-contact="${k}" title="Modifier" style="position:absolute;top:0.5rem;right:0.5rem"><i class="fas fa-pencil"></i></button>
         <div class="c-name"><i class="fas fa-${k === 'assurance' ? 'umbrella' : k === 'avocat' ? 'gavel' : k === 'hebergeur' ? 'server' : 'user-tie'} mr-1"></i> ${k.charAt(0).toUpperCase()+k.slice(1)}</div>
-        <div class="c-detail"><i class="fas fa-user"></i>${esc(v.nom || 'Non renseigné')}</div>
-        <div class="c-detail"><i class="fas fa-phone"></i>${esc(v.telephone || '—')}</div>
-        <div class="c-detail"><i class="fas fa-envelope"></i>${esc(v.email || '—')}</div>
+        <div class="c-detail"><i class="fas fa-user"></i>${filterText(esc(v.nom || 'Non renseigné'))}</div>
+        <div class="c-detail"><i class="fas fa-phone"></i>${filterText(esc(v.telephone || '—'))}</div>
+        <div class="c-detail"><i class="fas fa-envelope"></i>${filterText(esc(v.email || '—'))}</div>
       </div>
     `).join('')}</div>
     <div class="grid-bento-wide gap-4">
@@ -2457,22 +2499,25 @@ renderFn.memos = function() {
       </div>
       <div class="glass-card">
         <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3"><i class="fas fa-folder mr-1"></i> Mémos (${vault.memos.length})</h3>
-        <div id="memoList">${vault.memos.length === 0 ? '<div class="empty-state" style="padding:1rem"><i class="fa-regular fa-note-sticky" style="font-size:1.5rem"></i><p>Aucun mémo pour le moment.</p></div>' : vault.memos.map((m,i) => {
+        <div id="memoList">${(() => {
+          const memos = searchFilter(vault.memos, ['titre','contenu']);
+          return !memos.length ? (searchQuery ? '<div class="empty-state" style="padding:1rem"><i class="fa-regular fa-note-sticky" style="font-size:1.5rem"></i><p>Aucun mémo trouvé.</p></div>' : '<div class="empty-state" style="padding:1rem"><i class="fa-regular fa-note-sticky" style="font-size:1.5rem"></i><p>Aucun mémo pour le moment.</p></div>') : memos.map(m => {
+          const idx = vault.memos.indexOf(m);
           const preview = m.contenu.length > 200 ? m.contenu.slice(0,200) + '\n\n*(...)*' : m.contenu;
           return `
           <div class="border-b border-white/5 py-2 last:border-0">
             <div class="flex items-center justify-between">
-              <span class="text-sm font-medium text-slate-200">${esc(m.titre)}</span>
+              <span class="text-sm font-medium text-slate-200">${filterText(esc(m.titre))}</span>
               <div class="flex gap-1">
-                <button class="memo-btn text-blue-400" data-view-memo="${i}" title="Voir"><i class="fas fa-eye"></i></button>
-                <button class="memo-btn text-amber-400" data-edit-memo="${i}" title="Modifier"><i class="fas fa-pencil"></i></button>
-                <button class="memo-btn text-red-400" data-del-memo="${i}" title="Supprimer"><i class="fas fa-trash-can"></i></button>
+                <button class="memo-btn text-blue-400" data-view-memo="${idx}" title="Voir"><i class="fas fa-eye"></i></button>
+                <button class="memo-btn text-amber-400" data-edit-memo="${idx}" title="Modifier"><i class="fas fa-pencil"></i></button>
+                <button class="memo-btn text-red-400" data-del-memo="${idx}" title="Supprimer"><i class="fas fa-trash-can"></i></button>
               </div>
             </div>
             <div class="text-xs text-slate-400 mt-1 memo-preview" data-md="${esc(preview)}"></div>
             <div class="text-[0.6rem] text-slate-600 mt-1">${new Date(m.date).toLocaleDateString('fr-FR')}</div>
           </div>
-        `; }).join('')}</div>
+        `; }).join('')})()}</div>
       </div>
     </div>`;
 };
@@ -2483,18 +2528,19 @@ const CAT_COLORS_ROADMAP = { 'Sécurité technique':'#ef4444', 'Conformité':'#3
 const STATUTS_ROADMAP = ['À faire','En cours','Fait','Bloqué'];
 
 renderFn.roadmap = function() {
-  const items = vault.feuille_route || [];
+  const allItems = vault.feuille_route || [];
+  const filtered = searchFilter(allItems, ['titre','categorie','responsable']);
   const quarters = {};
-  items.forEach(r => {
+  filtered.forEach(r => {
     const q = r.trimestre || 'Non défini';
     if (!quarters[q]) quarters[q] = [];
     quarters[q].push(r);
   });
   const sortedQuarters = Object.keys(quarters).sort();
-  const done = items.filter(r => r.statut === 'Fait').length;
-  const total = items.length;
+  const done = allItems.filter(r => r.statut === 'Fait').length;
+  const total = allItems.length;
   const pct = total ? Math.round(done/total*100) : 0;
-  const blk = items.filter(r => r.statut === 'Bloqué').length;
+  const blk = allItems.filter(r => r.statut === 'Bloqué').length;
   const trClass = pct === 100 ? 'text-emerald-400' : blk > 0 ? 'text-red-400' : 'text-amber-400';
   return `
     <div class="glass-card mb-4 p-3">
@@ -2503,8 +2549,8 @@ renderFn.roadmap = function() {
         <div class="flex-1 min-w-[120px] h-2 rounded-full bg-white/5 overflow-hidden"><div class="h-full rounded-full ${pct === 100 ? 'bg-emerald-500' : 'bg-blue-500'}" style="width:${pct}%"></div></div>
         <div class="flex gap-3 text-xs text-slate-500">
           <span><span class="text-emerald-400 font-semibold">${done}</span> Fait</span>
-          <span><span class="text-blue-400 font-semibold">${items.filter(r=>r.statut==='En cours').length}</span> En cours</span>
-          <span><span class="text-amber-400 font-semibold">${items.filter(r=>r.statut==='À faire').length}</span> À faire</span>
+          <span><span class="text-blue-400 font-semibold">${allItems.filter(r=>r.statut==='En cours').length}</span> En cours</span>
+          <span><span class="text-amber-400 font-semibold">${allItems.filter(r=>r.statut==='À faire').length}</span> À faire</span>
           <span><span class="text-red-400 font-semibold">${blk}</span> Bloqué</span>
         </div>
         <button class="btn btn-primary btn-xs" onclick="addJalon()"><i class="fas fa-plus"></i> Jalon</button>
@@ -2512,24 +2558,25 @@ renderFn.roadmap = function() {
     </div>
     <div class="roadmap-grid">${sortedQuarters.map(q => `
       <div class="glass-card">
-        <h4 class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2 border-b border-white/5 pb-1">${esc(q)}</h4>
-        ${quarters[q].length === 0 ? '<p class="text-xs text-slate-600">Aucun jalon.</p>' : quarters[q].map(r => {
+        <h4 class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2 border-b border-white/5 pb-1">${filterText(esc(q))}</h4>
+        ${!quarters[q].length ? '<p class="text-xs text-slate-600">Aucun jalon.</p>' : quarters[q].map(r => {
           const cls = r.statut === 'Fait' ? 'bg-emerald-500' : r.statut === 'En cours' ? 'bg-blue-500' : r.statut === 'Bloqué' ? 'bg-red-500' : 'bg-slate-500';
+          const idx = allItems.indexOf(r);
           return `<div class="flex items-start gap-2 py-1.5 border-b border-white/5 last:border-0">
             <span class="w-2 h-2 rounded-full flex-shrink-0 mt-1 ${cls}"></span>
             <div style="min-width:0;flex:1">
               <div class="flex items-center justify-between gap-1">
-                <span class="text-xs font-medium text-slate-200 truncate">${esc(r.titre)}</span>
-                <span class="text-[0.55rem] px-1 rounded text-slate-600" style="background:${CAT_COLORS_ROADMAP[r.categorie]||'#64748b'}22;color:${CAT_COLORS_ROADMAP[r.categorie]||'#64748b'}">${esc(r.categorie||'')}</span>
+                <span class="text-xs font-medium text-slate-200 truncate">${filterText(esc(r.titre))}</span>
+                <span class="text-[0.55rem] px-1 rounded text-slate-600" style="background:${CAT_COLORS_ROADMAP[r.categorie]||'#64748b'}22;color:${CAT_COLORS_ROADMAP[r.categorie]||'#64748b'}">${filterText(esc(r.categorie||''))}</span>
               </div>
               <div class="flex items-center gap-2 mt-0.5">
                 <div class="flex-1 h-1 rounded-full bg-white/5 overflow-hidden"><div class="h-full rounded-full ${r.avancement===100?'bg-emerald-500':'bg-blue-500'}" style="width:${r.avancement||0}%"></div></div>
                 <span class="text-[0.55rem] font-mono text-slate-500">${r.avancement||0}%</span>
               </div>
-              ${r.responsable ? `<span class="text-[0.55rem] text-slate-600"><i class="fas fa-user mr-0.5"></i>${esc(r.responsable)}</span>` : ''}
+              ${r.responsable ? `<span class="text-[0.55rem] text-slate-600"><i class="fas fa-user mr-0.5"></i>${filterText(esc(r.responsable))}</span>` : ''}
             </div>
-            <button class="text-xs text-slate-600 hover:text-slate-300 transition-colors flex-shrink-0" onclick="editJalon(${items.indexOf(r)})" title="Modifier"><i class="fas fa-pencil-alt"></i></button>
-            <button class="text-xs text-slate-600 hover:text-red-400 transition-colors flex-shrink-0" onclick="deleteJalon(${items.indexOf(r)})" title="Supprimer"><i class="fas fa-times"></i></button>
+            <button class="text-xs text-slate-600 hover:text-slate-300 transition-colors flex-shrink-0" onclick="editJalon(${idx})" title="Modifier"><i class="fas fa-pencil-alt"></i></button>
+            <button class="text-xs text-slate-600 hover:text-red-400 transition-colors flex-shrink-0" onclick="deleteJalon(${idx})" title="Supprimer"><i class="fas fa-times"></i></button>
           </div>`;
         }).join('')}
       </div>
@@ -2810,12 +2857,33 @@ function filterText(s) {
   if (!s || !searchQuery) return s;
   const q = searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const re = new RegExp('(' + q + ')', 'gi');
-  return s.replace(re, '<mark style="background:rgba(59,130,246,0.25);color:#93c5fd;padding:0.1rem 0.2rem;border-radius:2px">$1</mark>');
+  return s.replace(re, '<mark class="search-hl">$1</mark>');
+}
+
+function searchFilter(arr, fields) {
+  if (!searchQuery || !arr || !fields) return arr;
+  const q = searchQuery.toLowerCase();
+  return arr.filter(item =>
+    fields.some(f => {
+      const v = item[f];
+      return v != null && String(v).toLowerCase().includes(q);
+    })
+  );
+}
+
+function updateSearchCount() {
+  const el = document.getElementById('searchCount');
+  if (!el) return;
+  if (!searchQuery) { el.className = ''; return; }
+  const n = document.querySelectorAll('.search-hl').length;
+  if (n > 0) { el.textContent = '(' + n + ')'; el.className = 'visible'; }
+  else { el.textContent = 'Aucun résultat'; el.className = 'visible'; }
 }
 
 function globalSearch(query) {
   searchQuery = query.trim();
   renderAll();
+  setTimeout(updateSearchCount, 50);
 }
 
 function findItem(id) {
