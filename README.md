@@ -1,16 +1,19 @@
 # RSSI Secure Command Deck
 
-Application web chiffrée destinée aux RSSI et professionnels de la cybersécurité. Tableau de bord, outils techniques/GRC, threat intelligence, playbooks, calculateurs, et persistance locale — le tout dans un seul fichier HTML.
+Application web chiffrée destinée aux RSSI et professionnels de la cybersécurité. Tableau de bord, outils techniques/GRC, threat intelligence, playbooks avec historique, calculateurs RPO/RTO/amende, et persistance locale — le tout dans un seul fichier HTML.
 
 ## Fonctionnalités
 
-- **Dashboard** — Statistiques, alertes, contacts d'urgence, graphes
-- **Outils Techniques** — 18 fiches (Nmap, Wireshark, Metasploit, Volatility, Wazuh, Kubernetes…)
-- **Outils Fonctionnels (GRC)** — 10 fiches (EBIOS, ISO 27001, PIA, PCA…)
-- **Threat Intel** — Sources OSINT, flux CISA/ANSSI, indicateurs de compromission
-- **Frameworks & Normes** — 5 référentiels (MITRE ATT&CK, NIST CSF, PCI-DSS, RGPD, ISO 27001)
-- **Mémos & Playbooks** — 4 playbooks pré-remplis (Ransomware, Fuite RGPD, Panne Datacenter, Compromission Admin) + éditeur de notes
-- **Calculateurs** — Simulation amende RGPD, grille de risque EBIOS
+- **Dashboard** — Statistiques, favoris récents, jauges composites (couverture outillage, complétion playbooks, maturité prioritaire)
+- **Outils Techniques** — 33 fiches (Nmap, Wireshark, Nessus, Metasploit, Velociraptor, Wazuh, CrowdStrike, Keycloak, Veeam…)
+- **Outils Fonctionnels (GRC)** — 14 fiches (TheHive, MISP, Eramba, GLPI, Obsidian, Bitwarden…)
+- **Threat Intel** — Sources OSINT, flux CISA/ANSSI, modèles conceptuels (Kill Chain, Diamond Model)
+- **Frameworks & Normes** — 7 référentiels (RGPD, NIS 2, DORA, ISO 27001/27002, CIS Controls v8, NIST CSF 2.0)
+- **Calculateurs** — Amende RGPD, grille de risque EBIOS, **RPO/RTO avec coût d'arrêt horaire**
+- **Mémos & Playbooks** — 4 playbooks (Ransomware, Fuite RGPD, Panne Datacenter, Compromission Admin) avec historique des exercices, éditeur de notes Markdown, vue/édition/suppression
+- **Contacts d'Urgence** — 4 fiches modifiables (assurance, avocat, hébergeur, direction)
+- **Recherche globale** — Filtrage instantané de toutes les fiches
+- **Tri par priorité** — Essentiel / Important / Complémentaire avec badges colorés
 
 ## Sécurité
 
@@ -19,6 +22,7 @@ Application web chiffrée destinée aux RSSI et professionnels de la cybersécur
 - IV aléatoire de 12 octets pour chaque chiffrement
 - Aucune clé en clair conservée en mémoire persistante
 - Coffre déchiffré uniquement en mémoire vive, pendant la session
+- Mot de passe saisi via **modale DOM** (plus de `prompt()`)
 
 ## Stockage
 
@@ -31,7 +35,7 @@ Deux couches de persistance :
 
 - **http://** : `showDirectoryPicker` → choisir `.rssi_deck/rssi_coffre.json` + copie IDB
 - **file://** : IndexedDB automatique + bouton "Exporter" pour copie fichier manuelle
-- **Export** : Téléchargement du fichier `.json` chiffré (toujours disponible)
+- **Export** : Téléchargement du fichier `.json` chiffré (nom horodaté : `rssi_coffre_2026-05-22_08_30.json`)
 - **Import** : Chargement depuis un fichier `.json` externe (toujours disponible)
 
 Le chemin fichier attendu sur le disque est affiché sur l'écran de verrouillage :
@@ -54,7 +58,7 @@ Le chemin fichier attendu sur le disque est affiché sur l'écran de verrouillag
 - **Tailwind CSS** (CDN) — Styles utilitaires
 - **FontAwesome 6** (CDN) — Icônes
 - **Chart.js** — Graphiques du dashboard
-- **Marked.js** — Rendu Markdown des playbooks
+- **Marked.js** — Rendu Markdown des mémos et playbooks
 - **Web Crypto API** — Chiffrement AES-GCM 256 + PBKDF2
 - **IndexedDB** — Persistance navigateur
 - **File System Access API** — Accès fichier disque (Chrome http://)
