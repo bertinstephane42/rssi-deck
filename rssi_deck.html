@@ -823,6 +823,7 @@ const DEFAULT_VAULT = {
    STATE
    ============================================================ */
 let vault = null;          // plaintext data
+let _hadVaultBeforeLock = false;
 let vaultKey = null;       // derived CryptoKey (held only in memory)
 let _sessionKey = null;    // cached CryptoKey (non-exportable, in-memory only)
 let _sessionSalt = null;   // salt paired with _sessionKey
@@ -3772,6 +3773,7 @@ async function lockApp() {
       return;
     }
   }
+  _hadVaultBeforeLock = !!vault;
   vault = null;
   vaultKey = null;
   _sessionKey = null;
@@ -3928,6 +3930,11 @@ document.addEventListener('DOMContentLoaded', async function() {
     const pwd = document.getElementById('lockImportPwd').value;
     if (!_pendingImportFile) { document.getElementById('lockError').textContent = 'Sélectionnez d\'abord un fichier .json.'; document.getElementById('lockError').style.display = 'block'; return; }
     if (!pwd) { document.getElementById('lockError').textContent = 'Saisissez le mot de passe du coffre.'; document.getElementById('lockError').style.display = 'block'; return; }
+    if (_hadVaultBeforeLock) {
+      const ok = await showConfirm("L'importation va supprimer le coffre actuellement en mémoire et le remplacer par le fichier sélectionné. Voulez-vous continuer ?");
+      if (!ok) return;
+      _hadVaultBeforeLock = false;
+    }
     await importVault(_pendingImportFile, pwd);
     // After import, subsequent saves will use the stored dir handle
     // If no dir handle set yet, next exportVault will prompt for directory
