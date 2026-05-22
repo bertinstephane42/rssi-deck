@@ -735,6 +735,11 @@ function notify(msg, type = 'info') {
 
 function sortTools(tools, mode) {
   if (mode === 'alpha') return [...tools].sort((a,b) => a.nom.localeCompare(b.nom));
+  if (mode === 'favs') {
+    const favs = tools.filter(t => vault.favorites.includes(t.id));
+    const rest = tools.filter(t => !vault.favorites.includes(t.id));
+    return [...favs, ...rest];
+  }
   return tools;
 }
 
@@ -829,7 +834,7 @@ renderFn['outils-tech'] = function() {
   const cats = {};
   items.forEach(t => { (cats[t.categorie] = cats[t.categorie] || []).push(t); });
   const sb = (m, l) => `<button class="sort-btn${sortOutilsTech===m?' active':''}" data-sort="${m}">${l}</button>`;
-  const sortBar = `<div class="sort-bar"><span class="sort-label">Trier :</span>${sb('default','Par défaut')}${sb('alpha','A–Z')}</div>`;
+  const sortBar = `<div class="sort-bar"><span class="sort-label">Trier :</span>${sb('default','Par défaut')}${sb('alpha','A–Z')}${sb('favs','☆ Favoris')}</div>`;
   return sortBar + Object.keys(cats).map(cat => `
     <div class="category-label"><i class="fas fa-circle text-[6px] mr-1 align-middle" style="color:${catColor(cat)}"></i> ${cat}</div>
     <div class="grid-bento">${cats[cat].map(t => toolCard(t, 'tech')).join('')}</div>
@@ -841,7 +846,7 @@ renderFn['outils-fonctionnels'] = function() {
   const cats = {};
   items.forEach(t => { (cats[t.categorie] = cats[t.categorie] || []).push(t); });
   const sb = (m, l) => `<button class="sort-btn${sortOutilsFonc===m?' active':''}" data-sort="${m}">${l}</button>`;
-  const sortBar = `<div class="sort-bar"><span class="sort-label">Trier :</span>${sb('default','Par défaut')}${sb('alpha','A–Z')}</div>`;
+  const sortBar = `<div class="sort-bar"><span class="sort-label">Trier :</span>${sb('default','Par défaut')}${sb('alpha','A–Z')}${sb('favs','☆ Favoris')}</div>`;
   return sortBar + Object.keys(cats).map(cat => `
     <div class="category-label"><i class="fas fa-circle text-[6px] mr-1 align-middle" style="color:${catColor(cat)}"></i> ${cat}</div>
     <div class="grid-bento">${cats[cat].map(t => toolCard(t, 'fonc')).join('')}</div>
@@ -1445,7 +1450,7 @@ renderFn.memos = function() {
               <div class="flex-1 h-1 rounded-full bg-white/5"><div class="h-full rounded-full ${done === total ? 'bg-emerald-500' : 'bg-blue-500'}" style="width:${total ? Math.round(done/total*100) : 0}%"></div></div>
               <span class="text-xs text-slate-500 font-mono">${done}/${total}</span>
             </div>
-            <div class="text-[0.6rem] text-slate-600 mt-1">${p.date ? '📅 ' + new Date(p.date).toLocaleDateString('fr-FR') : ''}${p.historique && p.historique.length ? ' · 📋 ' + p.historique.length : ''}</div>
+            <div class="text-[0.6rem] text-slate-600 mt-1">${p.historique && p.historique.length ? '📋 ' + p.historique.length + ' entr\u00e9e(s)' : 'Aucun historique'}</div>
           </div>
         </div>
       </div>`;
@@ -1542,18 +1547,6 @@ function showModal(id) {
             <button class="btn btn-sm btn-secondary" id="pbHistoCancel">Annuler</button>
           </div>
         </div>
-      </section>
-      <section>
-        <h3>Date de l'incident</h3>
-        <div class="text-sm text-slate-400" id="pbDateDisplay">${data.date ? new Date(data.date).toLocaleDateString('fr-FR') : 'Non renseignée'}</div>
-        <div id="pbDateEdit" style="display:none" class="mt-1">
-          <input type="date" id="pbDateInput" class="lock-input" value="${data.date || ''}" style="width:auto">
-          <div class="flex gap-2 mt-1">
-            <button class="btn btn-sm btn-primary" id="pbDateSave" data-pb-id="${data.id}"><i class="fas fa-check mr-1"></i> OK</button>
-            <button class="btn btn-sm btn-secondary" id="pbDateCancel">Annuler</button>
-          </div>
-        </div>
-        <button class="btn btn-sm btn-primary mt-2" id="playbookDateEditBtn" data-pb-id="${data.id}"><i class="fas fa-calendar mr-1"></i> Modifier la date</button>
       </section>`;
   } else {
     const isFav = vault.favorites.includes(data.id);
@@ -1594,31 +1587,6 @@ function bindModalEvents() {
       if (label) label.classList.toggle('done', this.checked);
     };
   });
-  const pbDateEditBtn = document.getElementById('playbookDateEditBtn');
-  if (pbDateEditBtn) {
-    pbDateEditBtn.onclick = function() {
-      document.getElementById('pbDateDisplay').style.display = 'none';
-      document.getElementById('pbDateEdit').style.display = 'block';
-      this.style.display = 'none';
-    };
-  }
-  document.getElementById('pbDateSave').onclick = function() {
-    const pid = this.dataset.pbId;
-    const pb = vault.playbooks.find(p => p.id === pid);
-    if (!pb) return;
-    pb.date = document.getElementById('pbDateInput').value;
-    document.getElementById('pbDateDisplay').style.display = 'block';
-    document.getElementById('pbDateEdit').style.display = 'none';
-    document.getElementById('playbookDateEditBtn').style.display = '';
-    document.getElementById('pbDateDisplay').textContent = pb.date ? new Date(pb.date).toLocaleDateString('fr-FR') : 'Non renseignée';
-    setDirty();
-    notify('Date mise à jour.', 'success');
-  };
-  document.getElementById('pbDateCancel').onclick = function() {
-    document.getElementById('pbDateDisplay').style.display = 'block';
-    document.getElementById('pbDateEdit').style.display = 'none';
-    document.getElementById('playbookDateEditBtn').style.display = '';
-  };
   /* Historique handlers */
   var _histoEditing = -1;
   const histoAddBtn = document.getElementById('pbHistoAddBtn');
