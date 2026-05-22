@@ -25,6 +25,26 @@ body{font-family:system-ui,-apple-system,'Inter','Segoe UI',sans-serif;backgroun
 .lock-input{width:100%;padding:0.75rem 1rem;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:#e2e8f0;font-size:0.9rem;outline:none;transition:border-color 0.2s}
 .lock-input:focus{border-color:rgba(59,130,246,0.5)}
 .lock-input::placeholder{color:#475569}
+.pwd-modal{position:fixed;inset:0;z-index:9998;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+.pwd-modal .pwd-box{width:92%;max-width:420px;padding:1.5rem}
+.pwd-modal .pwd-box p{text-align:center;margin-bottom:1rem;font-size:0.9rem}
+.pwd-modal .flex{gap:0.5rem}
+.pwd-modal.visible{display:flex}
+.lock-input option{background:#1e293b;color:#e2e8f0}
+.threat-edit-btn{position:absolute;top:0.5rem;right:0.5rem;width:28px;height:28px;border-radius:6px;border:none;background:rgba(255,255,255,0.06);color:#64748b;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0.7rem;transition:all 0.2s;opacity:0;z-index:2}
+.threat-card:hover .threat-edit-btn{opacity:1}
+.threat-edit-btn:hover{background:rgba(59,130,246,0.2);color:#60a5fa}
+.sort-bar{display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem;flex-wrap:wrap}
+.sort-label{font-size:0.75rem;color:#64748b;text-transform:uppercase;letter-spacing:0.05em}
+.sort-btn{font-size:0.75rem;padding:0.3rem 0.7rem;border-radius:6px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:#94a3b8;cursor:pointer;transition:all 0.15s}
+.sort-btn.active{background:rgba(59,130,246,0.15);border-color:rgba(59,130,246,0.3);color:#60a5fa}
+.sort-btn:hover{border-color:rgba(255,255,255,0.15)}
+.prio-badge{font-size:0.6rem;padding:0.1rem 0.4rem;border-radius:3px;margin-left:0.4rem;white-space:nowrap;vertical-align:middle}
+.prio-1{background:rgba(239,68,68,0.15);color:#f87171}
+.prio-2{background:rgba(245,158,11,0.15);color:#fbbf24}
+.prio-3{background:rgba(100,116,139,0.15);color:#94a3b8}
+.memo-btn{background:none;border:none;cursor:pointer;font-size:0.75rem;padding:0.1rem 0.3rem;border-radius:4px;transition:all 0.15s}
+.memo-btn:hover{background:rgba(255,255,255,0.06)}
 .btn{display:inline-flex;align-items:center;gap:0.5rem;padding:0.65rem 1.2rem;border-radius:8px;font-size:0.85rem;font-weight:600;border:none;cursor:pointer;transition:all 0.2s}
 .btn-primary{background:linear-gradient(135deg,#2563eb,#3b82f6);color:#fff}
 .btn-primary:hover{background:linear-gradient(135deg,#1d4ed8,#2563eb);transform:translateY(-1px)}
@@ -97,7 +117,7 @@ body{font-family:system-ui,-apple-system,'Inter','Segoe UI',sans-serif;backgroun
 .contact-card .c-detail i{width:14px;margin-right:0.3rem}
 .memo-editor{width:100%;min-height:120px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:8px;color:#e2e8f0;padding:0.75rem;font-size:0.85rem;font-family:inherit;outline:none;resize:vertical}
 .memo-editor:focus{border-color:rgba(59,130,246,0.4)}
-.memo-preview{background:rgba(255,255,255,0.02);border-radius:8px;padding:0.75rem;font-size:0.85rem;line-height:1.7;min-height:60px}
+.memo-preview{background:rgba(255,255,255,0.02);border-radius:8px;padding:0.75rem;font-size:0.85rem;line-height:1.7;min-height:60px;overflow:hidden;word-break:break-word}
 .memo-preview h1{font-size:1.2rem;font-weight:700;margin:0.5rem 0 0.3rem}
 .memo-preview h2{font-size:1rem;font-weight:600;margin:0.5rem 0 0.3rem}
 .memo-preview h3{font-size:0.9rem;font-weight:600;margin:0.4rem 0 0.2rem}
@@ -152,17 +172,12 @@ body{font-family:system-ui,-apple-system,'Inter','Segoe UI',sans-serif;backgroun
       <button class="lock-tab" data-tab="import">Importer un fichier</button>
     </div>
     <div id="lockTabCreate">
-      <div id="createPathHint" class="text-xs text-slate-500 mb-3 text-center leading-relaxed" style="display:none">
-        <i class="fas fa-info-circle text-blue-400 mr-1"></i>
-        Un dossier <code class="text-blue-400">.rssi_deck</code> sera créé dans le chemin ci-dessus.
-        Vous serez guidé pour le sélectionner.
-      </div>
       <input type="password" class="lock-input mb-3" id="lockPwd" placeholder="Mot de passe maître">
       <input type="password" class="lock-input mb-4" id="lockPwdConfirm" placeholder="Confirmer le mot de passe">
       <button class="btn btn-primary w-full justify-center" id="lockCreateBtn"><i class="fas fa-lock"></i> Créer &amp; Déverrouiller</button>
     </div>
     <div id="lockTabLoad" style="display:none">
-      <p class="text-xs text-slate-400 mb-3 text-center" id="loadTabHint">Charger le coffre depuis le répertoire .rssi_deck</p>
+      <p class="text-xs text-slate-400 mb-3 text-center" id="loadTabHint">Charger le coffre depuis le dossier</p>
       <input type="password" class="lock-input mb-3" id="lockLoadPwd" placeholder="Mot de passe du coffre">
       <button class="btn btn-primary w-full justify-center mb-2" id="lockLoadBtn"><i class="fas fa-folder-open"></i> Charger &amp; Déverrouiller</button>
       <p id="loadError" class="text-xs text-red-400 text-center" style="display:none"></p>
@@ -235,6 +250,69 @@ body{font-family:system-ui,-apple-system,'Inter','Segoe UI',sans-serif;backgroun
 
 <!-- NOTIFICATION -->
 <div id="notification" class="notif"></div>
+
+<div id="urlEditModal" class="pwd-modal">
+  <div class="pwd-box glass-card">
+    <p class="text-slate-300 mb-3">Modifier le lien</p>
+    <label class="text-xs text-slate-400 block mb-1">Nom</label>
+    <input type="text" id="urlEditName" class="lock-input mb-2">
+    <label class="text-xs text-slate-400 block mb-1">URL</label>
+    <input type="url" id="urlEditLink" class="lock-input mb-3">
+    <p id="urlEditError" class="text-xs text-red-400 mb-2 text-center" style="display:none"></p>
+    <div class="flex gap-2">
+      <button id="urlEditCancel" class="btn btn-secondary flex-1 justify-center">Annuler</button>
+      <button id="urlEditSave" class="btn btn-primary flex-1 justify-center">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<div id="memoEditModal" class="pwd-modal">
+  <div class="pwd-box glass-card" style="position:relative">
+    <button class="modal-close" id="memoEditClose" style="position:absolute;top:0.75rem;right:0.75rem">&times;</button>
+    <p class="text-slate-300 mb-3">Modifier le mémo</p>
+    <input type="hidden" id="memoEditIdx">
+    <label class="text-xs text-slate-400 block mb-1">Titre</label>
+    <input type="text" id="memoEditTitle" class="lock-input mb-2">
+    <label class="text-xs text-slate-400 block mb-1">Contenu (Markdown)</label>
+    <textarea id="memoEditBody" class="lock-input mb-3" rows="5" style="resize:vertical"></textarea>
+    <div class="flex gap-2">
+      <button id="memoEditCancel" class="btn btn-secondary flex-1 justify-center">Annuler</button>
+      <button id="memoEditSave" class="btn btn-primary flex-1 justify-center">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<div id="contactEditModal" class="pwd-modal">
+  <div class="pwd-box glass-card" style="position:relative">
+    <button class="modal-close" id="contactEditClose" style="position:absolute;top:0.75rem;right:0.75rem">&times;</button>
+    <p class="text-slate-300 mb-3">Modifier le contact</p>
+    <input type="hidden" id="contactEditKey">
+    <label class="text-xs text-slate-400 block mb-1">Contact</label>
+    <div class="text-sm text-slate-300 mb-2" id="contactEditLabel"></div>
+    <label class="text-xs text-slate-400 block mb-1">Nom</label>
+    <input type="text" id="contactEditNom" class="lock-input mb-2">
+    <label class="text-xs text-slate-400 block mb-1">Téléphone</label>
+    <input type="text" id="contactEditTel" class="lock-input mb-2">
+    <label class="text-xs text-slate-400 block mb-1">Email</label>
+    <input type="email" id="contactEditEmail" class="lock-input mb-3">
+    <div class="flex gap-2">
+      <button id="contactEditCancel" class="btn btn-secondary flex-1 justify-center">Annuler</button>
+      <button id="contactEditSave" class="btn btn-primary flex-1 justify-center">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<div id="pwdModal" class="pwd-modal">
+  <div class="pwd-box glass-card">
+    <p id="pwdModalMsg" class="text-slate-300">Mot de passe pour chiffrer le coffre :</p>
+    <input type="password" id="pwdModalInput" class="lock-input" placeholder="Mot de passe" autocomplete="new-password">
+    <p id="pwdModalError" class="text-xs text-red-400 mt-2 text-center" style="display:none"></p>
+    <div class="flex gap-2 mt-3">
+      <button id="pwdModalCancel" class="btn btn-secondary flex-1 justify-center">Annuler</button>
+      <button id="pwdModalConfirm" class="btn btn-primary flex-1 justify-center">Confirmer</button>
+    </div>
+  </div>
+</div>
 
 <script>
 /* ============================================================
@@ -417,36 +495,55 @@ const DEFAULT_VAULT = {
   playbook_checks: {},
   memos: [],
   outils_techniques: [
-    { id:'nmap', nom:'Nmap', icone:'fa-network-wired', categorie:'Réseau', description:'Scanner de ports et cartographie réseau. Indispensable pour l\'audit de périmètre et la découverte de services exposés.', lien:'https://nmap.org/', commandes:['nmap -sV -sC -A 192.168.1.0/24','nmap -p- -sS 10.0.0.1','nmap --script vuln target'], cas_usage:'Cartographie réseau, inventaire de services, détection de ports ouverts.' },
-    { id:'wireshark', nom:'Wireshark', icone:'fa-eye', categorie:'Réseau', description:'Analyseur de paquets réseau en temps réel. Permet l\'inspection approfondie des flux et la détection de comportements anormaux.', lien:'https://www.wireshark.org/', commandes:['tshark -i eth0 -w capture.pcap','tshark -r capture.pcap -Y "http.request"'], cas_usage:'Analyse forensique réseau, inspection de trafic suspect, troubleshooting.' },
-    { id:'masscan', nom:'Masscan', icone:'fa-bolt', categorie:'Réseau', description:'Scanner TCP à très haut débit. Capable de scanner l\'intégralité d\'Internet en quelques minutes.', lien:'https://github.com/robertdavidgraham/masscan', commandes:['masscan 10.0.0.0/8 -p443 --rate=10000','masscan --ports 0-65535 --rate=5000'], cas_usage:'Scan large de périmètre, découverte rapide de surfaces d\'attaque.' },
-    { id:'nessus', nom:'Nessus / OpenVAS', icone:'fa-shield', categorie:'Vulnérabilité', description:'Scanner de vulnérabilités complet. OpenVAS est la version open source. Identifie les CVE, configurations erronées et mots de passe faibles.', lien:'https://www.tenable.com/products/nessus', commandes:['openvas-setup','gvm-cli --gmp-username admin socket'], cas_usage:'Audit de vulnérabilités, campagnes de patch management, conformité.' },
-    { id:'metasploit', nom:'Metasploit', icone:'fa-skull', categorie:'Vulnérabilité', description:'Framework d\'exploitation et de validation de vulnérabilités. Utilisé en test d\'intrusion pour valider la criticité des failles.', lien:'https://www.metasploit.com/', commandes:['msfconsole','use exploit/multi/handler','set PAYLOAD windows/meterpreter/reverse_tcp'], cas_usage:'Test d\'intrusion, validation de correctifs, simulation d\'attaques.' },
-    { id:'nikto', nom:'Nikto', icone:'fa-globe', categorie:'Vulnérabilité', description:'Scanner de vulnérabilités web. Vérifie les serveurs HTTP pour les fichiers dangereux, CGIs obsolètes et configurations par défaut.', lien:'https://github.com/sullo/nikto', commandes:['nikto -h https://example.com','nikto -h 10.0.0.1 -port 8443 -ssl'], cas_usage:'Audit d\'applications web, revue de configuration serveur.' },
-    { id:'autopsy', nom:'Autopsy', icone:'fa-microscope', categorie:'Forensic', description:'Plateforme d\'analyse forensique numérique. Interface graphique pour The Sleuth Kit. Analyse de disques, fichiers supprimés, timeline.', lien:'https://www.autopsy.com/', commandes:['autopsy','tsk_recover -e img.dd ./sortie'], cas_usage:'Analyse post-incident, récupération de preuves numériques, investigation interne.' },
-    { id:'volatility', nom:'Volatility', icone:'fa-memory', categorie:'Forensic', description:'Framework d\'analyse de la mémoire volatile (RAM). Permet d\'extraire les processus, connexions réseau et artefacts des dumps mémoire.', lien:'https://www.volatilityfoundation.org/', commandes:['volatility -f mem.dump imageinfo','volatility -f mem.dump --profile=Win10x64 pslist'], cas_usage:'Analyse de malware en mémoire, investigation post-incident, reverse engineering.' },
-    { id:'grr', nom:'GRR Rapid Response', icone:'fa-gauge-high', categorie:'Forensic', description:'Framework de réponse sur incident à distance. Déploie des agents sur les endpoints pour collecte forensique en direct.', lien:'https://github.com/google/grr', commandes:['grr_admin','grr_config_updater'], cas_usage:'Réponse incident à grande échelle, chasse de menaces, collecte forensique distante.' },
-    { id:'proxmox', nom:'Proxmox VE', icone:'fa-server', categorie:'Infrastructure', description:'Plateforme de virtualisation open source. Gère VMs KVM et conteneurs LXC avec haute disponibilité et stockage Ceph intégré.', lien:'https://www.proxmox.com/', commandes:['qm list','pct list','pvecm status','ceph -s'], cas_usage:'Gestion d\'infrastructure virtualisée, snapshot et backup de VMs, clustering HA.' },
-    { id:'docker', nom:'Docker / Podman', icone:'fa-cubes', categorie:'Infrastructure', description:'Moteur de conteneurisation. Déploiement standardisé d\'applications. Podman est l\'alternative daemonless compatible OCI.', lien:'https://www.docker.com/', commandes:['docker ps','docker compose up -d','podman run --rm -it alpine sh'], cas_usage:'Déploiement applicatif, isolation de services, CI/CD.' },
-    { id:'kubernetes', nom:'Kubernetes', icone:'fa-ship', categorie:'Infrastructure', description:'Orchestrateur de conteneurs. Automatise le déploiement, la mise à l\'échelle et la gestion des applications conteneurisées.', lien:'https://kubernetes.io/', commandes:['kubectl get nodes','kubectl get pods --all-namespaces','kubectl describe pod'], cas_usage:'Orchestration micro-services, gestion de clusters, déploiement resilient.' },
-    { id:'terraform', nom:'Terraform', icone:'fa-cubes-stacked', categorie:'Infrastructure', description:'Outil d\'Infrastructure as Code. Déploie et gère les ressources cloud et on-premise par déclaration.', lien:'https://www.terraform.io/', commandes:['terraform init','terraform plan','terraform apply'], cas_usage:'Automatisation d\'infrastructure, gestion multi-cloud, reproductibilité des environnements.' },
-    { id:'ansible', nom:'Ansible', icone:'fa-gears', categorie:'Infrastructure', description:'Moteur d\'automatisation IT. Configuration, déploiement et orchestration sans agent sur les cibles.', lien:'https://www.ansible.com/', commandes:['ansible all -m ping','ansible-playbook site.yml'], cas_usage:'Gestion de configuration, déploiement applicatif, hardening automatisé.' },
-    { id:'wazuh', nom:'Wazuh', icone:'fa-chart-line', categorie:'SIEM', description:'Plateforme de sécurité unifiée (SIEM + XDR). Détection de menaces, analyse de conformité et réponse sur incident.', lien:'https://wazuh.com/', commandes:['systemctl status wazuh-manager','/var/ossec/bin/ossec-control status'], cas_usage:'Corrélation d\'alertes, conformité PCI-DSS/GDPR, scan de vulnérabilités intégré.' },
-    { id:'splunk', nom:'Splunk', icone:'fa-magnifying-glass-chart', categorie:'SIEM', description:'Plateforme de recherche et analyse de logs machine. Corrélation temps réel et visualisation avancée des données de sécurité.', lien:'https://www.splunk.com/', commandes:['index=windows_logs EventCode=4625','sourcetype=apache status=404'], cas_usage:'Analyse forensique SIEM, corrélation d\'événements, tableau de bord de sécurité.' },
-    { id:'elk', nom:'Elastic Stack (ELK)', icone:'fa-layer-group', categorie:'SIEM', description:'Stack Elasticsearch + Logstash + Kibana + Fleet. Centralisation des logs, détection et visualisation.', lien:'https://www.elastic.co/elastic-stack/', commandes:['elasticsearch','filebeat modules enable system','kibana'], cas_usage:'Centralisation de logs, détection d\'anomalies, analyse forensique centralisée.' },
-    { id:'grafana', nom:'Grafana', icone:'fa-chart-simple', categorie:'SIEM', description:'Plateforme de visualisation et d\'alerte. Tableaux de bord interactifs multi-sources (Prometheus, Elasticsearch, Loki).', lien:'https://grafana.com/', commandes:[], cas_usage:'Monitoring temps réel, dashboards RSSI, alerting métier et technique.' }
+    { id:'nmap', nom:'Nmap', icone:'fa-network-wired', categorie:'Réseau', priorite:1, description:'Scanner de ports et cartographie réseau. Indispensable pour l\'audit de périmètre et la découverte de services exposés.', lien:'https://nmap.org/', commandes:['nmap -sV -sC -A 192.168.1.0/24','nmap -p- -sS 10.0.0.1','nmap --script vuln target'], cas_usage:'Cartographie réseau, inventaire de services, détection de ports ouverts.' },
+    { id:'wireshark', nom:'Wireshark', icone:'fa-eye', categorie:'Réseau', priorite:1, description:'Analyseur de paquets réseau en temps réel. Permet l\'inspection approfondie des flux et la détection de comportements anormaux.', lien:'https://www.wireshark.org/', commandes:['tshark -i eth0 -w capture.pcap','tshark -r capture.pcap -Y "http.request"'], cas_usage:'Analyse forensique réseau, inspection de trafic suspect, troubleshooting.' },
+    { id:'tcpdump', nom:'Tcpdump', icone:'fa-ethernet', categorie:'Réseau', priorite:1, description:'Capture et analyse de paquets réseau en ligne de commande. Outil de diagnostic réseau indispensable pour tout RSSI.', lien:'https://www.tcpdump.org/', commandes:['tcpdump -i eth0 -w capture.pcap','tcpdump -i eth0 port 443'], cas_usage:'Diagnostic réseau, analyse de trafic suspect, capture forensique.' },
+    { id:'masscan', nom:'Masscan', icone:'fa-bolt', categorie:'Réseau', priorite:2, description:'Scanner TCP à très haut débit. Capable de scanner l\'intégralité d\'Internet en quelques minutes.', lien:'https://github.com/robertdavidgraham/masscan', commandes:['masscan 10.0.0.0/8 -p443 --rate=10000','masscan --ports 0-65535 --rate=5000'], cas_usage:'Scan large de périmètre, découverte rapide de surfaces d\'attaque.' },
+    { id:'zmap', nom:'Zmap', icone:'fa-bolt', categorie:'Réseau', priorite:2, description:'Scanner réseau à très haut débit. Capable de scanner l\'intégralité d\'IPv4 en 45 minutes. Alternative moderne à Masscan.', lien:'https://zmap.io/', commandes:['zmap -p 443 10.0.0.0/8','zmap --output-fields=* -p 80 0.0.0.0/0'], cas_usage:'Scan internet à grande échelle, discovery de surfaces d\'attaque, monitoring de périmètre.' },
+    { id:'nessus', nom:'Nessus / OpenVAS', icone:'fa-shield', categorie:'Vulnérabilité', priorite:1, description:'Scanner de vulnérabilités complet. OpenVAS est la version open source. Identifie les CVE, configurations erronées et mots de passe faibles.', lien:'https://www.tenable.com/products/nessus', commandes:['openvas-setup','gvm-cli --gmp-username admin socket'], cas_usage:'Audit de vulnérabilités, campagnes de patch management, conformité.' },
+    { id:'qualys', nom:'Qualys', icone:'fa-cloud', categorie:'Vulnérabilité', priorite:1, description:'Scanner de vulnérabilités cloud SaaS. Très répandu en entreprise pour le patch management, la conformité PCI-DSS et l\'inventaire d\'actifs.', lien:'https://www.qualys.com/', commandes:[], cas_usage:'Scan de vulnérabilités cloud, conformité réglementaire, inventaire d\'actifs, reporting RSSI.' },
+    { id:'metasploit', nom:'Metasploit', icone:'fa-skull', categorie:'Vulnérabilité', priorite:2, description:'Framework d\'exploitation et de validation de vulnérabilités. Utilisé en test d\'intrusion pour valider la criticité des failles.', lien:'https://www.metasploit.com/', commandes:['msfconsole','use exploit/multi/handler','set PAYLOAD windows/meterpreter/reverse_tcp'], cas_usage:'Test d\'intrusion, validation de correctifs, simulation d\'attaques.' },
+    { id:'nikto', nom:'Nikto', icone:'fa-globe', categorie:'Vulnérabilité', priorite:2, description:'Scanner de vulnérabilités web. Vérifie les serveurs HTTP pour les fichiers dangereux, CGIs obsolètes et configurations par défaut.', lien:'https://github.com/sullo/nikto', commandes:['nikto -h https://example.com','nikto -h 10.0.0.1 -port 8443 -ssl'], cas_usage:'Audit d\'applications web, revue de configuration serveur.' },
+    { id:'burpsuite', nom:'Burp Suite', icone:'fa-spider', categorie:'Vulnérabilité', priorite:2, description:'Proxy d\'interception et framework de test d\'intrusion web. Indispensable pour l\'audit de sécurité des applications web.', lien:'https://portswigger.net/burp', commandes:[], cas_usage:'Test d\'intrusion web, analyse de vulnérabilités applicatives, revue de code sécurisé.' },
+    { id:'velociraptor', nom:'Velociraptor', icone:'fa-dragon', categorie:'Forensic', priorite:1, description:'Plateforme open source de chasse de menaces, collecte forensique et réponse sur incident. Agent déployable sur des milliers d\'endpoints.', lien:'https://docs.velociraptor.app/', commandes:['velociraptor client -v','velociraptor artifacts list'], cas_usage:'Chasse de menaces à grande échelle, collecte forensique distante, investigation post-incident.' },
+    { id:'autopsy', nom:'Autopsy', icone:'fa-microscope', categorie:'Forensic', priorite:2, description:'Plateforme d\'analyse forensique numérique. Interface graphique pour The Sleuth Kit. Analyse de disques, fichiers supprimés, timeline.', lien:'https://www.autopsy.com/', commandes:['autopsy','tsk_recover -e img.dd ./sortie'], cas_usage:'Analyse post-incident, récupération de preuves numériques, investigation interne.' },
+    { id:'kape', nom:'KAPE', icone:'fa-box', categorie:'Forensic', priorite:2, description:'Kroll Artifact Parser and Extractor. Collecte automatisée d\'artefacts forensiques Windows (registre, prefetch, Event Logs, USN journal).', lien:'https://www.kroll.com/en/services/cyber-risk/kape', commandes:['kape.exe --tsource C: --tdest D:\\output --target !SANS_Triage'], cas_usage:'Collecte forensique Windows automatisée, triage sur incident, acquisition standardisée.' },
+    { id:'volatility', nom:'Volatility', icone:'fa-memory', categorie:'Forensic', priorite:2, description:'Framework d\'analyse de la mémoire volatile (RAM). Permet d\'extraire les processus, connexions réseau et artefacts des dumps mémoire.', lien:'https://www.volatilityfoundation.org/', commandes:['volatility -f mem.dump imageinfo','volatility -f mem.dump --profile=Win10x64 pslist'], cas_usage:'Analyse de malware en mémoire, investigation post-incident, reverse engineering.' },
+    { id:'grr', nom:'GRR Rapid Response', icone:'fa-gauge-high', categorie:'Forensic', priorite:2, description:'Framework de réponse sur incident à distance. Déploie des agents sur les endpoints pour collecte forensique en direct.', lien:'https://github.com/google/grr', commandes:['grr_admin','grr_config_updater'], cas_usage:'Réponse incident à grande échelle, chasse de menaces, collecte forensique distante.' },
+    { id:'vault-hashicorp', nom:'HashiCorp Vault', icone:'fa-vault', categorie:'Infrastructure', priorite:1, description:'Gestion centralisée des secrets, clés API, certificats et mots de passe. Chiffrement en transit et au repos avec rotation automatique.', lien:'https://www.vaultproject.io/', commandes:['vault kv put secret/foo key=value','vault secrets enable -path=ssh ssh'], cas_usage:'Gestion des secrets d\'infrastructure, rotation de clés, PKI interne, coffre d\'accès privilégié.' },
+    { id:'ansible', nom:'Ansible', icone:'fa-gears', categorie:'Infrastructure', priorite:1, description:'Moteur d\'automatisation IT. Configuration, déploiement et orchestration sans agent sur les cibles.', lien:'https://www.ansible.com/', commandes:['ansible all -m ping','ansible-playbook site.yml'], cas_usage:'Gestion de configuration, déploiement applicatif, hardening automatisé.' },
+    { id:'openssh', nom:'OpenSSH', icone:'fa-terminal', categorie:'Infrastructure', priorite:1, description:'Suite SSH pour l\'administration sécurisée à distance. Tunnels chiffrés, transfert de fichiers SFTP, authentification par clé publique.', lien:'https://www.openssh.com/', commandes:['ssh -i ~/.ssh/id_rsa user@host','ssh -L 8080:localhost:80 user@host','scp file user@host:/path/'], cas_usage:'Administration sécurisée à distance, tunnels SSH, transfert de fichiers chiffrés, bastion SSH.' },
+    { id:'proxmox', nom:'Proxmox VE', icone:'fa-server', categorie:'Infrastructure', priorite:2, description:'Plateforme de virtualisation open source. Gère VMs KVM et conteneurs LXC avec haute disponibilité et stockage Ceph intégré.', lien:'https://www.proxmox.com/', commandes:['qm list','pct list','pvecm status','ceph -s'], cas_usage:'Gestion d\'infrastructure virtualisée, snapshot et backup de VMs, clustering HA.' },
+    { id:'docker', nom:'Docker / Podman', icone:'fa-cubes', categorie:'Infrastructure', priorite:2, description:'Moteur de conteneurisation. Déploiement standardisé d\'applications. Podman est l\'alternative daemonless compatible OCI.', lien:'https://www.docker.com/', commandes:['docker ps','docker compose up -d','podman run --rm -it alpine sh'], cas_usage:'Déploiement applicatif, isolation de services, CI/CD.' },
+    { id:'kubernetes', nom:'Kubernetes', icone:'fa-ship', categorie:'Infrastructure', priorite:2, description:'Orchestrateur de conteneurs. Automatise le déploiement, la mise à l\'échelle et la gestion des applications conteneurisées.', lien:'https://kubernetes.io/', commandes:['kubectl get nodes','kubectl get pods --all-namespaces','kubectl describe pod'], cas_usage:'Orchestration micro-services, gestion de clusters, déploiement resilient.' },
+    { id:'terraform', nom:'Terraform', icone:'fa-cubes-stacked', categorie:'Infrastructure', priorite:2, description:'Outil d\'Infrastructure as Code. Déploie et gère les ressources cloud et on-premise par déclaration.', lien:'https://www.terraform.io/', commandes:['terraform init','terraform plan','terraform apply'], cas_usage:'Automatisation d\'infrastructure, gestion multi-cloud, reproductibilité des environnements.' },
+    { id:'openvpn', nom:'OpenVPN / WireGuard', icone:'fa-shield-halved', categorie:'Infrastructure', priorite:2, description:'VPN open source pour accès distant sécurisé et interconnectivité de sites. WireGuard est l\'alternative moderne plus performante.', lien:'https://openvpn.net/', commandes:['openvpn --config client.ovpn','wg-quick up wg0'], cas_usage:'Accès distant sécurisé, VPN site-à-site, accès administrateur isolé.' },
+    { id:'wazuh', nom:'Wazuh', icone:'fa-chart-line', categorie:'SIEM', priorite:1, description:'Plateforme de sécurité unifiée (SIEM + XDR). Détection de menaces, analyse de conformité et réponse sur incident.', lien:'https://wazuh.com/', commandes:['systemctl status wazuh-manager','/var/ossec/bin/ossec-control status'], cas_usage:'Corrélation d\'alertes, conformité PCI-DSS/GDPR, scan de vulnérabilités intégré.' },
+    { id:'crowdstrike', nom:'CrowdStrike Falcon', icone:'fa-eagle', categorie:'SIEM', priorite:1, description:'Plateforme EDR/XDR cloud leader du marché. Détection en temps réel, threat hunting, réponse automatisée et analyse forensique.', lien:'https://www.crowdstrike.com/', commandes:[], cas_usage:'EDR/XDR entreprise, chasse de menaces, réponse automatisée, investigation post-incident.' },
+    { id:'ms-sentinel', nom:'Microsoft Sentinel', icone:'fa-cloud', categorie:'SIEM', priorite:1, description:'SIEM cloud natif Azure. Corrélation d\'alertes, SOAR intégré, notebooks KQL pour investigation forensique.', lien:'https://azure.microsoft.com/en-us/products/microsoft-sentinel/', commandes:[], cas_usage:'SIEM cloud, corrélation multi-source, réponse automatisée (SOAR), analyse forensique KQL.' },
+    { id:'splunk', nom:'Splunk', icone:'fa-magnifying-glass-chart', categorie:'SIEM', priorite:2, description:'Plateforme de recherche et analyse de logs machine. Corrélation temps réel et visualisation avancée des données de sécurité.', lien:'https://www.splunk.com/', commandes:['index=windows_logs EventCode=4625','sourcetype=apache status=404'], cas_usage:'Analyse forensique SIEM, corrélation d\'événements, tableau de bord de sécurité.' },
+    { id:'elk', nom:'Elastic Stack (ELK)', icone:'fa-layer-group', categorie:'SIEM', priorite:2, description:'Stack Elasticsearch + Logstash + Kibana + Fleet. Centralisation des logs, détection et visualisation.', lien:'https://www.elastic.co/elastic-stack/', commandes:['elasticsearch','filebeat modules enable system','kibana'], cas_usage:'Centralisation de logs, détection d\'anomalies, analyse forensique centralisée.' },
+    { id:'grafana', nom:'Grafana', icone:'fa-chart-simple', categorie:'SIEM', priorite:3, description:'Plateforme de visualisation et d\'alerte. Tableaux de bord interactifs multi-sources (Prometheus, Elasticsearch, Loki).', lien:'https://grafana.com/', commandes:[], cas_usage:'Monitoring temps réel, dashboards RSSI, alerting métier et technique.' },
+    { id:'keycloak', nom:'Keycloak', icone:'fa-id-card', categorie:'IAM', priorite:1, description:'Solution open source d\'Identity & Access Management. SSO, fédération d\'identités, MFA, gestion des rôles et permissions.', lien:'https://www.keycloak.org/', commandes:[], cas_usage:'SSO d\'entreprise, fédération d\'identités, gestion des accès, MFA centralisé.' },
+    { id:'freeipa', nom:'FreeIPA', icone:'fa-users', categorie:'IAM', priorite:2, description:'Suite d\'identity management open source (LDAP + Kerberos + PKI + DNS). Alternative à Active Directory pour environnements Linux.', lien:'https://www.freeipa.org/', commandes:['ipa user-add','ipa host-add','ipa cert-request'], cas_usage:'Gestion des identités Linux, authentification Kerberos, PKI interne, contrôle d\'accès.' },
+    { id:'veeam', nom:'Veeam', icone:'fa-life-ring', categorie:'Backup', priorite:1, description:'Solution de backup et restauration entreprise. Sauvegardes immuables, réplication site-à-site, PRA intégré. Très utilisé en environnement VMware/Hyper-V.', lien:'https://www.veeam.com/', commandes:[], cas_usage:'Backup infrastructure, restauration granulaire, PRA, sauvegardes immuables anti-ransomware.' },
+    { id:'restic', nom:'Restic', icone:'fa-hard-drive', categorie:'Backup', priorite:2, description:'Outil de backup CLI open source. Chiffrement AES-256 natif, déduplication, support S3/Backblaze/Local.', lien:'https://restic.net/', commandes:['restic init --repo s3:s3.amazonaws.com/bucket','restic backup /home --repo s3:...'], cas_usage:'Backup automatisé CLI, sauvegarde chiffrée, off-site vers cloud object storage.' }
   ],
   outils_fonctionnels: [
-    { id:'thehive', nom:'TheHive', icone:'fa-hexagon-nodes', categorie:'Gestion de Crise', description:'Plateforme de réponse sur incident collaborative. Casel management, corrélation d\'alertes et workflow d\'investigation.', lien:'https://thehive-project.org/', commandes:[], cas_usage:'Suivi d\'incidents SOC, escalade, rapport post-mortem, collaboration équipe.' },
-    { id:'cortex', nom:'Cortex', icone:'fa-brain', categorie:'Gestion de Crise', description:'Moteur d\'analyse automatisée. Exécute des analyseurs (VirusTotal, AbuseIPDB) et des responders (blocage IP, quarantine).', lien:'https://cortex-project.org/', commandes:[], cas_usage:'Enrichissement automatique d\'IoC, réponse orchestrée, playbooks automatisés.' },
-    { id:'misp', nom:'MISP', icone:'fa-share-nodes', categorie:'Gestion de Crise', description:'Plateforme de partage de renseignement sur les menaces. Base de données collaborative d\'IoC et de TTPs.', lien:'https://www.misp-project.org/', commandes:[], cas_usage:'Partage de threat intelligence, enrichissement d\'alertes, veille collaborative.' },
-    { id:'eramba', nom:'Eramba', icone:'fa-clipboard-check', categorie:'GRC', description:'Solution open source de GRC (Gouvernance, Risque et Conformité). Gestion des risques, politiques et audits.', lien:'https://eramba.org/', commandes:[], cas_usage:'Cartographie des risques, pilotage de la conformité, plan d\'action RSSI.' },
-    { id:'simplerisk', nom:'SimpleRisk', icone:'fa-chart-simple', categorie:'GRC', description:'Outil de gestion de risques. Évaluation quantitative/qualitative, suivi des traitements et rapport de conformité.', lien:'https://simplerisk.com/', commandes:[], cas_usage:'Analyse de risques, suivi des plans de traitement, reporting RSSI.' },
-    { id:'iso27001', nom:'ISO 27001 Toolkit', icone:'fa-certificate', categorie:'GRC', description:'Framework de gestion pour la mise en œuvre d\'un SMSI conforme ISO 27001. Documents types et procédures.', lien:'https://www.iso.org/standard/27001', commandes:[], cas_usage:'Mise en conformité ISO 27001, documentation SMSI, audit blanc.' },
-    { id:'drawio', nom:'Draw.io / diagrams.net', icone:'fa-diagram-project', categorie:'Documentation', description:'Outil de création de diagrammes techniques. Gratuit, export SVG/PNG. Cartographie réseau et architecture.', lien:'https://www.drawio.com/', commandes:[], cas_usage:'Cartographie d\'infrastructure, diagrammes de flux, architecture de sécurité.' },
-    { id:'obsidian', nom:'Obsidian / Notion', icone:'fa-note-sticky', categorie:'Documentation', description:'Base de connaissances. Notes liées, graphe de connaissances. Idéal pour la documentation RSSI et les PAM.', lien:'https://obsidian.md/', commandes:[], cas_usage:'Documentation RSSI, base de connaissances, PAM (Procédures d\'Administration).' },
-    { id:'bitwarden', nom:'Bitwarden', icone:'fa-key', categorie:'Mots de passe', description:'Gestionnaire de mots de passe open source. Chiffrement de bout en bout, partage sécurisé entre équipes.', lien:'https://bitwarden.com/', commandes:[], cas_usage:'Gestion des mots de passe d\'infrastructure, coffre d\'équipe, rotation de secrets.' },
-    { id:'keepassxc', nom:'KeePassXC', icone:'fa-lock', categorie:'Mots de passe', description:'Gestionnaire de mots de passe hors ligne. Base de données locale chiffrée AES-256, compatible KeePass 2.', lien:'https://keepassxc.org/', commandes:[], cas_usage:'Coffre de mots de passe personnel, stockage hors ligne, authentification forte.' }
+    { id:'thehive', nom:'TheHive', icone:'fa-hexagon-nodes', categorie:'Gestion de Crise', priorite:1, description:'Plateforme de réponse sur incident collaborative. Casel management, corrélation d\'alertes et workflow d\'investigation.', lien:'https://thehive-project.org/', commandes:[], cas_usage:'Suivi d\'incidents SOC, escalade, rapport post-mortem, collaboration équipe.' },
+    { id:'misp', nom:'MISP', icone:'fa-share-nodes', categorie:'Gestion de Crise', priorite:1, description:'Plateforme de partage de renseignement sur les menaces. Base de données collaborative d\'IoC et de TTPs.', lien:'https://www.misp-project.org/', commandes:[], cas_usage:'Partage de threat intelligence, enrichissement d\'alertes, veille collaborative.' },
+    { id:'opencti', nom:'OpenCTI', icone:'fa-brain', categorie:'Gestion de Crise', priorite:1, description:'Plateforme open source de threat intelligence. Collecte, enrichissement et analyse de renseignements sur les menaces (STIX/TAXII).', lien:'https://www.filigran.io/', commandes:[], cas_usage:'Threat intelligence centralisée, enrichissement d\'IoC, partage STIX/TAXII, veille cyber.' },
+    { id:'cortex', nom:'Cortex', icone:'fa-brain', categorie:'Gestion de Crise', priorite:2, description:'Moteur d\'analyse automatisée. Exécute des analyseurs (VirusTotal, AbuseIPDB) et des responders (blocage IP, quarantine).', lien:'https://github.com/TheHive-Project/Cortex', commandes:[], cas_usage:'Enrichissement automatique d\'IoC, réponse orchestrée, playbooks automatisés.' },
+    { id:'eramba', nom:'Eramba', icone:'fa-clipboard-check', categorie:'GRC', priorite:1, description:'Solution open source de GRC (Gouvernance, Risque et Conformité). Gestion des risques, politiques et audits.', lien:'https://eramba.org/', commandes:[], cas_usage:'Cartographie des risques, pilotage de la conformité, plan d\'action RSSI.' },
+    { id:'simplerisk', nom:'SimpleRisk', icone:'fa-chart-simple', categorie:'GRC', priorite:1, description:'Outil de gestion de risques. Évaluation quantitative/qualitative, suivi des traitements et rapport de conformité.', lien:'https://simplerisk.com/', commandes:[], cas_usage:'Analyse de risques, suivi des plans de traitement, reporting RSSI.' },
+    { id:'lynis', nom:'Lynis', icone:'fa-shield', categorie:'GRC', priorite:2, description:'Audit de sécurité et hardening Linux. Vérifie les configurations système, applicatives et réseau. Idéal pour l\'auto-évaluation RSSI.', lien:'https://cisofy.com/lynis/', commandes:['lynis audit system','lynis show warnings'], cas_usage:'Audit de sécurité Linux, hardening, conformité, auto-évaluation RSSI.' },
+    { id:'openscap', nom:'OpenSCAP', icone:'fa-check-double', categorie:'GRC', priorite:2, description:'Framework de conformité SCAP. Évalue et rapporte la conformité aux benchmarks CIS, DISA STIG, PCI-DSS.', lien:'https://www.open-scap.org/', commandes:['oscap xccdf eval --profile xccdf_org.ssgproject.content_profile_cis'], cas_usage:'Scoring de conformité automatisé, audit CIS/DISA, reporting de sécurité.' },
+    { id:'obsidian', nom:'Obsidian / Notion', icone:'fa-note-sticky', categorie:'Documentation', priorite:1, description:'Base de connaissances. Notes liées, graphe de connaissances. Idéal pour la documentation RSSI et les PAM.', lien:'https://obsidian.md/', commandes:[], cas_usage:'Documentation RSSI, base de connaissances, PAM (Procédures d\'Administration).' },
+    { id:'wikijs', nom:'Wiki.js', icone:'fa-wikipedia-w', categorie:'Documentation', priorite:2, description:'Plateforme wiki moderne et puissante. Markdown natif, versionnage Git, authentification SSO. Idéal pour la base documentaire RSSI.', lien:'https://js.wiki/', commandes:[], cas_usage:'Documentation RSSI, PAM (Procédures d\'Administration), base de connaissances, politique de sécurité.' },
+    { id:'drawio', nom:'Draw.io / diagrams.net', icone:'fa-diagram-project', categorie:'Documentation', priorite:2, description:'Outil de création de diagrammes techniques. Gratuit, export SVG/PNG. Cartographie réseau et architecture.', lien:'https://www.drawio.com/', commandes:[], cas_usage:'Cartographie d\'infrastructure, diagrammes de flux, architecture de sécurité.' },
+    { id:'bitwarden', nom:'Bitwarden', icone:'fa-key', categorie:'Mots de passe', priorite:1, description:'Gestionnaire de mots de passe open source. Chiffrement de bout en bout, partage sécurisé entre équipes.', lien:'https://bitwarden.com/', commandes:[], cas_usage:'Gestion des mots de passe d\'infrastructure, coffre d\'équipe, rotation de secrets.' },
+    { id:'keepassxc', nom:'KeePassXC', icone:'fa-lock', categorie:'Mots de passe', priorite:1, description:'Gestionnaire de mots de passe hors ligne. Base de données locale chiffrée AES-256, compatible KeePass 2.', lien:'https://keepassxc.org/', commandes:[], cas_usage:'Coffre de mots de passe personnel, stockage hors ligne, authentification forte.' },
+    { id:'glpi', nom:'GLPI', icone:'fa-ticket', categorie:'Ticketing', priorite:2, description:'Gestion de services IT (ITSM) open source. Inventaire IT, helpdesk, gestion d\'incidents avec module sécurité intégré.', lien:'https://glpi-project.org/', commandes:[], cas_usage:'Ticketing SOC, inventaire IT, gestion d\'incidents, suivi des demandes RSSI.' }
   ],
   threat_intel: {
     cve: { nom:'NVD — National Vulnerability Database', url:'https://nvd.nist.gov/' },
@@ -456,7 +553,7 @@ const DEFAULT_VAULT = {
     ],
     modeles: [
       { nom:'Cyber Kill Chain (Lockheed Martin)', url:'https://www.lockheedmartin.com/en-us/capabilities/cyber/cyber-kill-chain.html', description:'Modèle des 7 phases d\'une cyberattaque : Reconnaissance → Weaponization → Delivery → Exploitation → Installation → C2 → Actions on Objectives.', icone:'fa-chain' },
-      { nom:'Diamond Model', url:'http://diamondmodel.org/', description:'Analyse des intrusions selon 4 axes : Adversaire, Capacité, Infrastructure, Victime. Permet de modéliser chaque événement malveillant.', icone:'fa-gem' }
+      { nom:'Diamond Model', url:'https://www.threatintel.academy/diamond/', description:'Analyse des intrusions selon 4 axes : Adversaire, Capacité, Infrastructure, Victime. Permet de modéliser chaque événement malveillant.', icone:'fa-gem' }
     ],
     sources: [
       { nom:'ANSSI — Actualités & Alertes', url:'https://www.ssi.gouv.fr/actualite/', description:'Alerte et recommandations officielles de l\'Agence Nationale de la Sécurité des Systèmes d\'Information.', icone:'fa-flag-france' },
@@ -472,7 +569,7 @@ const DEFAULT_VAULT = {
     ]
   },
   playbooks: [
-    { id:'p1', titre:'Réponse Ransomware', scenario:'Détection d\'un rançongiciel actif sur le SI. Priorité : isolation, identification, restauration.', severity:'crit', checklist:[
+    { id:'p1', titre:'Réponse Ransomware', scenario:'Détection d\'un rançongiciel actif sur le SI. Priorité : isolation, identification, restauration.', severity:'crit', date:'', checklist:[
       'Isoler la machine infectée du réseau (débrancher RJ45 / couper le port switch)',
       'Couper les accès AD du compte utilisateur concerné',
       'Identifier la souche (hachage SHA256, nom, extension des fichiers chiffrés)',
@@ -484,7 +581,7 @@ const DEFAULT_VAULT = {
       'Corriger la brèche avant remise en production',
       'Rédiger le rapport d\'incident et le REX'
     ]},
-    { id:'p2', titre:'Fuite de Données (RGPD)', scenario:'Détection d\'un accès non autorisé à des données personnelles. Notification obligatoire sous 72h.', severity:'high', checklist:[
+    { id:'p2', titre:'Fuite de Données (RGPD)', scenario:'Détection d\'un accès non autorisé à des données personnelles. Notification obligatoire sous 72h.', severity:'high', date:'', checklist:[
       'Confirmer la réalité de la fuite (logs, alertes, témoignage)',
       'Identifier les bases de données et fichiers concernés',
       'Déterminer le périmètre : quels types de données, quels individus',
@@ -496,7 +593,7 @@ const DEFAULT_VAULT = {
       'Mettre en place des mesures de surveillance renforcées',
       'Documenter l\'incident pour le registre RGPD'
     ]},
-    { id:'p3', titre:'Panne Datacenter', scenario:'Indisponibilité partielle ou totale d\'un site d\'hébergement. Activation du PCA/PRA.', severity:'crit', checklist:[
+    { id:'p3', titre:'Panne Datacenter', scenario:'Indisponibilité partielle ou totale d\'un site d\'hébergement. Activation du PCA/PRA.', severity:'crit', date:'', checklist:[
       'Confirmer l\'étendue de la panne (site complet ou partiel)',
       'Contacter l\'hébergeur (support technique)',
       'Déclencher le PCA (Plan de Continuité d\'Activité)',
@@ -507,7 +604,7 @@ const DEFAULT_VAULT = {
       'Suivre le RTO et ajuster les communications',
       'Documenter les causes et actions pour le REX'
     ]},
-    { id:'p4', titre:'Compromission Compte Admin', scenario:'Détection d\'un usage anormal d\'un compte administrateur (AD, cloud, SSH).', severity:'high', checklist:[
+    { id:'p4', titre:'Compromission Compte Admin', scenario:'Détection d\'un usage anormal d\'un compte administrateur (AD, cloud, SSH).', severity:'high', date:'', checklist:[
       'Révoquer immédiatement les tokens et sessions du compte',
       'Désactiver le compte AD/SSO concerné',
       'Analyser les logs de connexion (heure, IP, actions)',
@@ -523,10 +620,12 @@ const DEFAULT_VAULT = {
   cadre_legal: {
     normes: [
       { nom:'RGPD', url:'https://www.cnil.fr/fr/reglement-europeen-protection-donnees', description:'Règlement Général sur la Protection des Données. Notification des fuites sous 72h, DPO obligatoire pour organismes publics.', icone:'fa-gavel' },
-      { nom:'NIS 2', url:'https://www.ssi.gouv.fr/guide/nis-2/', description:'Directive européenne sur la sécurité des réseaux et systèmes d\'information. Obligations renforcées pour OIV et OSE.', icone:'fa-landmark' },
-      { nom:'DORA', url:'https://www.ecb.europa.eu/press/pr/date/2024/html/ecb.pr240710~.html', description:'Digital Operational Resilience Act. Résilience opérationnelle des acteurs financiers (banques, fintechs).', icone:'fa-building-columns' },
+      { nom:'NIS 2', url:'https://www.cyber.gouv.fr/nis-2', description:'Directive européenne sur la sécurité des réseaux et systèmes d\'information. Obligations renforcées pour OIV et OSE.', icone:'fa-landmark' },
+      { nom:'DORA', url:'https://eur-lex.europa.eu/eli/reg/2022/2554/oj', description:'Digital Operational Resilience Act. Résilience opérationnelle des acteurs financiers (banques, fintechs).', icone:'fa-building-columns' },
       { nom:'ISO 27001:2022', url:'https://www.iso.org/standard/27001', description:'SMSI — Management de la sécurité de l\'information. Référence internationale pour le système de management.', icone:'fa-certificate' },
-      { nom:'ISO 27002:2022', url:'https://www.iso.org/standard/27002', description:'Code de bonnes pratiques pour les mesures de sécurité. Catalogue d\'annexes A mis à jour en 2022.', icone:'fa-book' }
+      { nom:'ISO 27002:2022', url:'https://www.iso.org/standard/27002', description:'Code de bonnes pratiques pour les mesures de sécurité. Catalogue d\'annexes A mis à jour en 2022.', icone:'fa-book' },
+      { nom:'CIS Controls v8', url:'https://www.cisecurity.org/controls', description:'20 contrôles de sécurité prioritaires. Référence internationale pour le hardening et la gouvernance SSI.', icone:'fa-shield-halved' },
+      { nom:'NIST CSF 2.0', url:'https://www.nist.gov/cyberframework', description:'Framework de cybersécurité du NIST. 5 fonctions : Identifier, Protéger, Détecter, Répondre, Rétablir.', icone:'fa-building-columns' }
     ]
   }
 };
@@ -540,6 +639,8 @@ let dirty = false;
 let currentView = 'dashboard';
 let chartInstance = null;
 let searchQuery = '';
+let sortOutilsTech = 'default';
+let sortOutilsFonc = 'default';
 let chartData = [12,8,15,6,9,14,7]; // simulated alert trend
 
 function setDirty() { dirty = true; }
@@ -552,6 +653,11 @@ function notify(msg, type = 'info') {
   n.textContent = msg;
   n.className = 'notif notif-' + type + ' show';
   setTimeout(() => n.classList.remove('show'), 3500);
+}
+
+function sortTools(tools, mode) {
+  if (mode === 'alpha') return [...tools].sort((a,b) => a.nom.localeCompare(b.nom));
+  return tools;
 }
 
 /* ============================================================
@@ -579,6 +685,11 @@ function renderView(name) {
   el.classList.add('active');
   el.innerHTML = renderFn[name]();
   bindViewEvents(name);
+  if (window.marked) {
+    document.querySelectorAll('.memo-preview[data-md]').forEach(el => {
+      el.innerHTML = marked.parse(el.dataset.md);
+    });
+  }
 }
 
 const renderFn = {};
@@ -646,38 +757,45 @@ function initDashboardChart() {
 
 /* ---------- OUTILS TECH ---------- */
 renderFn['outils-tech'] = function() {
+  const items = sortTools(vault.outils_techniques, sortOutilsTech);
   const cats = {};
-  vault.outils_techniques.forEach(t => { (cats[t.categorie] = cats[t.categorie] || []).push(t); });
-  return Object.keys(cats).map(cat => `
+  items.forEach(t => { (cats[t.categorie] = cats[t.categorie] || []).push(t); });
+  const sb = (m, l) => `<button class="sort-btn${sortOutilsTech===m?' active':''}" data-sort="${m}">${l}</button>`;
+  const sortBar = `<div class="sort-bar"><span class="sort-label">Trier :</span>${sb('default','Par défaut')}${sb('alpha','A–Z')}</div>`;
+  return sortBar + Object.keys(cats).map(cat => `
     <div class="category-label"><i class="fas fa-circle text-[6px] mr-1 align-middle" style="color:${catColor(cat)}"></i> ${cat}</div>
     <div class="grid-bento">${cats[cat].map(t => toolCard(t, 'tech')).join('')}</div>
   `).join('');
 };
 
 renderFn['outils-fonctionnels'] = function() {
+  const items = sortTools(vault.outils_fonctionnels, sortOutilsFonc);
   const cats = {};
-  vault.outils_fonctionnels.forEach(t => { (cats[t.categorie] = cats[t.categorie] || []).push(t); });
-  return Object.keys(cats).map(cat => `
+  items.forEach(t => { (cats[t.categorie] = cats[t.categorie] || []).push(t); });
+  const sb = (m, l) => `<button class="sort-btn${sortOutilsFonc===m?' active':''}" data-sort="${m}">${l}</button>`;
+  const sortBar = `<div class="sort-bar"><span class="sort-label">Trier :</span>${sb('default','Par défaut')}${sb('alpha','A–Z')}</div>`;
+  return sortBar + Object.keys(cats).map(cat => `
     <div class="category-label"><i class="fas fa-circle text-[6px] mr-1 align-middle" style="color:${catColor(cat)}"></i> ${cat}</div>
     <div class="grid-bento">${cats[cat].map(t => toolCard(t, 'fonc')).join('')}</div>
   `).join('');
 };
 
 function catColor(c) {
-  const m = { 'Réseau':'#3b82f6', 'Vulnérabilité':'#ef4444', 'Forensic':'#10b981', 'Infrastructure':'#f59e0b', 'SIEM':'#8b5cf6', 'Gestion de Crise':'#f97316', 'GRC':'#06b6d4', 'Documentation':'#ec4899', 'Mots de passe':'#14b8a6' };
+  const m = { 'Réseau':'#3b82f6', 'Vulnérabilité':'#ef4444', 'Forensic':'#10b981', 'Infrastructure':'#f59e0b', 'SIEM':'#8b5cf6', 'Gestion de Crise':'#f97316', 'GRC':'#06b6d4', 'Documentation':'#ec4899', 'Mots de passe':'#14b8a6', 'IAM':'#a855f7', 'Backup':'#22c55e', 'Ticketing':'#0ea5e9' };
   return m[c] || '#64748b';
 }
 
 function toolCard(t, ns) {
   const isFav = vault.favorites.includes(t.id);
-  const ttl = filterText(t);
+  const ttl = filterText(t.nom);
   const desc = filterText(t.description);
+  const prio = t.priorite === 1 ? '<span class="prio-badge prio-1">Essentiel</span>' : t.priorite === 2 ? '<span class="prio-badge prio-2">Important</span>' : '<span class="prio-badge prio-3">Complémentaire</span>';
   return `<div class="glass-card cursor-pointer" data-id="${t.id}" data-ns="${ns}" data-modal="${t.id}">
     <div class="flex items-start gap-3 mb-2">
       <div class="card-icon" style="background:${t.categorie === 'Réseau' ? 'rgba(59,130,246,0.12)' : t.categorie === 'Vulnérabilité' ? 'rgba(239,68,68,0.12)' : t.categorie === 'Forensic' ? 'rgba(16,185,129,0.12)' : 'rgba(245,158,11,0.12)'}"><i class="fas ${t.icone}" style="color:${catColor(t.categorie)}"></i></div>
       <div style="min-width:0;flex:1">
         <div class="flex items-center gap-2 mb-1">
-          <span class="text-sm font-semibold text-slate-100">${ttl}</span>
+          <span class="text-sm font-semibold text-slate-100">${ttl}${prio}</span>
           <button class="fav-btn ${isFav?'active':''}" data-fav="${t.id}" title="Favori"><i class="${isFav?'fas':'fa-regular'} fa-star"></i></button>
         </div>
         <p class="text-xs text-slate-400 leading-relaxed line-clamp-2">${desc}</p>
@@ -702,17 +820,18 @@ renderFn['threat-intel'] = function() {
       <p class="text-xs text-slate-500 mt-2">${esc(ti.cve.nom)} — Recherche directe dans la base NIST.</p>
     </div>
     <div class="category-label"><i class="fas fa-book-skull mr-1"></i> Frameworks de Menaces</div>
-    <div class="grid-bento mb-4">${ti.frameworks.map(f => threatCard(f)).join('')}</div>
+    <div class="grid-bento mb-4">${ti.frameworks.map((f,i) => threatCard(f, 'threat_intel.frameworks.' + i)).join('')}</div>
     <div class="category-label"><i class="fas fa-puzzle-piece mr-1"></i> Modèles Conceptuels</div>
-    <div class="grid-bento mb-4">${ti.modeles.map(f => threatCard(f)).join('')}</div>
+    <div class="grid-bento mb-4">${ti.modeles.map((f,i) => threatCard(f, 'threat_intel.modeles.' + i)).join('')}</div>
     <div class="category-label"><i class="fas fa-rss mr-1"></i> Sources & Veille</div>
-    <div class="grid-bento mb-4">${ti.sources.map(f => threatCard(f)).join('')}</div>
+    <div class="grid-bento mb-4">${ti.sources.map((f,i) => threatCard(f, 'threat_intel.sources.' + i)).join('')}</div>
     <div class="category-label"><i class="fas fa-eye mr-1"></i> OSINT</div>
-    <div class="grid-bento">${ti.osint.map(f => threatCard(f)).join('')}</div>`;
+    <div class="grid-bento">${ti.osint.map((f,i) => threatCard(f, 'threat_intel.osint.' + i)).join('')}</div>`;
 };
 
-function threatCard(item) {
-  return `<a href="${esc(item.url)}" target="_blank" class="glass-card block no-underline">
+function threatCard(item, path) {
+  return `<a href="${esc(item.url)}" target="_blank" class="glass-card block no-underline relative threat-card">
+    <button class="threat-edit-btn" data-ti-path="${esc(path)}" onclick="event.preventDefault();editThreatUrl(this.dataset.tiPath)" title="Modifier l'URL"><i class="fas fa-pencil-alt"></i></button>
     <div class="flex items-start gap-3">
       <div class="card-icon bg-blue-500/10"><i class="fas ${item.icone || 'fa-link'} text-blue-400"></i></div>
       <div>
@@ -723,13 +842,62 @@ function threatCard(item) {
   </a>`;
 }
 
+function editThreatUrl(path) {
+  if (!path) return;
+  const keys = path.split('.');
+  let obj = vault;
+  for (let i = 0; i < keys.length; i++) {
+    if (obj == null) return;
+    if (i === keys.length - 1) break;
+    obj = obj[keys[i]];
+  }
+  const idx = keys[keys.length - 1];
+  const target = obj[idx];
+  if (!target) return;
+  const modal = document.getElementById('urlEditModal');
+  const nameEl = document.getElementById('urlEditName');
+  const linkEl = document.getElementById('urlEditLink');
+  const errEl = document.getElementById('urlEditError');
+  nameEl.value = target.nom;
+  linkEl.value = target.url;
+  errEl.style.display = 'none';
+  modal.style.display = 'flex';
+  setTimeout(() => linkEl.focus(), 100);
+  const saveBtn = document.getElementById('urlEditSave');
+  const cancelBtn = document.getElementById('urlEditCancel');
+  const onSave = () => {
+    const u = linkEl.value.trim();
+    if (!/^https?:\/\/.+/.test(u)) {
+      errEl.textContent = "L'URL doit commencer par http:// ou https://";
+      errEl.style.display = 'block';
+      return;
+    }
+    target.nom = nameEl.value.trim() || target.nom;
+    target.url = u;
+    modal.style.display = 'none';
+    setDirty();
+    renderView(currentView);
+    notify('Lien mis à jour.', 'success');
+  };
+  const onCancel = () => { modal.style.display = 'none'; };
+  const onKey = e => {
+    if (e.key === 'Enter') onSave();
+    if (e.key === 'Escape') onCancel();
+  };
+  saveBtn.onclick = onSave;
+  cancelBtn.onclick = onCancel;
+  linkEl.onkeydown = onKey;
+  nameEl.onkeydown = onKey;
+}
+
 /* ---------- FRAMEWORKS ---------- */
 renderFn.frameworks = function() {
   const norms = vault.cadre_legal.normes;
   return `
     <div class="category-label"><i class="fas fa-scale-balanced mr-1"></i> Normes & Référentiels</div>
-    <div class="grid-bento mb-6">${norms.map(n => `
-      <a href="${esc(n.url)}" target="_blank" class="glass-card block no-underline">
+    <div class="grid-bento mb-6">${norms.map((n,i) => `
+      <a href="${esc(n.url)}" target="_blank" class="glass-card block no-underline relative threat-card">
+        <button class="threat-edit-btn" data-ti-path="cadre_legal.normes.${i}" onclick="event.preventDefault();editThreatUrl(this.dataset.tiPath)" title="Modifier l'URL"><i class="fas fa-pencil-alt"></i></button>
         <div class="flex items-start gap-3">
           <div class="card-icon bg-blue-500/10"><i class="fas ${n.icone || 'fa-book'} text-blue-400"></i></div>
           <div>
@@ -763,6 +931,24 @@ renderFn.frameworks = function() {
           <div class="text-xs text-slate-500 mt-1">Matrice 5×5 : ≤4 Faible, 5-9 Moyen, 10-15 Élevé, ≥16 Critique</div>
         </div>
       </div>
+      <div class="glass-card">
+        <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3"><i class="fas fa-clock mr-1"></i> Calculateur RPO / RTO &amp; Coût d'Arrêt</h3>
+        <p class="text-xs text-slate-500 mb-3">Estimez le coût financier d&rsquo;un sinistre selon vos objectifs de résilience.</p>
+        <div class="calc-group"><label><span class="text-slate-400">Régime horaire d&rsquo;activité</span></label><select id="regimeSelect" class="lock-input" style="font-size:0.85rem"><option value="24">24/7 (24 h/jour, 365 j/an)</option><option value="8">Jours ouvrés (8 h/jour, 365 j/an)</option><option value="7">24/7 réduit (7 j × 8 h)</option><option value="0">Personnalisé</option></select><div id="regimeCustomWrap" style="display:none;margin-top:0.3rem"><label class="text-xs text-slate-400">Heures par jour :</label> <input type="number" id="regimeCustom" class="lock-input" min="1" max="24" value="24" style="width:100px"></div></div>
+        <div class="calc-group"><label><span class="text-slate-400">Chiffre d&rsquo;affaires annuel (€)</span></label><input type="number" id="caInput" class="lock-input" placeholder="Ex : 50 000 000" min="0" style="font-size:0.85rem"></div>
+        <div class="calc-group"><label><span class="text-slate-400">RPO &mdash; Perte de données max</span> <span id="rpoVal" class="text-blue-400">4 h</span></label><select id="rpoSelect" class="lock-input" style="font-size:0.85rem"><option value="0.25">15 min</option><option value="0.5">30 min</option><option value="1">1 h</option><option value="2">2 h</option><option value="4" selected>4 h</option><option value="8">8 h</option><option value="12">12 h</option><option value="24">24 h</option></select></div>
+        <div class="calc-group"><label><span class="text-slate-400">RTO &mdash; Temps de récupération max</span> <span id="rtoVal" class="text-blue-400">8 h</span></label><select id="rtoSelect" class="lock-input" style="font-size:0.85rem"><option value="1">1 h</option><option value="2">2 h</option><option value="4">4 h</option><option value="8" selected>8 h</option><option value="12">12 h</option><option value="24">24 h</option><option value="48">48 h</option><option value="72">72 h</option></select></div>
+        <div class="border-t border-white/5 pt-3 mt-3">
+          <div class="text-xs text-slate-500">Coût estimé par heure d&rsquo;arrêt :</div>
+          <div class="calc-result" id="coutHoraireResult" style="font-size:1rem">&mdash;</div>
+          <div class="grid grid-cols-3 gap-2 mt-2">
+            <div><div class="text-xs text-slate-500">Coût RPO<br><small>(données)</small></div><div class="text-sm font-semibold text-blue-400" id="coutRpoResult">&mdash;</div></div>
+            <div><div class="text-xs text-slate-500">Coût RTO<br><small>(indisponibilité)</small></div><div class="text-sm font-semibold text-amber-400" id="coutRtoResult">&mdash;</div></div>
+            <div><div class="text-xs text-slate-500">Coût total</div><div class="text-sm font-semibold text-emerald-400" id="coutTotalResult">&mdash;</div></div>
+          </div>
+          <div class="mt-2 text-xs" id="classeResilience">Renseignez les champs ci-dessus.</div>
+        </div>
+      </div>
     </div>`;
 };
 
@@ -787,13 +973,15 @@ renderFn.memos = function() {
               <div class="flex-1 h-1 rounded-full bg-white/5"><div class="h-full rounded-full ${done === total ? 'bg-emerald-500' : 'bg-blue-500'}" style="width:${total ? Math.round(done/total*100) : 0}%"></div></div>
               <span class="text-xs text-slate-500 font-mono">${done}/${total}</span>
             </div>
+            <div class="text-[0.6rem] text-slate-600 mt-1">${p.date ? '📅 ' + new Date(p.date).toLocaleDateString('fr-FR') : ''}</div>
           </div>
         </div>
       </div>`;
     }).join('')}</div>
     <div class="category-label"><i class="fas fa-notes-medical mr-1"></i> Contacts d'Urgence</div>
     <div class="contact-grid mb-6">${Object.entries(vault.contacts_urgence).map(([k,v]) => `
-      <div class="contact-card">
+      <div class="contact-card" style="position:relative">
+        <button class="memo-btn text-amber-400" data-edit-contact="${k}" title="Modifier" style="position:absolute;top:0.5rem;right:0.5rem"><i class="fas fa-pencil"></i></button>
         <div class="c-name"><i class="fas fa-${k === 'assurance' ? 'umbrella' : k === 'avocat' ? 'gavel' : k === 'hebergeur' ? 'server' : 'user-tie'} mr-1"></i> ${k.charAt(0).toUpperCase()+k.slice(1)}</div>
         <div class="c-detail"><i class="fas fa-user"></i>${esc(v.nom || 'Non renseigné')}</div>
         <div class="c-detail"><i class="fas fa-phone"></i>${esc(v.telephone || '—')}</div>
@@ -809,16 +997,22 @@ renderFn.memos = function() {
       </div>
       <div class="glass-card">
         <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3"><i class="fas fa-folder mr-1"></i> Mémos (${vault.memos.length})</h3>
-        <div id="memoList">${vault.memos.length === 0 ? '<div class="empty-state" style="padding:1rem"><i class="fa-regular fa-note-sticky" style="font-size:1.5rem"></i><p>Aucun mémo pour le moment.</p></div>' : vault.memos.map((m,i) => `
+        <div id="memoList">${vault.memos.length === 0 ? '<div class="empty-state" style="padding:1rem"><i class="fa-regular fa-note-sticky" style="font-size:1.5rem"></i><p>Aucun mémo pour le moment.</p></div>' : vault.memos.map((m,i) => {
+          const preview = m.contenu.length > 200 ? m.contenu.slice(0,200) + '\n\n*(...)*' : m.contenu;
+          return `
           <div class="border-b border-white/5 py-2 last:border-0">
             <div class="flex items-center justify-between">
               <span class="text-sm font-medium text-slate-200">${esc(m.titre)}</span>
-              <button class="text-xs text-red-400 hover:text-red-300 bg-none border-none cursor-pointer" data-del-memo="${i}"><i class="fas fa-trash-can"></i></button>
+              <div class="flex gap-1">
+                <button class="memo-btn text-blue-400" data-view-memo="${i}" title="Voir"><i class="fas fa-eye"></i></button>
+                <button class="memo-btn text-amber-400" data-edit-memo="${i}" title="Modifier"><i class="fas fa-pencil"></i></button>
+                <button class="memo-btn text-red-400" data-del-memo="${i}" title="Supprimer"><i class="fas fa-trash-can"></i></button>
+              </div>
             </div>
-            <div class="text-xs text-slate-400 mt-1 memo-preview">${marked.parse(m.contenu)}</div>
+            <div class="text-xs text-slate-400 mt-1 memo-preview" data-md="${esc(preview)}"></div>
             <div class="text-[0.6rem] text-slate-600 mt-1">${new Date(m.date).toLocaleDateString('fr-FR')}</div>
           </div>
-        `).join('')}</div>
+        `; }).join('')}</div>
       </div>
     </div>`;
 };
@@ -863,6 +1057,18 @@ function showModal(id) {
       <section>
         <h3>Contacts Utiles</h3>
         <div class="text-sm text-slate-400">Référez-vous aux contacts d'urgence dans l'onglet Mémos.</div>
+      </section>
+      <section>
+        <h3>Date de l'incident</h3>
+        <div class="text-sm text-slate-400" id="pbDateDisplay">${data.date ? new Date(data.date).toLocaleDateString('fr-FR') : 'Non renseignée'}</div>
+        <div id="pbDateEdit" style="display:none" class="mt-1">
+          <input type="date" id="pbDateInput" class="lock-input" value="${data.date || ''}" style="width:auto">
+          <div class="flex gap-2 mt-1">
+            <button class="btn btn-sm btn-primary" id="pbDateSave" data-pb-id="${data.id}"><i class="fas fa-check mr-1"></i> OK</button>
+            <button class="btn btn-sm btn-secondary" id="pbDateCancel">Annuler</button>
+          </div>
+        </div>
+        <button class="btn btn-sm btn-primary mt-2" id="playbookDateEditBtn" data-pb-id="${data.id}"><i class="fas fa-calendar mr-1"></i> Modifier la date</button>
       </section>`;
   } else {
     const isFav = vault.favorites.includes(data.id);
@@ -903,6 +1109,31 @@ function bindModalEvents() {
       if (label) label.classList.toggle('done', this.checked);
     };
   });
+  const pbDateEditBtn = document.getElementById('playbookDateEditBtn');
+  if (pbDateEditBtn) {
+    pbDateEditBtn.onclick = function() {
+      document.getElementById('pbDateDisplay').style.display = 'none';
+      document.getElementById('pbDateEdit').style.display = 'block';
+      this.style.display = 'none';
+    };
+  }
+  document.getElementById('pbDateSave').onclick = function() {
+    const pid = this.dataset.pbId;
+    const pb = vault.playbooks.find(p => p.id === pid);
+    if (!pb) return;
+    pb.date = document.getElementById('pbDateInput').value;
+    document.getElementById('pbDateDisplay').style.display = 'block';
+    document.getElementById('pbDateEdit').style.display = 'none';
+    document.getElementById('playbookDateEditBtn').style.display = '';
+    document.getElementById('pbDateDisplay').textContent = pb.date ? new Date(pb.date).toLocaleDateString('fr-FR') : 'Non renseignée';
+    setDirty();
+    notify('Date mise à jour.', 'success');
+  };
+  document.getElementById('pbDateCancel').onclick = function() {
+    document.getElementById('pbDateDisplay').style.display = 'block';
+    document.getElementById('pbDateEdit').style.display = 'none';
+    document.getElementById('playbookDateEditBtn').style.display = '';
+  };
 }
 
 function hideModal() {
@@ -997,6 +1228,26 @@ function bindViewEvents(name) {
         };
       }
     });
+    /* RPO/RTO calculator */
+    ['rpoSelect','rtoSelect','caInput','regimeSelect','regimeCustom'].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.oninput = updateRpoRto;
+    });
+    var regimeEl = document.getElementById('regimeSelect');
+    if (regimeEl) regimeEl.onchange = function() {
+      document.getElementById('regimeCustomWrap').style.display = this.value === '0' ? 'block' : 'none';
+      updateRpoRto();
+    };
+    var rpoEl = document.getElementById('rpoSelect');
+    if (rpoEl) rpoEl.onchange = function() {
+      document.getElementById('rpoVal').textContent = this.options[this.selectedIndex].text;
+      updateRpoRto();
+    };
+    var rtoEl = document.getElementById('rtoSelect');
+    if (rtoEl) rtoEl.onchange = function() {
+      document.getElementById('rtoVal').textContent = this.options[this.selectedIndex].text;
+      updateRpoRto();
+    };
   }
 
   if (name === 'memos') {
@@ -1017,15 +1268,53 @@ function bindViewEvents(name) {
     document.querySelectorAll('[data-del-memo]').forEach(b => {
       b.onclick = function() {
         const idx = parseInt(this.dataset.delMemo);
+        const m = vault.memos[idx];
+        if (!m) return;
+        if (!confirm('Supprimer le mémo « ' + m.titre + ' » ?')) return;
         vault.memos.splice(idx, 1);
         setDirty();
         renderView('memos');
         notify('Mémo supprimé.', 'info');
       };
     });
-    // Render memo markdown
-    document.querySelectorAll('.memo-preview').forEach(el => {
-      try { if (window.marked) el.innerHTML = marked.parse(el.textContent); } catch(e) {}
+    document.querySelectorAll('[data-view-memo]').forEach(b => {
+      b.onclick = function() {
+        const idx = parseInt(this.dataset.viewMemo);
+        const m = vault.memos[idx];
+        if (!m) return;
+        const overlay = document.getElementById('modalOverlay');
+        document.getElementById('modalTitle').textContent = m.titre || 'Mémo';
+        document.getElementById('modalBody').innerHTML = window.marked ? marked.parse(m.contenu) : '<pre>' + esc(m.contenu) + '</pre>';
+        overlay.classList.add('visible');
+        document.body.style.overflow = 'hidden';
+        overlay.scrollTop = 0;
+        bindModalEvents();
+      };
+    });
+    document.querySelectorAll('[data-edit-memo]').forEach(b => {
+      b.onclick = function() {
+        const idx = parseInt(this.dataset.editMemo);
+        const m = vault.memos[idx];
+        if (!m) return;
+        document.getElementById('memoEditIdx').value = idx;
+        document.getElementById('memoEditTitle').value = m.titre;
+        document.getElementById('memoEditBody').value = m.contenu;
+        document.getElementById('memoEditModal').classList.add('visible');
+      };
+    });
+    document.querySelectorAll('[data-edit-contact]').forEach(b => {
+      b.onclick = function() {
+        const key = this.dataset.editContact;
+        const c = vault.contacts_urgence[key];
+        if (!c) return;
+        const label = key.charAt(0).toUpperCase() + key.slice(1);
+        document.getElementById('contactEditKey').value = key;
+        document.getElementById('contactEditLabel').textContent = label;
+        document.getElementById('contactEditNom').value = c.nom;
+        document.getElementById('contactEditTel').value = c.telephone;
+        document.getElementById('contactEditEmail').value = c.email;
+        document.getElementById('contactEditModal').classList.add('visible');
+      };
     });
   }
 
@@ -1065,6 +1354,16 @@ function bindViewEvents(name) {
     if (fav) { e.stopPropagation(); toggleFav(fav.dataset.fav); return; }
     if (card) { e.stopPropagation(); showModal(card.dataset.modal); }
   };
+
+  /* Sort buttons */
+  document.querySelectorAll('.sort-btn').forEach(btn => {
+    btn.onclick = function() {
+      const mode = this.dataset.sort;
+      if (currentView === 'outils-tech') sortOutilsTech = mode;
+      else if (currentView === 'outils-fonctionnels') sortOutilsFonc = mode;
+      renderView(currentView);
+    };
+  });
 }
 
 /* ---------- CALCULATORS ---------- */
@@ -1091,6 +1390,37 @@ function updateRisque() {
   const el = document.getElementById('risqueResult');
   el.textContent = level + ' (' + score + '/25)';
   el.style.color = color;
+}
+
+function updateRpoRto() {
+  const ca = parseFloat(document.getElementById('caInput').value) || 0;
+  const regime = parseInt(document.getElementById('regimeSelect').value);
+  const heuresJour = regime === 0 ? parseFloat(document.getElementById('regimeCustom').value) || 24 : regime;
+  const rpo = parseFloat(document.getElementById('rpoSelect').value);
+  const rto = parseFloat(document.getElementById('rtoSelect').value);
+  if (ca <= 0) {
+    document.getElementById('coutHoraireResult').innerHTML = '&mdash;';
+    document.getElementById('coutRpoResult').textContent = '—';
+    document.getElementById('coutRtoResult').textContent = '—';
+    document.getElementById('coutTotalResult').textContent = '—';
+    document.getElementById('classeResilience').innerHTML = '<span class="text-slate-500">Renseignez le chiffre d\'affaires.</span>';
+    return;
+  }
+  const coutHoraire = ca / (365 * heuresJour);
+  const coutRpo = coutHoraire * rpo;
+  const coutRto = coutHoraire * rto;
+  const coutTotal = coutRpo + coutRto;
+  const fmt = function(v) { return Number(v).toLocaleString('fr-FR', { maximumFractionDigits: 0 }); };
+  document.getElementById('coutHoraireResult').innerHTML = '<strong>' + fmt(coutHoraire) + ' €/h</strong>';
+  document.getElementById('coutRpoResult').textContent = fmt(coutRpo) + ' €';
+  document.getElementById('coutRtoResult').textContent = fmt(coutRto) + ' €';
+  document.getElementById('coutTotalResult').textContent = fmt(coutTotal) + ' €';
+  var classe, color;
+  if (rpo <= 0.5 && rto <= 4) { classe = 'A (Excellent)'; color = '#10b981'; }
+  else if (rpo <= 4 && rto <= 24) { classe = 'B (Bon)'; color = '#f59e0b'; }
+  else if (rpo <= 12 && rto <= 48) { classe = 'C (Moyen)'; color = '#f97316'; }
+  else { classe = 'D (Critique)'; color = '#ef4444'; }
+  document.getElementById('classeResilience').innerHTML = 'Classe de résilience : <strong style="color:' + color + '">' + classe + '</strong>';
 }
 
 /* ============================================================
@@ -1176,7 +1506,7 @@ async function _downloadFallback(content) {
   const blob = new Blob([content], { type:'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'rssi_coffre_' + new Date().toISOString().slice(0,10) + '.json';
+  a.download = 'rssi_coffre_' + new Date().toISOString().replace(/[:-]/g,'_').slice(0,16) + '.json';
   a.click();
   URL.revokeObjectURL(a.href);
   dirty = false;
@@ -1185,9 +1515,34 @@ async function _downloadFallback(content) {
 
 function askPassword(msg) {
   return new Promise(resolve => {
-    const pwd = prompt(msg);
-    if (!pwd || pwd.length < 4) { notify('Mot de passe : minimum 4 caractères.', 'error'); resolve(null); }
-    else resolve(pwd);
+    const modal = document.getElementById('pwdModal');
+    const input = document.getElementById('pwdModalInput');
+    const errEl = document.getElementById('pwdModalError');
+    const msgEl = document.getElementById('pwdModalMsg');
+    msgEl.textContent = msg;
+    input.value = '';
+    errEl.style.display = 'none';
+    modal.style.display = 'flex';
+    setTimeout(() => input.focus(), 100);
+    const confirmBtn = document.getElementById('pwdModalConfirm');
+    const cancelBtn = document.getElementById('pwdModalCancel');
+    const cleanup = () => { modal.style.display = 'none'; input.value = ''; };
+    const onConfirm = () => {
+      const pwd = input.value;
+      if (!pwd || pwd.length < 4) {
+        errEl.textContent = 'Mot de passe : minimum 4 caractères.';
+        errEl.style.display = 'block';
+        return;
+      }
+      cleanup(); resolve(pwd);
+    };
+    const onCancel = () => { cleanup(); resolve(null); };
+    confirmBtn.onclick = onConfirm;
+    cancelBtn.onclick = onCancel;
+    input.onkeydown = e => {
+      if (e.key === 'Enter') onConfirm();
+      if (e.key === 'Escape') onCancel();
+    };
   });
 }
 
@@ -1291,13 +1646,11 @@ document.addEventListener('DOMContentLoaded', async function() {
   /* OS path hint on lock screen */
   const osPathCode = document.getElementById('osPathCode');
   const osPathHint = document.getElementById('osPathHint');
-  const createPathHint = document.getElementById('createPathHint');
   const loadTabHint = document.getElementById('loadTabHint');
   if (osPathCode) {
     const sep = OS.isWin ? '\\' : '/';
     osPathCode.textContent = OS.getDirLabel() + sep + 'rssi_coffre.json';
     osPathHint.style.display = 'block';
-    createPathHint.style.display = 'block';
   }
   if (loadTabHint && FS.isFileProtocol()) {
     loadTabHint.textContent = 'Charger le coffre depuis le stockage navigateur (IndexedDB)';
@@ -1462,9 +1815,17 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
   });
 
-  /* Keyboard shortcut: Escape to close modal */
+  /* Keyboard shortcut: Escape to close modals */
   document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') hideModal();
+    if (e.key === 'Escape') {
+      const urlModal = document.getElementById('urlEditModal');
+      if (urlModal.style.display === 'flex') { urlModal.style.display = 'none'; return; }
+      const memoEditModal = document.getElementById('memoEditModal');
+      if (memoEditModal.classList.contains('visible')) { memoEditModal.classList.remove('visible'); return; }
+      const contactEditModal = document.getElementById('contactEditModal');
+      if (contactEditModal.classList.contains('visible')) { contactEditModal.classList.remove('visible'); return; }
+      hideModal();
+    }
   });
 
   /* Auto-check for existing vault — show badge on "Charger" tab */
@@ -1483,6 +1844,48 @@ document.addEventListener('DOMContentLoaded', async function() {
       }
     } catch(e) { /* no vault in IDB */ }
   }
+
+  /* Memo edit modal */
+  document.getElementById('memoEditSave').onclick = function() {
+    const idx = parseInt(document.getElementById('memoEditIdx').value);
+    const memo = vault.memos[idx];
+    if (!memo) return;
+    const title = document.getElementById('memoEditTitle').value.trim();
+    const body = document.getElementById('memoEditBody').value.trim();
+    if (!title) { notify('Le titre est requis.', 'error'); return; }
+    memo.titre = title;
+    memo.contenu = body;
+    document.getElementById('memoEditModal').classList.remove('visible');
+    setDirty();
+    renderView('memos');
+    notify('Mémo modifié.', 'success');
+  };
+  document.getElementById('memoEditCancel').onclick = function() {
+    document.getElementById('memoEditModal').classList.remove('visible');
+  };
+  document.getElementById('memoEditClose').onclick = function() {
+    document.getElementById('memoEditModal').classList.remove('visible');
+  };
+
+  /* Contact edit modal */
+  document.getElementById('contactEditSave').onclick = function() {
+    const key = document.getElementById('contactEditKey').value;
+    const c = vault.contacts_urgence[key];
+    if (!c) return;
+    c.nom = document.getElementById('contactEditNom').value.trim();
+    c.telephone = document.getElementById('contactEditTel').value.trim();
+    c.email = document.getElementById('contactEditEmail').value.trim();
+    document.getElementById('contactEditModal').classList.remove('visible');
+    setDirty();
+    renderView('memos');
+    notify('Contact modifié.', 'success');
+  };
+  document.getElementById('contactEditCancel').onclick = function() {
+    document.getElementById('contactEditModal').classList.remove('visible');
+  };
+  document.getElementById('contactEditClose').onclick = function() {
+    document.getElementById('contactEditModal').classList.remove('visible');
+  };
 });
 </script>
 </body>
