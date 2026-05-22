@@ -569,7 +569,7 @@ const DEFAULT_VAULT = {
     ]
   },
   playbooks: [
-    { id:'p1', titre:'Réponse Ransomware', scenario:'Détection d\'un rançongiciel actif sur le SI. Priorité : isolation, identification, restauration.', severity:'crit', date:'', checklist:[
+    { id:'p1', titre:'Réponse Ransomware', scenario:'Détection d\'un rançongiciel actif sur le SI. Priorité : isolation, identification, restauration.', severity:'crit', date:'', historique:[], checklist:[
       'Isoler la machine infectée du réseau (débrancher RJ45 / couper le port switch)',
       'Couper les accès AD du compte utilisateur concerné',
       'Identifier la souche (hachage SHA256, nom, extension des fichiers chiffrés)',
@@ -581,7 +581,7 @@ const DEFAULT_VAULT = {
       'Corriger la brèche avant remise en production',
       'Rédiger le rapport d\'incident et le REX'
     ]},
-    { id:'p2', titre:'Fuite de Données (RGPD)', scenario:'Détection d\'un accès non autorisé à des données personnelles. Notification obligatoire sous 72h.', severity:'high', date:'', checklist:[
+    { id:'p2', titre:'Fuite de Données (RGPD)', scenario:'Détection d\'un accès non autorisé à des données personnelles. Notification obligatoire sous 72h.', severity:'high', date:'', historique:[], checklist:[
       'Confirmer la réalité de la fuite (logs, alertes, témoignage)',
       'Identifier les bases de données et fichiers concernés',
       'Déterminer le périmètre : quels types de données, quels individus',
@@ -593,7 +593,7 @@ const DEFAULT_VAULT = {
       'Mettre en place des mesures de surveillance renforcées',
       'Documenter l\'incident pour le registre RGPD'
     ]},
-    { id:'p3', titre:'Panne Datacenter', scenario:'Indisponibilité partielle ou totale d\'un site d\'hébergement. Activation du PCA/PRA.', severity:'crit', date:'', checklist:[
+    { id:'p3', titre:'Panne Datacenter', scenario:'Indisponibilité partielle ou totale d\'un site d\'hébergement. Activation du PCA/PRA.', severity:'crit', date:'', historique:[], checklist:[
       'Confirmer l\'étendue de la panne (site complet ou partiel)',
       'Contacter l\'hébergeur (support technique)',
       'Déclencher le PCA (Plan de Continuité d\'Activité)',
@@ -604,7 +604,7 @@ const DEFAULT_VAULT = {
       'Suivre le RTO et ajuster les communications',
       'Documenter les causes et actions pour le REX'
     ]},
-    { id:'p4', titre:'Compromission Compte Admin', scenario:'Détection d\'un usage anormal d\'un compte administrateur (AD, cloud, SSH).', severity:'high', date:'', checklist:[
+    { id:'p4', titre:'Compromission Compte Admin', scenario:'Détection d\'un usage anormal d\'un compte administrateur (AD, cloud, SSH).', severity:'high', date:'', historique:[], checklist:[
       'Révoquer immédiatement les tokens et sessions du compte',
       'Désactiver le compte AD/SSO concerné',
       'Analyser les logs de connexion (heure, IP, actions)',
@@ -642,6 +642,15 @@ let searchQuery = '';
 let sortOutilsTech = 'default';
 let sortOutilsFonc = 'default';
 let chartData = [12,8,15,6,9,14,7]; // simulated alert trend
+
+function migrateVault(v) {
+  if (v && v.playbooks) {
+    v.playbooks.forEach(function(p) {
+      if (!p.historique) p.historique = [];
+    });
+  }
+  return v;
+}
 
 function setDirty() { dirty = true; }
 
@@ -973,7 +982,7 @@ renderFn.memos = function() {
               <div class="flex-1 h-1 rounded-full bg-white/5"><div class="h-full rounded-full ${done === total ? 'bg-emerald-500' : 'bg-blue-500'}" style="width:${total ? Math.round(done/total*100) : 0}%"></div></div>
               <span class="text-xs text-slate-500 font-mono">${done}/${total}</span>
             </div>
-            <div class="text-[0.6rem] text-slate-600 mt-1">${p.date ? '📅 ' + new Date(p.date).toLocaleDateString('fr-FR') : ''}</div>
+            <div class="text-[0.6rem] text-slate-600 mt-1">${p.date ? '📅 ' + new Date(p.date).toLocaleDateString('fr-FR') : ''}${p.historique && p.historique.length ? ' · 📋 ' + p.historique.length : ''}</div>
           </div>
         </div>
       </div>`;
@@ -1058,6 +1067,19 @@ function showModal(id) {
         <h3>Contacts Utiles</h3>
         <div class="text-sm text-slate-400">Référez-vous aux contacts d'urgence dans l'onglet Mémos.</div>
       </section>
+      <section id="pbHistoriqueSection">
+        <h3>Historique (${data.historique ? data.historique.length : 0})</h3>
+        <div id="pbHistoriqueContainer">${typeof renderHistorique === 'function' ? renderHistorique(data) : ''}</div>
+        <button class="btn btn-sm btn-primary mt-2" id="pbHistoAddBtn" data-pb-id="${data.id}"><i class="fas fa-plus mr-1"></i> Ajouter une entrée</button>
+        <div id="pbHistoForm" style="display:none" class="mt-2">
+          <input type="date" id="pbHistoDate" class="lock-input" style="width:auto">
+          <textarea id="pbHistoContenu" class="memo-editor mt-1" placeholder="Notes / REX de l'exercice…" rows="3"></textarea>
+          <div class="flex gap-2 mt-1">
+            <button class="btn btn-sm btn-primary" id="pbHistoSave" data-pb-id="${data.id}"><i class="fas fa-check mr-1"></i> Enregistrer</button>
+            <button class="btn btn-sm btn-secondary" id="pbHistoCancel">Annuler</button>
+          </div>
+        </div>
+      </section>
       <section>
         <h3>Date de l'incident</h3>
         <div class="text-sm text-slate-400" id="pbDateDisplay">${data.date ? new Date(data.date).toLocaleDateString('fr-FR') : 'Non renseignée'}</div>
@@ -1134,6 +1156,99 @@ function bindModalEvents() {
     document.getElementById('pbDateEdit').style.display = 'none';
     document.getElementById('playbookDateEditBtn').style.display = '';
   };
+  /* Historique handlers */
+  var _histoEditing = -1;
+  const histoAddBtn = document.getElementById('pbHistoAddBtn');
+  if (histoAddBtn) {
+    histoAddBtn.onclick = function() {
+      document.getElementById('pbHistoForm').style.display = 'block';
+      this.style.display = 'none';
+      _histoEditing = -1;
+      document.getElementById('pbHistoDate').value = '';
+      document.getElementById('pbHistoContenu').value = '';
+    };
+  }
+  document.getElementById('pbHistoCancel').onclick = function() {
+    document.getElementById('pbHistoForm').style.display = 'none';
+    document.getElementById('pbHistoAddBtn').style.display = '';
+    _histoEditing = -1;
+  };
+  document.getElementById('pbHistoSave').onclick = function() {
+    const pid = this.dataset.pbId;
+    const pb = vault.playbooks.find(p => p.id === pid);
+    if (!pb) return;
+    if (!pb.historique) pb.historique = [];
+    const date = document.getElementById('pbHistoDate').value;
+    const contenu = document.getElementById('pbHistoContenu').value.trim();
+    if (!date || !contenu) { notify('Date et contenu requis.', 'error'); return; }
+    const isEditing = _histoEditing >= 0 && _histoEditing < pb.historique.length;
+    if (isEditing) {
+      pb.historique[_histoEditing] = { date: date, contenu: contenu };
+    } else {
+      pb.historique.push({ date: date, contenu: contenu });
+    }
+    document.getElementById('pbHistoForm').style.display = 'none';
+    document.getElementById('pbHistoAddBtn').style.display = '';
+    _histoEditing = -1;
+    refreshHistorique(pid);
+    setDirty();
+    notify(isEditing ? 'Entrée modifiée.' : 'Entrée ajoutée.', 'success');
+  };
+  /* Historique — event delegation (survit à refreshHistorique) */
+  const histoContainer = document.getElementById('pbHistoriqueContainer');
+  if (histoContainer) {
+    histoContainer.onclick = function(e) {
+      const delBtn = e.target.closest('[data-del-histo]');
+      if (delBtn) {
+        const idx = parseInt(delBtn.dataset.delHisto);
+        const pid = document.querySelector('#pbHistoSave').dataset.pbId;
+        const pb = vault.playbooks.find(p => p.id === pid);
+        if (!pb || !pb.historique[idx]) return;
+        if (!confirm('Supprimer cette entrée historique ?')) return;
+        pb.historique.splice(idx, 1);
+        refreshHistorique(pid);
+        setDirty();
+        notify('Entrée supprimée.', 'info');
+        return;
+      }
+      const editBtn = e.target.closest('[data-edit-histo]');
+      if (editBtn) {
+        const idx = parseInt(editBtn.dataset.editHisto);
+        const h = vault.playbooks.find(p => p.id === document.querySelector('#pbHistoSave').dataset.pbId);
+        if (!h || !h.historique[idx]) return;
+        _histoEditing = idx;
+        document.getElementById('pbHistoDate').value = h.historique[idx].date;
+        document.getElementById('pbHistoContenu').value = h.historique[idx].contenu;
+        document.getElementById('pbHistoForm').style.display = 'block';
+        document.getElementById('pbHistoAddBtn').style.display = 'none';
+      }
+    };
+  }
+}
+
+function renderHistorique(pb) {
+  if (!pb.historique || !pb.historique.length) return '<p class="text-sm text-slate-500">Aucune entrée pour le moment.</p>';
+  return pb.historique.map((h, i) => `
+    <div class="border-b border-white/5 py-2 last:border-0">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-semibold text-slate-300">📅 ${esc(h.date)}</span>
+        <div class="flex gap-1">
+          <button class="memo-btn text-amber-400" data-edit-histo="${i}"><i class="fas fa-pencil"></i></button>
+          <button class="memo-btn text-red-400" data-del-histo="${i}"><i class="fas fa-trash-can"></i></button>
+        </div>
+      </div>
+      <p class="text-xs text-slate-400 mt-1">${esc(h.contenu)}</p>
+    </div>
+  `).join('');
+}
+
+function refreshHistorique(pid) {
+  const pb = vault.playbooks.find(p => p.id === pid);
+  if (!pb) return;
+  const container = document.getElementById('pbHistoriqueContainer');
+  if (container) { container.innerHTML = renderHistorique(pb); }
+  const h3 = document.querySelector('#pbHistoriqueSection h3');
+  if (h3) { h3.textContent = 'Historique (' + (pb.historique ? pb.historique.length : 0) + ')'; }
 }
 
 function hideModal() {
@@ -1555,6 +1670,7 @@ async function importVault(file, pwd) {
     }
     const data = await Crypto.decrypt(encrypted, pwd);
     vault = data;
+    migrateVault(vault);
     vaultKey = true;
     dirty = false;
     // Auto-save encrypted content to IDB
@@ -1577,6 +1693,7 @@ async function decryptFromHandle(pwd) {
     if (!encrypted.salt || !encrypted.iv || !encrypted.ciphertext) throw new Error('Format invalide');
     const data = await Crypto.decrypt(encrypted, pwd);
     vault = data;
+    migrateVault(vault);
     vaultKey = true;
     dirty = false;
     unlockApp();
