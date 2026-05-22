@@ -257,59 +257,68 @@ const Crypto = (() => {
 })();
 
 /* ============================================================
-   MODULE IDB — Stockage du FileSystemFileHandle
+   MODULE IDB — Stockage du FileSystemDirectoryHandle
    ============================================================ */
-const FS = {
-  _handle: null,
-  _fsaSupported: 'showSaveFilePicker' in window && 'showOpenFilePicker' in window,
+const FS = (() => {
+  let _dirHandle = null;
+  const _fsaSupported = 'showDirectoryPicker' in window;
 
-  async saveHandle(handle) {
-    this._handle = handle;
-    try {
-      const db = await new Promise((res, rej) => {
-        const r = indexedDB.open('rssi_deck_fs', 1);
-        r.onupgradeneeded = e => e.target.result.createObjectStore('handles');
-        r.onsuccess = e => res(e.target.result);
-        r.onerror = rej;
-      });
-      const tx = db.transaction('handles', 'readwrite');
-      tx.objectStore('handles').put(handle, 'vaultHandle');
-      await new Promise((res, rej) => { tx.oncomplete = res; tx.onerror = rej; });
-    } catch(e) { /* IDB may not support structured clone of handles in all browsers */ }
-  },
+  async function _getDb() {
+    return new Promise((res, rej) => {
+      const r = indexedDB.open('rssi_deck_fs', 2);
+      r.onupgradeneeded = e => {
+        if (!e.target.result.objectStoreNames.contains('handles'))
+          e.target.result.createObjectStore('handles');
+      };
+      r.onsuccess = e => res(e.target.result);
+      r.onerror = rej;
+    });
+  }
 
-  async loadHandle() {
-    if (this._handle) return this._handle;
-    try {
-      const db = await new Promise((res, rej) => {
-        const r = indexedDB.open('rssi_deck_fs', 1);
-        r.onsuccess = e => res(e.target.result);
-        r.onerror = rej;
-      });
-      const tx = db.transaction('handles', 'readonly');
-      const req = tx.objectStore('handles').get('vaultHandle');
-      const handle = await new Promise((res, rej) => { req.onsuccess = () => res(req.result); req.onerror = rej; });
-      if (handle) this._handle = handle;
-      return handle || null;
-    } catch(e) { return null; }
-  },
+  return {
+    supportsApi() { return _fsaSupported; },
 
-  async clearHandle() {
-    this._handle = null;
-    try {
-      const db = await new Promise((res, rej) => {
-        const r = indexedDB.open('rssi_deck_fs', 1);
-        r.onsuccess = e => res(e.target.result);
-        r.onerror = rej;
-      });
-      const tx = db.transaction('handles', 'readwrite');
-      tx.objectStore('handles').delete('vaultHandle');
-      await new Promise((res, rej) => { tx.oncomplete = res; tx.onerror = rej; });
-    } catch(e) {}
-  },
+    async saveDirHandle(dirHandle) {
+      _dirHandle = dirHandle;
+      try { const db = await _getDb(); const tx = db.transaction('handles','readwrite'); tx.objectStore('handles').put(dirHandle,'dirHandle'); await new Promise((res,rej)=>{tx.oncomplete=res;tx.onerror=rej;}); } catch(e) {}
+    },
 
-  supportsApi() { return this._fsaSupported; }
-};
+    async loadDirHandle() {
+      if (_dirHandle) return _dirHandle;
+      try { const db = await _getDb(); const tx = db.transaction('handles','readonly'); const req = tx.objectStore('handles').get('dirHandle'); const h = await new Promise((res,rej)=>{req.onsuccess=()=>res(req.result);req.onerror=rej;}); if (h) _dirHandle = h; return h||null; } catch(e) { return null; }
+    },
+
+    async clearDirHandle() {
+      _dirHandle = null;
+      try { const db = await _getDb(); const tx = db.transaction('handles','readwrite'); tx.objectStore('handles').delete('dirHandle'); await new Promise((res,rej)=>{tx.oncomplete=res;tx.onerror=rej;}); } catch(e) {}
+    },
+
+    async getFileHandle(create) {
+      if (!_dirHandle) throw new Error('Aucun répertoire .rssi_deck configuré.');
+      return _dirHandle.getFileHandle('rssi_coffre.json', { create: !!create });
+    },
+
+    async writeVault(content) {
+      const fh = await this.getFileHandle(true);
+      const writable = await fh.createWritable();
+      await writable.write(content);
+      await writable.close();
+    },
+
+    async readVault() {
+      const fh = await this.getFileHandle(false);
+      const file = await fh.getFile();
+      return file.text();
+    },
+
+    async migrateOldHandle() {
+      try { const db = await _getDb(); const tx = db.transaction('handles','readwrite'); tx.objectStore('handles').delete('vaultHandle'); await new Promise((res,rej)=>{tx.oncomplete=res;tx.onerror=rej;}); } catch(e) {}
+    },
+
+    get dirHandle() { return _dirHandle; },
+    set dirHandle(v) { _dirHandle = v; }
+  };
+})();
 
 /* ============================================================
    MODULE DATA — Contenu initial riche
@@ -1012,76 +1021,76 @@ async function exportVault() {
   if (!vault) return;
   vault.last_updated = new Date().toISOString();
 
-  // Step 1 — Obtain file handle (needs user gesture, do this BEFORE prompt)
-  let handle = null;
+  // Determine destination upfront (needs gesture while available)
+  let dirHandle = FS.dirHandle || await FS.loadDirHandle();
+  let useDir = false, useFallback = false, firstPick = false;
+
   if (FS.supportsApi()) {
-    handle = await FS.loadHandle();
-    if (handle) {
+    if (dirHandle) {
       try {
-        const perm = await handle.requestPermission({ mode: 'readwrite' });
-        if (perm !== 'granted') { FS.clearHandle(); handle = null; }
-      } catch(e) { FS.clearHandle(); handle = null; }
+        const perm = await dirHandle.requestPermission({ mode: 'readwrite' });
+        if (perm !== 'granted') { FS.clearDirHandle(); dirHandle = null; }
+      } catch(e) { FS.clearDirHandle(); dirHandle = null; }
     }
-    if (!handle) {
+    if (!dirHandle) {
+      // First time — pick directory now while gesture is active
       try {
-        handle = await window.showSaveFilePicker({
-          suggestedName: 'rssi_coffre.json',
-          types: [{ description: 'Coffre RSSI', accept: { 'application/json': ['.json'] } }],
-          id: 'rssi_deck'
+        dirHandle = await window.showDirectoryPicker({
+          id: 'rssi_deck_dir',
+          mode: 'readwrite'
         });
-        await FS.saveHandle(handle);
-        // After saveFilePicker creates the file, immediately ask for password
-        const pwd = await askPassword('Mot de passe pour chiffrer le coffre :');
-        if (!pwd) return;
-        // Prepare encrypted content
-        const encrypted = await Crypto.encrypt(vault, pwd);
-        encrypted.version = vault.version;
-        encrypted.last_updated = vault.last_updated;
-        const content = JSON.stringify(encrypted, null, 2);
-        // Write to the freshly picked file
-        const writable = await handle.createWritable();
-        await writable.write(content);
-        await writable.close();
-        dirty = false;
-        updateFsPath();
-        notify('Coffre enregistré dans .rssi_deck.', 'success');
+        await FS.saveDirHandle(dirHandle);
+        firstPick = true;
+        if (dirHandle.name !== '.rssi_deck') {
+          // Show warning later, after encryption
+        }
       } catch(e) {
         if (e.name === 'AbortError') return;
-        // FSA failed — fallback to download
-        const pwd = await askPassword('Mot de passe pour chiffrer le coffre :');
-        if (!pwd) return;
-        const encrypted = await Crypto.encrypt(vault, pwd);
-        encrypted.version = vault.version;
-        encrypted.last_updated = vault.last_updated;
-        await exportVaultFallback(JSON.stringify(encrypted, null, 2));
+        useFallback = true;
       }
-    } else {
-      // Existing handle — ask password, then write
-      const pwd = await askPassword('Mot de passe pour chiffrer le coffre :');
-      if (!pwd) return;
-      const encrypted = await Crypto.encrypt(vault, pwd);
-      encrypted.version = vault.version;
-      encrypted.last_updated = vault.last_updated;
-      const content = JSON.stringify(encrypted, null, 2);
-      const writable = await handle.createWritable();
-      await writable.write(content);
-      await writable.close();
+    }
+    if (dirHandle) useDir = true;
+  } else {
+    useFallback = true;
+  }
+
+  // Step 2 — Ask password (gesture no longer needed)
+  const pwd = await askPassword('Mot de passe pour chiffrer le coffre :');
+  if (!pwd) {
+    // If user cancels password after picking directory, clean up
+    if (firstPick) { /* dir handle kept for next time */ }
+    return;
+  }
+
+  // Step 3 — Encrypt
+  const encrypted = await Crypto.encrypt(vault, pwd);
+  encrypted.version = vault.version;
+  encrypted.last_updated = vault.last_updated;
+  const content = JSON.stringify(encrypted, null, 2);
+
+  // Step 4 — Write
+  if (useDir) {
+    try {
+      await FS.writeVault(content);
       dirty = false;
       updateFsPath();
-      notify('Coffre enregistré dans .rssi_deck.', 'success');
+      let label = dirHandle.name + '/rssi_coffre.json';
+      if (firstPick && dirHandle.name !== '.rssi_deck') {
+        label += '. ' + (navigator.userAgent.includes('Windows') ?
+          'Attention : le chemin recommandé est C:\\Users\\<USER>\\AppData\\Local\\.rssi_deck\\' :
+          'Attention : le chemin recommandé est ~/.rssi_deck/') +
+          '. Vous pourrez changer via "Importer" puis resauvegarder.';
+      }
+      notify('Coffre enregistré dans ' + label, 'success');
+    } catch(e) {
+      notify('Erreur d\'écriture : ' + e.message, 'error');
     }
-  } else {
-    // No FSA support — password then download
-    const pwd = await askPassword('Mot de passe pour chiffrer le coffre :');
-    if (!pwd) return;
-    const encrypted = await Crypto.encrypt(vault, pwd);
-    encrypted.version = vault.version;
-    encrypted.last_updated = vault.last_updated;
-    await exportVaultFallback(JSON.stringify(encrypted, null, 2));
+  } else if (useFallback) {
+    await _downloadFallback(content);
   }
 }
 
-async function exportVaultFallback(content) {
+async function _downloadFallback(content) {
   const blob = new Blob([content], { type:'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -1121,12 +1130,19 @@ async function importVault(file, pwd) {
   }
 }
 
-async function decryptFromHandle(handle, pwd) {
+async function decryptFromHandle(dirHandle, pwd) {
   try {
-    const file = await handle.getFile();
-    return importVault(file, pwd);
+    const text = await FS.readVault();
+    const encrypted = JSON.parse(text);
+    if (!encrypted.salt || !encrypted.iv || !encrypted.ciphertext) throw new Error('Format invalide');
+    const data = await Crypto.decrypt(encrypted, pwd);
+    vault = data;
+    vaultKey = true;
+    dirty = false;
+    unlockApp();
+    notify('Coffre déchiffré et chargé avec succès.', 'success');
   } catch(e) {
-    document.getElementById('loadError').textContent = 'Impossible de lire le fichier.';
+    document.getElementById('loadError').textContent = 'Mot de passe incorrect ou fichier corrompu.';
     document.getElementById('loadError').style.display = 'block';
     throw e;
   }
@@ -1146,9 +1162,9 @@ function unlockApp() {
 function updateFsPath() {
   const el = document.getElementById('fsPathDisplay');
   const txt = document.getElementById('fsPathText');
-  if (FS._handle) {
+  if (FS.dirHandle) {
     el.style.display = 'flex';
-    txt.textContent = '.rssi_deck/rssi_coffre.json' + (vault ? ' • ' + new Date(vault.last_updated).toLocaleString('fr-FR') : '');
+    txt.textContent = FS.dirHandle.name + '/rssi_coffre.json' + (vault ? ' • ' + new Date(vault.last_updated).toLocaleString('fr-FR') : '');
   } else {
     el.style.display = 'none';
   }
@@ -1181,6 +1197,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     document.getElementById('lockFsUnsupported').style.display = 'block';
   }
 
+  /* Migrate old (v1) vaultHandle from IDB */
+  await FS.migrateOldHandle();
+
   /* Lock tabs */
   document.querySelectorAll('.lock-tab').forEach(tab => {
     tab.addEventListener('click', function() {
@@ -1209,32 +1228,34 @@ document.addEventListener('DOMContentLoaded', async function() {
 
   /* Lock: Load from .rssi_deck */
   const loadBtn = document.getElementById('lockLoadBtn');
-  async function doLoadFromHandle() {
+  async function doLoadFromDir() {
     const pwd = document.getElementById('lockLoadPwd').value;
     if (!pwd) { document.getElementById('loadError').textContent = 'Saisissez le mot de passe du coffre.'; document.getElementById('loadError').style.display = 'block'; return; }
-    const handle = await FS.loadHandle();
-    if (!handle) { document.getElementById('loadError').textContent = 'Aucun coffre trouvé. Utilisez "Importer" pour sélectionner le fichier.'; document.getElementById('loadError').style.display = 'block'; return; }
+    const dirHandle = await FS.loadDirHandle();
+    if (!dirHandle) { document.getElementById('loadError').textContent = 'Aucun répertoire .rssi_deck configuré. Utilisez "Importer" ou sauvegardez d\'abord.'; document.getElementById('loadError').style.display = 'block'; return; }
     let perm;
-    try { perm = await handle.requestPermission({ mode: 'read' }); } catch(e) { perm = 'denied'; }
-    if (perm !== 'granted') { document.getElementById('loadError').textContent = 'Permission refusée. Utilisez "Importer" pour sélectionner le fichier.'; document.getElementById('loadError').style.display = 'block'; FS.clearHandle(); return; }
-    await decryptFromHandle(handle, pwd);
+    try { perm = await dirHandle.requestPermission({ mode: 'read' }); } catch(e) { perm = 'denied'; }
+    if (perm !== 'granted') {
+      document.getElementById('loadError').textContent = 'Permission refusée. Utilisez "Importer" pour charger un fichier depuis un autre emplacement.'; document.getElementById('loadError').style.display = 'block'; FS.clearDirHandle(); return;
+    }
+    // Restore the handle in the FS module so readVault works
+    await FS.saveDirHandle(dirHandle);
+    await decryptFromHandle(dirHandle, pwd);
   }
-  loadBtn.addEventListener('click', doLoadFromHandle);
+  loadBtn.addEventListener('click', doLoadFromDir);
   document.getElementById('lockLoadPwd').addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') doLoadFromHandle();
+    if (e.key === 'Enter') doLoadFromDir();
   });
 
-  /* Lock: Import (file picker) */
-  let importFileHandle = null;
+  /* Lock: Import (file picker — any location) */
   document.getElementById('lockPickFileBtn').addEventListener('click', async function() {
-    if (!FS.supportsApi()) { /* fallback: just show hint */ return; }
+    if (!('showOpenFilePicker' in window)) { notify('API Fichier non disponible sur ce navigateur.', 'error'); return; }
     try {
       const [handle] = await window.showOpenFilePicker({
         types: [{ description: 'Coffre RSSI', accept: { 'application/json': ['.json'] } }],
         multiple: false,
         id: 'rssi_deck'
       });
-      importFileHandle = handle;
       _pendingImportFile = await handle.getFile();
       document.getElementById('lockFileName').textContent = '✓ ' + _pendingImportFile.name;
       document.getElementById('lockImportBtn').disabled = false;
@@ -1246,7 +1267,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     if (!_pendingImportFile) { document.getElementById('lockError').textContent = 'Sélectionnez d\'abord un fichier .json.'; document.getElementById('lockError').style.display = 'block'; return; }
     if (!pwd) { document.getElementById('lockError').textContent = 'Saisissez le mot de passe du coffre.'; document.getElementById('lockError').style.display = 'block'; return; }
     await importVault(_pendingImportFile, pwd);
-    if (importFileHandle) await FS.saveHandle(importFileHandle);
+    // After import, subsequent saves will use the stored dir handle
+    // If no dir handle set yet, next exportVault will prompt for directory
   });
   document.getElementById('lockImportPwd').addEventListener('keydown', function(e) {
     if (e.key === 'Enter' && !document.getElementById('lockImportBtn').disabled) document.getElementById('lockImportBtn').click();
@@ -1294,11 +1316,11 @@ document.addEventListener('DOMContentLoaded', async function() {
     if (e.key === 'Escape') hideModal();
   });
 
-  /* Auto-check for existing handle — show badge on "Charger" tab */
-  const existingHandle = await FS.loadHandle();
-  if (existingHandle) {
+  /* Auto-check for existing directory handle — show badge on "Charger" tab */
+  const existingDir = await FS.loadDirHandle();
+  if (existingDir) {
     const loadTab = document.querySelector('.lock-tab[data-tab="load"]');
-    if (loadTab) loadTab.innerHTML = '<i class="fas fa-rotate-left mr-1" style="font-size:0.7rem"></i> Charger <span style="font-size:0.6rem;background:rgba(59,130,246,0.2);color:#93c5fd;padding:0.1rem 0.4rem;border-radius:3px;margin-left:0.3rem">✓</span>';
+    if (loadTab) loadTab.innerHTML = '<i class="fas fa-rotate-left mr-1" style="font-size:0.7rem"></i> Charger <span style="font-size:0.6rem;background:rgba(59,130,246,0.2);color:#93c5fd;padding:0.1rem 0.4rem;border-radius:3px;margin-left:0.3rem">✓ .rssi_deck</span>';
   }
 });
 </script>
