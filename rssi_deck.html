@@ -177,6 +177,11 @@ body{font-family:system-ui,-apple-system,'Inter','Segoe UI',sans-serif;backgroun
 .status-en-cours{background:rgba(59,130,246,0.12);color:#93c5fd}
 .status-fait,.status-résolu{background:rgba(16,185,129,0.12);color:#6ee7b7}
 .status-à-faire{background:rgba(245,158,11,0.12);color:#fcd34d}
+.gravite-badge{display:inline-block;padding:0.15rem 0.5rem;border-radius:4px;font-size:0.65rem;font-weight:600}
+.gravite-faible{background:rgba(16,185,129,0.12);color:#6ee7b7}
+.gravite-moyen{background:rgba(245,158,11,0.12);color:#fcd34d}
+.gravite-élevé{background:rgba(239,68,68,0.12);color:#fca5a5}
+.gravite-critique{background:rgba(220,38,38,0.2);color:#fca5a5;border:1px solid rgba(239,68,68,0.3)}
 </style>
 </head>
 <body>
@@ -2178,16 +2183,22 @@ function resetRaci() {
 
 /* ---------- AIPD / DPIA ---------- */
 const STATUTS_AIPD = ['En cours','Validé','À revoir','Annulé'];
+const TYPES_TRAITEMENT_AIPD = ['Données clients / CRM','Gestion RH / paie','Vidéosurveillance','Géolocalisation','Données de santé','Prospection commerciale','Gestion des accès','Données bancaires','Évaluation / scoring','Autre'];
+const BASES_JURIDIQUES_AIPD = ['Exécution contractuelle (art. 6.1.b)','Obligation légale (art. 6.1.c)','Intérêt légitime (art. 6.1.f)','Mission d\'intérêt public (art. 6.1.e)','Consentement (art. 6.1.a)','Autre'];
+const GRAVITE_RISQUE_AIPD = ['Faible','Moyen','Élevé','Critique'];
 function renderAipd() {
   const items = vault.aipd || [];
   return `
     <div class="flex items-center gap-2 mb-3"><button class="btn btn-primary btn-sm" onclick="addAipd()"><i class="fas fa-plus"></i> Ajouter</button></div>
     ${items.length === 0 ? '<div class="empty-state" style="padding:1.5rem"><i class="fa-regular fa-file-shield"></i><p>Aucune AIPD enregistrée. Ajoutez votre première analyse d\'impact.</p></div>' : `
     <div style="overflow-x:auto"><table class="gouv-table">
-      <thead><tr><th>Traitement</th><th>Responsable</th><th>Risques</th><th>Mesures</th><th>Statut</th><th>Évaluation</th><th>Révision</th><th class="gouv-actions"></th></tr></thead>
+      <thead><tr><th>Traitement</th><th>Type</th><th>Base juridique</th><th>Responsable</th><th>Gravité</th><th>Risques</th><th>Mesures</th><th>Statut</th><th>Évaluation</th><th>Révision</th><th class="gouv-actions"></th></tr></thead>
       <tbody>${items.map((a,i) => { return `<tr>
           <td><strong>${esc(a.traitement||'')}</strong></td>
+          <td class="text-slate-400">${esc(a.type_traitement||'—')}</td>
+          <td class="text-slate-400">${esc(a.base_juridique||'—')}</td>
           <td>${esc(a.responsable||'')}</td>
+          <td>${a.gravite_risque ? '<span class="gravite-badge gravite-'+esc(a.gravite_risque).toLowerCase()+'">'+esc(a.gravite_risque)+'</span>' : '—'}</td>
           <td>${(esc(a.description_risques||'').length > 50 ? esc(a.description_risques).slice(0,50)+'\u2026' : esc(a.description_risques||''))}</td>
           <td>${(esc(a.mesures||'').length > 50 ? esc(a.mesures).slice(0,50)+'\u2026' : esc(a.mesures||''))}</td>
           <td>${statutBadge(a.statut||'En cours')}</td>
@@ -2205,8 +2216,11 @@ function addAipd() {
   showGouvModal({ title:'Nouvelle AIPD / DPIA', saveLabel:'Ajouter',
     fields:[
       { key:'traitement', label:'Traitement concern\u00e9 *' },
+      { key:'type_traitement', label:'Type de traitement', type:'select', options:TYPES_TRAITEMENT_AIPD, value:TYPES_TRAITEMENT_AIPD[0] },
+      { key:'base_juridique', label:'Base juridique', type:'select', options:BASES_JURIDIQUES_AIPD, value:BASES_JURIDIQUES_AIPD[0] },
       { key:'responsable', label:'Responsable' },
       { key:'description_risques', label:'Risques identifi\u00e9s' },
+      { key:'gravite_risque', label:'Gravit\u00e9 du risque', type:'select', options:GRAVITE_RISQUE_AIPD, value:GRAVITE_RISQUE_AIPD[0] },
       { key:'mesures', label:'Mesures pr\u00e9vues' },
       { key:'statut', label:'Statut', type:'select', options:STATUTS_AIPD, value:'En cours' },
       { key:'date_evaluation', label:"Date d'\u00e9valuation", type:'date' },
@@ -2221,8 +2235,11 @@ function editAipd(i) {
   showGouvModal({ title:"Modifier l'AIPD", saveLabel:'Enregistrer',
     fields:[
       { key:'traitement', label:'Traitement concern\u00e9 *', value:a.traitement },
+      { key:'type_traitement', label:'Type de traitement', type:'select', options:TYPES_TRAITEMENT_AIPD, value:TYPES_TRAITEMENT_AIPD.includes(a.type_traitement) ? a.type_traitement : TYPES_TRAITEMENT_AIPD[0] },
+      { key:'base_juridique', label:'Base juridique', type:'select', options:BASES_JURIDIQUES_AIPD, value:BASES_JURIDIQUES_AIPD.includes(a.base_juridique) ? a.base_juridique : BASES_JURIDIQUES_AIPD[0] },
       { key:'responsable', label:'Responsable', value:a.responsable||'' },
       { key:'description_risques', label:'Risques identifi\u00e9s', value:a.description_risques||'' },
+      { key:'gravite_risque', label:'Gravit\u00e9 du risque', type:'select', options:GRAVITE_RISQUE_AIPD, value:GRAVITE_RISQUE_AIPD.includes(a.gravite_risque) ? a.gravite_risque : GRAVITE_RISQUE_AIPD[0] },
       { key:'mesures', label:'Mesures pr\u00e9vues', value:a.mesures||'' },
       { key:'statut', label:'Statut', type:'select', options:STATUTS_AIPD, value:STATUTS_AIPD.includes(a.statut) ? a.statut : 'En cours' },
       { key:'date_evaluation', label:"Date d'\u00e9valuation", type:'date', value:a.date_evaluation||'' },
@@ -2240,6 +2257,20 @@ async function deleteAipd(i) {
 /* ---------- AUTO-ÉVALUATION MATURITÉ ---------- */
 const DOMAINES_MATURITE = ['Gouvernance (GV)','Identification (ID)','Protection (PR)','D\u00e9tection (DE)','R\u00e9ponse (RS)','R\u00e9tablissement (RC)'];
 const NIVEAUX_MATURITE = ['1','2','3','4','5'];
+const SOUS_DOMAINES_MATURITE = {
+  'Gouvernance (GV)':['Contexte organisationnel (GV.OC)','Strat\u00e9gie de gestion des risques (GV.RM)','Risques fournisseurs (GV.SC)','Supervision et pilotage (GV.OV)','R\u00f4les et responsabilit\u00e9s (GV.PO)'],
+  'Identification (ID)':['Inventaire des actifs (ID.AM)','\u00c9valuation des risques (ID.RA)','Environnement m\u00e9tier (ID.BE)','Risques fournisseurs (ID.SC)'],
+  'Protection (PR)':['Gestion des identit\u00e9s et acc\u00e8s (PR.AA)','Sensibilisation et formation (PR.AT)','S\u00e9curit\u00e9 des donn\u00e9es (PR.DS)','S\u00e9curit\u00e9 des plateformes (PR.PS)','Technologies de protection (PR.PT)','Maintenance (PR.MA)'],
+  'D\u00e9tection (DE)':['Anomalies et \u00e9v\u00e9nements (DE.AE)','Surveillance continue (DE.CM)','Processus de d\u00e9tection (DE.DP)'],
+  'R\u00e9ponse (RS)':['Gestion des incidents (RS.MA)','Communication (RS.CO)','Analyse (RS.AN)','Att\u00e9nuation (RS.MI)','Am\u00e9lioration (RS.IM)'],
+  'R\u00e9tablissement (RC)':['Plan de reprise (RC.RP)','Communication (RC.CO)','Am\u00e9lioration (RC.IM)','Sauvegardes et restauration (RC.BR)']
+};
+function populateSousDomaine() {
+  const domaine = document.getElementById('gouvField_domaine').value;
+  const sdSelect = document.getElementById('gouvField_sous_domaine');
+  const options = SOUS_DOMAINES_MATURITE[domaine] || [];
+  sdSelect.innerHTML = options.map(function(o) { return '<option value="'+esc(o)+'">'+esc(o)+'</option>'; }).join('');
+}
 function renderMaturite() {
   const items = vault.maturite || [];
   const globalPct = items.length ? Math.round(items.reduce(function(s,m){return s+((m.niveau_actuel||1)/(m.niveau_cible||3));},0)/items.length*100) : 0;
@@ -2257,19 +2288,21 @@ function renderMaturite() {
     </div>
     ${items.length === 0 ? '<div class="empty-state" style="padding:1.5rem"><i class="fa-regular fa-chart-line"></i><p>Aucun domaine \u00e9valu\u00e9. Ajoutez un domaine NIST CSF ou un domaine personnalis\u00e9.</p></div>' : `
     <div style="overflow-x:auto"><table class="gouv-table">
-      <thead><tr><th>Domaine</th><th>Niveau actuel</th><th>Niveau cible</th><th>Progression</th><th>Observations</th><th class="gouv-actions"></th></tr></thead>
+      <thead><tr><th>Domaine</th><th>Sous-domaine</th><th>Niveau actuel</th><th>Niveau cible</th><th>Progression</th><th>Observations</th><th class="gouv-actions"></th></tr></thead>
       <tbody>${items.map(function(m,i) {
         const pct = Math.min(100, Math.round(((m.niveau_actuel||1) / (m.niveau_cible||3)) * 100));
         const color = pct >= 80 ? '#10b981' : pct >= 50 ? '#f59e0b' : '#3b82f6';
-        return '<tr><td><strong>'+esc(m.domaine||'')+'</strong></td><td>'+(m.niveau_actuel||1)+'/5</td><td>'+(m.niveau_cible||3)+'/5</td><td style="min-width:120px"><div class="h-1.5 rounded-full bg-white/5 overflow-hidden"><div class="h-full rounded-full" style="width:'+pct+'%;background:'+color+'"></div></div> <span class="text-[0.6rem] text-slate-500">'+pct+'%</span></td><td>'+(esc(m.observations||'').length > 40 ? esc(m.observations).slice(0,40)+'\u2026' : esc(m.observations||''))+'</td><td class="gouv-actions"><button onclick="editMaturiteDomaine('+i+')" title="Modifier"><i class="fas fa-pencil-alt"></i></button><button onclick="deleteMaturiteDomaine('+i+')" title="Supprimer"><i class="fas fa-trash"></i></button></td></tr>';
+        return '<tr><td><strong>'+esc(m.domaine||'')+'</strong></td><td class="text-slate-400">'+(esc(m.sous_domaine||'')||'\u2014')+'</td><td>'+(m.niveau_actuel||1)+'/5</td><td>'+(m.niveau_cible||3)+'/5</td><td style="min-width:120px"><div class="h-1.5 rounded-full bg-white/5 overflow-hidden"><div class="h-full rounded-full" style="width:'+pct+'%;background:'+color+'"></div></div> <span class="text-[0.6rem] text-slate-500">'+pct+'%</span></td><td>'+(esc(m.observations||'').length > 40 ? esc(m.observations).slice(0,40)+'\u2026' : esc(m.observations||''))+'</td><td class="gouv-actions"><button onclick="editMaturiteDomaine('+i+')" title="Modifier"><i class="fas fa-pencil-alt"></i></button><button onclick="deleteMaturiteDomaine('+i+')" title="Supprimer"><i class="fas fa-trash"></i></button></td></tr>';
       }).join('')}</tbody>
     </table></div>`}
     <div class="text-[0.65rem] text-slate-600 mt-2">${items.length} domaine(s) \u00e9valu\u00e9(s)</div>`;
 }
 function addMaturiteDomaine() {
+  const defaultSd = SOUS_DOMAINES_MATURITE[DOMAINES_MATURITE[0]] || [];
   showGouvModal({ title:'Nouveau domaine', saveLabel:'Ajouter',
     fields:[
       { key:'domaine', label:'Domaine *', type:'select', options:DOMAINES_MATURITE, value:DOMAINES_MATURITE[0] },
+      { key:'sous_domaine', label:'Sous-domaine NIST CSF', type:'select', options:defaultSd, value:defaultSd[0]||'' },
       { key:'niveau_actuel', label:'Niveau actuel (1-5)', type:'select', options:NIVEAUX_MATURITE, value:'1' },
       { key:'niveau_cible', label:'Niveau cible (1-5)', type:'select', options:NIVEAUX_MATURITE, value:'3' },
       { key:'observations', label:'Observations' }
@@ -2277,12 +2310,17 @@ function addMaturiteDomaine() {
     validate: function(d) { return d.domaine ? null : 'Le domaine est obligatoire.'; },
     onSave: function(d) { d.niveau_actuel = parseInt(d.niveau_actuel)||1; d.niveau_cible = parseInt(d.niveau_cible)||3; vault.maturite.push(d); setDirty(); renderGouvSubtab('maturite'); notify('Domaine ajout\u00e9.','success'); }
   });
+  document.getElementById('gouvField_domaine').addEventListener('change', populateSousDomaine);
 }
 function editMaturiteDomaine(i) {
   const m = vault.maturite[i]; if (!m) return;
+  const domaineVal = DOMAINES_MATURITE.includes(m.domaine) ? m.domaine : DOMAINES_MATURITE[0];
+  const sdOptions = SOUS_DOMAINES_MATURITE[domaineVal] || [];
+  const sdVal = sdOptions.includes(m.sous_domaine) ? m.sous_domaine : (sdOptions[0]||'');
   showGouvModal({ title:'Modifier le domaine', saveLabel:'Enregistrer',
     fields:[
-      { key:'domaine', label:'Domaine *', value:m.domaine },
+      { key:'domaine', label:'Domaine *', type:'select', options:DOMAINES_MATURITE, value:domaineVal },
+      { key:'sous_domaine', label:'Sous-domaine NIST CSF', type:'select', options:sdOptions, value:sdVal },
       { key:'niveau_actuel', label:'Niveau actuel (1-5)', type:'select', options:NIVEAUX_MATURITE, value:String(m.niveau_actuel||1) },
       { key:'niveau_cible', label:'Niveau cible (1-5)', type:'select', options:NIVEAUX_MATURITE, value:String(m.niveau_cible||3) },
       { key:'observations', label:'Observations', value:m.observations||'' }
@@ -2290,6 +2328,7 @@ function editMaturiteDomaine(i) {
     validate: function(d) { return d.domaine ? null : 'Le domaine est obligatoire.'; },
     onSave: function(d) { d.niveau_actuel = parseInt(d.niveau_actuel)||1; d.niveau_cible = parseInt(d.niveau_cible)||3; vault.maturite[i] = d; setDirty(); renderGouvSubtab('maturite'); notify('Domaine mis \u00e0 jour.','success'); }
   });
+  document.getElementById('gouvField_domaine').addEventListener('change', populateSousDomaine);
 }
 async function deleteMaturiteDomaine(i) {
   if (!await showConfirm('Supprimer ce domaine ?')) return;
@@ -3372,10 +3411,10 @@ function genererRapportExecutif() {
   /* AIPD */
   const aipds = vault.aipd || [];
   if (aipds.length) {
-    html += `<h2>Analyses d'impact (AIPD / DPIA)</h2><table><thead><tr><th>Traitement</th><th>Responsable</th><th>Statut</th><th>Révision</th></tr></thead><tbody>`;
+    html += `<h2>Analyses d'impact (AIPD / DPIA)</h2><table><thead><tr><th>Traitement</th><th>Type</th><th>Base juridique</th><th>Responsable</th><th>Gravité</th><th>Statut</th><th>Révision</th></tr></thead><tbody>`;
     aipds.forEach(a => {
       const cls = a.statut === 'Validé' ? 'badge-green' : a.statut === 'À revoir' ? 'badge-amber' : a.statut === 'Annulé' ? 'badge-slate' : 'badge-blue';
-      html += `<tr><td>${escHtml(a.traitement)}</td><td>${escHtml(a.responsable||'—')}</td><td><span class="badge ${cls}">${escHtml(a.statut)}</span></td><td>${a.date_revision ? new Date(a.date_revision).toLocaleDateString('fr-FR') : '—'}</td></tr>`;
+      html += `<tr><td>${escHtml(a.traitement)}</td><td>${escHtml(a.type_traitement||'—')}</td><td>${escHtml(a.base_juridique||'—')}</td><td>${escHtml(a.responsable||'—')}</td><td>${escHtml(a.gravite_risque||'—')}</td><td><span class="badge ${cls}">${escHtml(a.statut)}</span></td><td>${a.date_revision ? new Date(a.date_revision).toLocaleDateString('fr-FR') : '—'}</td></tr>`;
     });
     html += `</tbody></table>`;
   }
@@ -3383,10 +3422,10 @@ function genererRapportExecutif() {
   /* Maturité */
   const matItems = vault.maturite || [];
   if (matItems.length) {
-    html += `<h2>Auto-évaluation de maturité (NIST CSF)</h2><table><thead><tr><th>Domaine</th><th>Niveau actuel</th><th>Niveau cible</th><th>Atteinte</th></tr></thead><tbody>`;
+    html += `<h2>Auto-évaluation de maturité (NIST CSF)</h2><table><thead><tr><th>Domaine</th><th>Sous-domaine</th><th>Niveau actuel</th><th>Niveau cible</th><th>Atteinte</th></tr></thead><tbody>`;
     matItems.forEach(m => {
       const pct = Math.min(100, Math.round(((m.niveau_actuel||1) / (m.niveau_cible||3)) * 100));
-      html += `<tr><td>${escHtml(m.domaine)}</td><td>${m.niveau_actuel||1}/5</td><td>${m.niveau_cible||3}/5</td><td>${pctBar(pct, '#3b82f6')} <span style="font-size:8pt">${pct}%</span></td></tr>`;
+      html += `<tr><td>${escHtml(m.domaine)}</td><td>${escHtml(m.sous_domaine||'—')}</td><td>${m.niveau_actuel||1}/5</td><td>${m.niveau_cible||3}/5</td><td>${pctBar(pct, '#3b82f6')} <span style="font-size:8pt">${pct}%</span></td></tr>`;
     });
     html += `</tbody></table>`;
   }
