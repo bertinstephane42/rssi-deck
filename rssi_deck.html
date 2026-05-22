@@ -141,6 +141,10 @@ body{font-family:system-ui,-apple-system,'Inter','Segoe UI',sans-serif;backgroun
       <i class="fas fa-shield-halved text-4xl text-blue-400 mb-3"></i>
       <h1>RSSI Secure Command Deck</h1>
       <p class="text-xs text-slate-500 mt-1">Chiffrement AES-GCM 256 bits • PBKDF2 100k itérations</p>
+      <div id="osPathHint" class="text-xs text-slate-500 mt-2 text-center" style="display:none">
+        <i class="fas fa-folder-tree mr-1 text-slate-600"></i>Coffre sur disque&nbsp;:
+        <code id="osPathCode" class="text-blue-400/80" style="font-size:0.7rem;word-break:break-all"></code>
+      </div>
     </div>
     <div class="lock-tabs">
       <button class="lock-tab active" data-tab="create">Créer un coffre</button>
@@ -148,12 +152,17 @@ body{font-family:system-ui,-apple-system,'Inter','Segoe UI',sans-serif;backgroun
       <button class="lock-tab" data-tab="import">Importer un fichier</button>
     </div>
     <div id="lockTabCreate">
+      <div id="createPathHint" class="text-xs text-slate-500 mb-3 text-center leading-relaxed" style="display:none">
+        <i class="fas fa-info-circle text-blue-400 mr-1"></i>
+        Un dossier <code class="text-blue-400">.rssi_deck</code> sera créé dans le chemin ci-dessus.
+        Vous serez guidé pour le sélectionner.
+      </div>
       <input type="password" class="lock-input mb-3" id="lockPwd" placeholder="Mot de passe maître">
       <input type="password" class="lock-input mb-4" id="lockPwdConfirm" placeholder="Confirmer le mot de passe">
       <button class="btn btn-primary w-full justify-center" id="lockCreateBtn"><i class="fas fa-lock"></i> Créer &amp; Déverrouiller</button>
     </div>
     <div id="lockTabLoad" style="display:none">
-      <p class="text-xs text-slate-400 mb-3 text-center">Charger le coffre depuis le répertoire .rssi_deck</p>
+      <p class="text-xs text-slate-400 mb-3 text-center" id="loadTabHint">Charger le coffre depuis le répertoire .rssi_deck</p>
       <input type="password" class="lock-input mb-3" id="lockLoadPwd" placeholder="Mot de passe du coffre">
       <button class="btn btn-primary w-full justify-center mb-2" id="lockLoadBtn"><i class="fas fa-folder-open"></i> Charger &amp; Déverrouiller</button>
       <p id="loadError" class="text-xs text-red-400 text-center" style="display:none"></p>
@@ -167,7 +176,7 @@ body{font-family:system-ui,-apple-system,'Inter','Segoe UI',sans-serif;backgroun
       <input type="password" class="lock-input mb-4" id="lockImportPwd" placeholder="Mot de passe du coffre">
       <button class="btn btn-primary w-full justify-center" id="lockImportBtn" disabled><i class="fas fa-unlock"></i> Déverrouiller</button>
     </div>
-    <div id="lockFsUnsupported" class="lock-hint" style="display:none"><i class="fas fa-triangle-exclamation mr-1"></i> API Fichier non disponible — téléchargement manuel requis</div>
+    <div id="lockFsUnsupported" class="lock-hint" style="display:none"><i class="fas fa-triangle-exclamation mr-1"></i> Stockage navigateur (IndexedDB) — exporter vers disque recommandé</div>
     <p id="lockError" class="text-xs text-red-400 mt-3 text-center" style="display:none"></p>
   </div>
 </div>
@@ -196,6 +205,7 @@ body{font-family:system-ui,-apple-system,'Inter','Segoe UI',sans-serif;backgroun
         <input type="text" id="globalSearch" placeholder="Rechercher outils, playbooks, notes…">
       </div>
       <button class="btn btn-secondary btn-sm" id="saveBtn"><i class="fas fa-floppy-disk"></i> Sauvegarder</button>
+      <button class="btn btn-secondary btn-sm" id="exportDiskBtn" style="display:none" title="Exporter vers un fichier sur le disque"><i class="fas fa-download"></i> Exporter</button>
       <span id="fsPathDisplay" class="fs-path" style="display:none"><i class="fas fa-folder"></i> <span id="fsPathText"></span></span>
       <button class="btn btn-secondary btn-sm" id="refreshBtn"><i class="fas fa-rotate"></i> Rafraîchir</button>
     </div>
@@ -257,67 +267,138 @@ const Crypto = (() => {
 })();
 
 /* ============================================================
-   MODULE IDB — Stockage du FileSystemDirectoryHandle
+   MODULE IDB — Stockage IndexedDB (coffre + handles)
    ============================================================ */
 const FS = (() => {
   let _dirHandle = null;
   const _fsaSupported = 'showDirectoryPicker' in window;
+  const _isFileProtocol = window.location.protocol === 'file:';
+  const _useIdb = !_fsaSupported || _isFileProtocol; // FSA blocked on file://
 
-  async function _getDb() {
+  async function _getDb(name, ver, upgrade) {
     return new Promise((res, rej) => {
-      const r = indexedDB.open('rssi_deck_fs', 2);
-      r.onupgradeneeded = e => {
-        if (!e.target.result.objectStoreNames.contains('handles'))
-          e.target.result.createObjectStore('handles');
-      };
+      const r = indexedDB.open(name, ver);
+      r.onupgradeneeded = e => { if (upgrade) upgrade(e.target.result); };
       r.onsuccess = e => res(e.target.result);
       r.onerror = rej;
     });
   }
 
-  return {
-    supportsApi() { return _fsaSupported; },
+  async function _getHandleDb() {
+    return _getDb('rssi_deck_fs', 2, db => {
+      if (!db.objectStoreNames.contains('handles'))
+        db.createObjectStore('handles');
+    });
+  }
 
+  async function _getVaultDb() {
+    return _getDb('rssi_deck_vault', 1, db => {
+      if (!db.objectStoreNames.contains('vault'))
+        db.createObjectStore('vault');
+    });
+  }
+
+  return {
+    // FSA is only usable when browser supports it AND not on file://
+    supportsApi() { return _fsaSupported && !_isFileProtocol; },
+    isFileProtocol() { return _isFileProtocol; },
+
+    /* — Directory handles (FSA only) — */
     async saveDirHandle(dirHandle) {
       _dirHandle = dirHandle;
-      try { const db = await _getDb(); const tx = db.transaction('handles','readwrite'); tx.objectStore('handles').put(dirHandle,'dirHandle'); await new Promise((res,rej)=>{tx.oncomplete=res;tx.onerror=rej;}); } catch(e) {}
+      try { const db = await _getHandleDb(); const tx = db.transaction('handles','readwrite'); tx.objectStore('handles').put(dirHandle,'dirHandle'); await new Promise((res,rej)=>{tx.oncomplete=res;tx.onerror=rej;}); } catch(e) {}
     },
-
     async loadDirHandle() {
       if (_dirHandle) return _dirHandle;
-      try { const db = await _getDb(); const tx = db.transaction('handles','readonly'); const req = tx.objectStore('handles').get('dirHandle'); const h = await new Promise((res,rej)=>{req.onsuccess=()=>res(req.result);req.onerror=rej;}); if (h) _dirHandle = h; return h||null; } catch(e) { return null; }
+      try { const db = await _getHandleDb(); const tx = db.transaction('handles','readonly'); const req = tx.objectStore('handles').get('dirHandle'); const h = await new Promise((res,rej)=>{req.onsuccess=()=>res(req.result);req.onerror=rej;}); if (h) _dirHandle = h; return h||null; } catch(e) { return null; }
     },
-
     async clearDirHandle() {
       _dirHandle = null;
-      try { const db = await _getDb(); const tx = db.transaction('handles','readwrite'); tx.objectStore('handles').delete('dirHandle'); await new Promise((res,rej)=>{tx.oncomplete=res;tx.onerror=rej;}); } catch(e) {}
+      try { const db = await _getHandleDb(); const tx = db.transaction('handles','readwrite'); tx.objectStore('handles').delete('dirHandle'); await new Promise((res,rej)=>{tx.oncomplete=res;tx.onerror=rej;}); } catch(e) {}
     },
-
     async getFileHandle(create) {
       if (!_dirHandle) throw new Error('Aucun répertoire .rssi_deck configuré.');
       return _dirHandle.getFileHandle('rssi_coffre.json', { create: !!create });
     },
 
-    async writeVault(content) {
-      const fh = await this.getFileHandle(true);
-      const writable = await fh.createWritable();
-      await writable.write(content);
-      await writable.close();
+    /* — IDB vault content (universal) — */
+    async writeIdb(content) {
+      const db = await _getVaultDb();
+      const tx = db.transaction('vault','readwrite');
+      tx.objectStore('vault').put(content, 'encrypted');
+      await new Promise((res,rej)=>{tx.oncomplete=res;tx.onerror=rej;});
+    },
+    async readIdb() {
+      const db = await _getVaultDb();
+      const tx = db.transaction('vault','readonly');
+      const req = tx.objectStore('vault').get('encrypted');
+      return new Promise((res,rej)=>{req.onsuccess=()=>res(req.result||null);req.onerror=rej;});
+    },
+    async clearIdb() {
+      const db = await _getVaultDb();
+      const tx = db.transaction('vault','readwrite');
+      tx.objectStore('vault').delete('encrypted');
+      await new Promise((res,rej)=>{tx.oncomplete=res;tx.onerror=rej;});
     },
 
+    /* — Unified write (IDB always + FSA if available) — */
+    async writeVault(content) {
+      await this.writeIdb(content);
+      if (this.supportsApi() && _dirHandle) {
+        try {
+          const fh = await this.getFileHandle(true);
+          const writable = await fh.createWritable();
+          await writable.write(content);
+          await writable.close();
+        } catch(e) { /* FSA write failed, IDB saved */ }
+      }
+    },
+
+    /* — Unified read (FSA preferred, IDB fallback) — */
     async readVault() {
-      const fh = await this.getFileHandle(false);
-      const file = await fh.getFile();
-      return file.text();
+      if (this.supportsApi() && _dirHandle) {
+        try {
+          const fh = await this.getFileHandle(false);
+          const file = await fh.getFile();
+          return file.text();
+        } catch(e) { /* fall through to IDB */ }
+      }
+      const text = await this.readIdb();
+      if (text === null) throw new Error('Aucun coffre trouvé.');
+      return text;
     },
 
     async migrateOldHandle() {
-      try { const db = await _getDb(); const tx = db.transaction('handles','readwrite'); tx.objectStore('handles').delete('vaultHandle'); await new Promise((res,rej)=>{tx.oncomplete=res;tx.onerror=rej;}); } catch(e) {}
+      try { const db = await _getHandleDb(); const tx = db.transaction('handles','readwrite'); tx.objectStore('handles').delete('vaultHandle'); await new Promise((res,rej)=>{tx.oncomplete=res;tx.onerror=rej;}); } catch(e) {}
     },
 
     get dirHandle() { return _dirHandle; },
     set dirHandle(v) { _dirHandle = v; }
   };
+})();
+
+/* ============================================================
+   OS DETECTION — Chemin attendu du coffre
+   ============================================================ */
+const OS = (() => {
+  const ua = navigator.userAgent;
+  const name = ua.includes('Windows') ? 'windows' : ua.includes('Mac') ? 'mac' : ua.includes('Linux') ? 'linux' : 'other';
+  const isWin = name === 'windows';
+
+  function getExpectedDir() {
+    if (name === 'windows')
+      return 'C:\\Users\\<USER>\\AppData\\Local\\.rssi_deck';
+    if (name === 'mac')
+      return '/Users/<USER>/.rssi_deck';
+    return '/home/<USER>/.rssi_deck';
+  }
+
+  function getDirLabel() {
+    if (isWin) return getExpectedDir();
+    return getExpectedDir().replace('/home/<USER>', '~').replace('/Users/<USER>', '~');
+  }
+
+  return { name, isWin, getExpectedDir, getDirLabel };
 })();
 
 /* ============================================================
@@ -1021,11 +1102,12 @@ async function exportVault() {
   if (!vault) return;
   vault.last_updated = new Date().toISOString();
 
-  // Determine destination upfront (needs gesture while available)
-  let dirHandle = FS.dirHandle || await FS.loadDirHandle();
-  let useDir = false, useFallback = false, firstPick = false;
+  // Determine FSA availability (gesture needed for showDirectoryPicker)
+  const canUseFsa = FS.supportsApi();
+  let dirHandle = canUseFsa ? (FS.dirHandle || await FS.loadDirHandle()) : null;
+  let fsaReady = false;
 
-  if (FS.supportsApi()) {
+  if (canUseFsa) {
     if (dirHandle) {
       try {
         const perm = await dirHandle.requestPermission({ mode: 'readwrite' });
@@ -1033,61 +1115,61 @@ async function exportVault() {
       } catch(e) { FS.clearDirHandle(); dirHandle = null; }
     }
     if (!dirHandle) {
-      // First time — pick directory now while gesture is active
+      notify('Veuillez sélectionner le dossier .rssi_deck. Chemin attendu : ' + OS.getDirLabel(), 'info');
       try {
         dirHandle = await window.showDirectoryPicker({
-          id: 'rssi_deck_dir',
-          mode: 'readwrite'
+          id: 'rssi_deck_dir', mode: 'readwrite',
+          startIn: OS.isWin ? 'documents' : 'home'
         });
         await FS.saveDirHandle(dirHandle);
-        firstPick = true;
-        if (dirHandle.name !== '.rssi_deck') {
-          // Show warning later, after encryption
-        }
+        if (dirHandle.name !== '.rssi_deck')
+          notify('Le dossier choisi n\'est pas ".rssi_deck". Chemin recommandé : ' + OS.getDirLabel(), 'info');
       } catch(e) {
         if (e.name === 'AbortError') return;
-        useFallback = true;
       }
     }
-    if (dirHandle) useDir = true;
-  } else {
-    useFallback = true;
+    if (dirHandle) fsaReady = true;
   }
 
-  // Step 2 — Ask password (gesture no longer needed)
+  // Ask password → encrypt
   const pwd = await askPassword('Mot de passe pour chiffrer le coffre :');
-  if (!pwd) {
-    // If user cancels password after picking directory, clean up
-    if (firstPick) { /* dir handle kept for next time */ }
-    return;
-  }
-
-  // Step 3 — Encrypt
+  if (!pwd) return;
   const encrypted = await Crypto.encrypt(vault, pwd);
   encrypted.version = vault.version;
   encrypted.last_updated = vault.last_updated;
   const content = JSON.stringify(encrypted, null, 2);
 
-  // Step 4 — Write
-  if (useDir) {
-    try {
-      await FS.writeVault(content);
-      dirty = false;
-      updateFsPath();
-      let label = dirHandle.name + '/rssi_coffre.json';
-      if (firstPick && dirHandle.name !== '.rssi_deck') {
-        label += '. ' + (navigator.userAgent.includes('Windows') ?
-          'Attention : le chemin recommandé est C:\\Users\\<USER>\\AppData\\Local\\.rssi_deck\\' :
-          'Attention : le chemin recommandé est ~/.rssi_deck/') +
-          '. Vous pourrez changer via "Importer" puis resauvegarder.';
-      }
-      notify('Coffre enregistré dans ' + label, 'success');
-    } catch(e) {
-      notify('Erreur d\'écriture : ' + e.message, 'error');
+  // Write: IDB always (auto-persist), FSA if available
+  try {
+    await FS.writeVault(content);
+    dirty = false;
+    updateFsPath();
+    if (fsaReady) {
+      notify('Coffre enregistré dans ' + dirHandle.name + '/rssi_coffre.json.', 'success');
+    } else if (FS.isFileProtocol()) {
+      notify('Coffre sauvegardé dans le navigateur. Utilisez "Exporter" pour le copier sur le disque.', 'success');
+    } else {
+      await _downloadFallback(content);
     }
-  } else if (useFallback) {
-    await _downloadFallback(content);
+  } catch(e) {
+    if (!fsaReady && !FS.isFileProtocol()) {
+      await _downloadFallback(content);
+    } else {
+      notify('Erreur : ' + e.message, 'error');
+    }
   }
+}
+
+/* Export vers le disque (download manuel) */
+async function exportVaultToDisk() {
+  if (!vault) return;
+  vault.last_updated = new Date().toISOString();
+  const pwd = await askPassword('Mot de passe pour chiffrer le coffre :');
+  if (!pwd) return;
+  const encrypted = await Crypto.encrypt(vault, pwd);
+  encrypted.version = vault.version;
+  encrypted.last_updated = vault.last_updated;
+  await _downloadFallback(JSON.stringify(encrypted, null, 2));
 }
 
 async function _downloadFallback(content) {
@@ -1120,7 +1202,10 @@ async function importVault(file, pwd) {
     vault = data;
     vaultKey = true;
     dirty = false;
+    // Auto-save encrypted content to IDB
+    await FS.writeVault(text);
     unlockApp();
+    updateFsPath();
     notify('Coffre déchiffré et chargé avec succès.', 'success');
   } catch(e) {
     const el = document.querySelector('#lockTabLoad:not([style*="none"])') ? 'loadError' : 'lockError';
@@ -1130,7 +1215,7 @@ async function importVault(file, pwd) {
   }
 }
 
-async function decryptFromHandle(dirHandle, pwd) {
+async function decryptFromHandle(pwd) {
   try {
     const text = await FS.readVault();
     const encrypted = JSON.parse(text);
@@ -1165,6 +1250,9 @@ function updateFsPath() {
   if (FS.dirHandle) {
     el.style.display = 'flex';
     txt.textContent = FS.dirHandle.name + '/rssi_coffre.json' + (vault ? ' • ' + new Date(vault.last_updated).toLocaleString('fr-FR') : '');
+  } else if (FS.isFileProtocol()) {
+    el.style.display = 'flex';
+    txt.textContent = 'Navigateur' + (vault ? ' \u2022 ' + new Date(vault.last_updated).toLocaleString('fr-FR') : '');
   } else {
     el.style.display = 'none';
   }
@@ -1200,6 +1288,21 @@ document.addEventListener('DOMContentLoaded', async function() {
   /* Migrate old (v1) vaultHandle from IDB */
   await FS.migrateOldHandle();
 
+  /* OS path hint on lock screen */
+  const osPathCode = document.getElementById('osPathCode');
+  const osPathHint = document.getElementById('osPathHint');
+  const createPathHint = document.getElementById('createPathHint');
+  const loadTabHint = document.getElementById('loadTabHint');
+  if (osPathCode) {
+    const sep = OS.isWin ? '\\' : '/';
+    osPathCode.textContent = OS.getDirLabel() + sep + 'rssi_coffre.json';
+    osPathHint.style.display = 'block';
+    createPathHint.style.display = 'block';
+  }
+  if (loadTabHint && FS.isFileProtocol()) {
+    loadTabHint.textContent = 'Charger le coffre depuis le stockage navigateur (IndexedDB)';
+  }
+
   /* Lock tabs */
   document.querySelectorAll('.lock-tab').forEach(tab => {
     tab.addEventListener('click', function() {
@@ -1219,28 +1322,71 @@ document.addEventListener('DOMContentLoaded', async function() {
     const confirm = document.getElementById('lockPwdConfirm').value;
     if (!pwd || pwd.length < 4) { document.getElementById('lockError').textContent = 'Mot de passe : minimum 4 caractères.'; document.getElementById('lockError').style.display = 'block'; return; }
     if (pwd !== confirm) { document.getElementById('lockError').textContent = 'Les mots de passe ne correspondent pas.'; document.getElementById('lockError').style.display = 'block'; return; }
+
+    // Pick directory if FSA available (http://), skip for file://
+    let dirHandle = null;
+    if (FS.supportsApi()) {
+      try {
+        dirHandle = await window.showDirectoryPicker({
+          id: 'rssi_deck_dir', mode: 'readwrite',
+          startIn: OS.isWin ? 'documents' : 'home'
+        });
+        if (dirHandle.name !== '.rssi_deck')
+          notify('Le dossier sélectionné n\'est pas ".rssi_deck". Chemin attendu : ' + OS.getDirLabel(), 'info');
+        await FS.saveDirHandle(dirHandle);
+      } catch(e) {
+        if (e.name === 'AbortError') return;
+        document.getElementById('lockError').textContent = 'Erreur : ' + e.message; document.getElementById('lockError').style.display = 'block'; return;
+      }
+    }
+
+    // Create vault in memory
     vault = JSON.parse(JSON.stringify(DEFAULT_VAULT));
     vault.last_updated = new Date().toISOString();
     vaultKey = true;
     dirty = false;
+
+    // Encrypt and write (IDB always, FSA if handle exists)
+    try {
+      const encrypted = await Crypto.encrypt(vault, pwd);
+      encrypted.version = vault.version;
+      encrypted.last_updated = vault.last_updated;
+      await FS.writeVault(JSON.stringify(encrypted, null, 2));
+    } catch(e) {
+      document.getElementById('lockError').textContent = 'Erreur d\'écriture : ' + e.message;
+      document.getElementById('lockError').style.display = 'block';
+      vault = null; vaultKey = false;
+      return;
+    }
+
     unlockApp();
+    updateFsPath();
+    if (dirHandle) {
+      notify('Coffre créé et enregistré dans ' + dirHandle.name + '/rssi_coffre.json.', 'success');
+    } else {
+      notify('Coffre créé et sauvegardé dans le navigateur. Utilisez "Exporter" pour le copier sur disque.', 'success');
+    }
   });
 
-  /* Lock: Load from .rssi_deck */
+  /* Lock: Load from .rssi_deck (FSA) or IDB (file://) */
   const loadBtn = document.getElementById('lockLoadBtn');
   async function doLoadFromDir() {
     const pwd = document.getElementById('lockLoadPwd').value;
     if (!pwd) { document.getElementById('loadError').textContent = 'Saisissez le mot de passe du coffre.'; document.getElementById('loadError').style.display = 'block'; return; }
-    const dirHandle = await FS.loadDirHandle();
-    if (!dirHandle) { document.getElementById('loadError').textContent = 'Aucun répertoire .rssi_deck configuré. Utilisez "Importer" ou sauvegardez d\'abord.'; document.getElementById('loadError').style.display = 'block'; return; }
-    let perm;
-    try { perm = await dirHandle.requestPermission({ mode: 'read' }); } catch(e) { perm = 'denied'; }
-    if (perm !== 'granted') {
-      document.getElementById('loadError').textContent = 'Permission refusée. Utilisez "Importer" pour charger un fichier depuis un autre emplacement.'; document.getElementById('loadError').style.display = 'block'; FS.clearDirHandle(); return;
+
+    if (FS.supportsApi()) {
+      // FSA path: load from directory handle
+      const dirHandle = await FS.loadDirHandle();
+      if (!dirHandle) { document.getElementById('loadError').textContent = 'Aucun répertoire .rssi_deck configuré. Utilisez "Importer" ou sauvegardez d\'abord.'; document.getElementById('loadError').style.display = 'block'; return; }
+      let perm;
+      try { perm = await dirHandle.requestPermission({ mode: 'read' }); } catch(e) { perm = 'denied'; }
+      if (perm !== 'granted') {
+        document.getElementById('loadError').textContent = 'Permission refusée. Utilisez "Importer" pour charger un fichier depuis un autre emplacement.'; document.getElementById('loadError').style.display = 'block'; FS.clearDirHandle(); return;
+      }
+      await FS.saveDirHandle(dirHandle);
     }
-    // Restore the handle in the FS module so readVault works
-    await FS.saveDirHandle(dirHandle);
-    await decryptFromHandle(dirHandle, pwd);
+    // decryptFromHandle uses FS.readVault() which handles FSA + IDB fallback
+    await decryptFromHandle(pwd);
   }
   loadBtn.addEventListener('click', doLoadFromDir);
   document.getElementById('lockLoadPwd').addEventListener('keydown', function(e) {
@@ -1288,6 +1434,11 @@ document.addEventListener('DOMContentLoaded', async function() {
   /* Save */
   document.getElementById('saveBtn').addEventListener('click', exportVault);
 
+  /* Export to disk (visible on file://, always usable) */
+  const exportDiskBtn = document.getElementById('exportDiskBtn');
+  if (FS.isFileProtocol()) exportDiskBtn.style.display = '';
+  exportDiskBtn.addEventListener('click', exportVaultToDisk);
+
   /* Refresh */
   document.getElementById('refreshBtn').addEventListener('click', function() {
     vault.last_updated = new Date().toISOString();
@@ -1316,11 +1467,21 @@ document.addEventListener('DOMContentLoaded', async function() {
     if (e.key === 'Escape') hideModal();
   });
 
-  /* Auto-check for existing directory handle — show badge on "Charger" tab */
-  const existingDir = await FS.loadDirHandle();
-  if (existingDir) {
-    const loadTab = document.querySelector('.lock-tab[data-tab="load"]');
-    if (loadTab) loadTab.innerHTML = '<i class="fas fa-rotate-left mr-1" style="font-size:0.7rem"></i> Charger <span style="font-size:0.6rem;background:rgba(59,130,246,0.2);color:#93c5fd;padding:0.1rem 0.4rem;border-radius:3px;margin-left:0.3rem">✓ .rssi_deck</span>';
+  /* Auto-check for existing vault — show badge on "Charger" tab */
+  const loadTab = document.querySelector('.lock-tab[data-tab="load"]');
+  if (FS.supportsApi()) {
+    const existingDir = await FS.loadDirHandle();
+    if (existingDir && loadTab) {
+      loadTab.innerHTML = '<i class="fas fa-rotate-left mr-1" style="font-size:0.7rem"></i> Charger <span style="font-size:0.6rem;background:rgba(59,130,246,0.2);color:#93c5fd;padding:0.1rem 0.4rem;border-radius:3px;margin-left:0.3rem">✓ .rssi_deck</span>';
+    }
+  } else {
+    // file:// or no FSA — check IDB for existing content
+    try {
+      const text = await FS.readIdb();
+      if (text !== null && loadTab) {
+        loadTab.innerHTML = '<i class="fas fa-rotate-left mr-1" style="font-size:0.7rem"></i> Charger <span style="font-size:0.6rem;background:rgba(59,130,246,0.2);color:#93c5fd;padding:0.1rem 0.4rem;border-radius:3px;margin-left:0.3rem">✓ Coffre</span>';
+      }
+    } catch(e) { /* no vault in IDB */ }
   }
 });
 </script>
