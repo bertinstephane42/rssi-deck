@@ -1061,13 +1061,15 @@ function renderIncidents() {
     <div class="flex items-center gap-2 mb-3"><button class="btn btn-primary btn-sm" onclick="addIncident()"><i class="fas fa-plus"></i> Ajouter</button></div>
     ${items.length === 0 ? '<div class="empty-state" style="padding:1.5rem"><i class="fa-regular fa-circle-exclamation"></i><p>Aucun incident enregistré. Ajoutez votre premier incident.</p></div>' : `
     <div style="overflow-x:auto"><table class="gouv-table">
-      <thead><tr><th>Date</th><th>Type</th><th>Description</th><th>Impact</th><th>Statut</th><th class="gouv-actions"></th></tr></thead>
+      <thead><tr><th>Date</th><th>Type</th><th>Description</th><th>Impact</th><th>Périmètre</th><th>Risque</th><th>Statut</th><th class="gouv-actions"></th></tr></thead>
       <tbody>${items.map((inc,i) => `
         <tr>
           <td class="whitespace-nowrap">${escDate(inc.date)}</td>
           <td>${esc(inc.type||'')}</td>
           <td>${esc(inc.description||'').length > 60 ? esc(inc.description).slice(0,60)+'…' : esc(inc.description||'')}</td>
           <td>${esc(inc.impact||'')}</td>
+          <td>${esc(inc.perimetre||'')}</td>
+          <td>${esc(inc.risque_type||'')}</td>
           <td>${statutBadge(inc.statut||'Ouvert')}</td>
           <td class="gouv-actions">
             <button onclick="editIncident(${i})" title="Modifier"><i class="fas fa-pencil-alt"></i></button>
@@ -1199,6 +1201,26 @@ function addIncident() {
       { key:'type', label:'Type d\'incident *', type:'select', options:['Ransomware / Rançongiciel','Phishing / Hameçonnage','Fuite de données','Déni de service (DDoS)','Compromission de compte','Intrusion réseau','Malware','Ingénierie sociale','Fraude au président (FOVI)','Chaîne d\'approvisionnement','Défaillance matérielle','Erreur humaine / Mauvaise configuration','Menace interne','Atteinte physique / Intrusion','Autre'], value:'Phishing / Hameçonnage' },
       { key:'description', label:'Description' },
       { key:'impact', label:'Impact' },
+      { key:'perimetre', label:'Périmètre', type:'select',
+        options:['Non défini','Local (poste de travail)','Réseau local (LAN / DMZ)',
+          'Réseau étendu (WAN / multi-sites)','Cloud (IaaS / PaaS / SaaS)',
+          'Périmètre Internet (services exposés)',
+          'Chaîne d\'approvisionnement (fournisseurs)',
+          'Systèmes industriels (OT / SCADA / ICS)',
+          'Mobile / Nomade (télétravail)',
+          'Physique (site / salle serveur / datacenter)'],
+        value:'Non défini' },
+      { key:'risque_type', label:'Type de risque', type:'select',
+        options:['Non défini','Physique (accès, intrusion, vol)',
+          'Applicatif (OWASP Top 10, injection, XSS, API)',
+          'Système d\'exploitation (CVE OS, configuration, patch)',
+          'Réseau (sniffing, MitM, DDoS, routage)',
+          'Humain (erreur, négligence, social engineering)',
+          'Organisationnel (gouvernance, conformité, politique)',
+          'Logiciel / Malware (rançon, backdoor, spyware)',
+          'Supply Chain (fournisseur, mise à jour, dépendance)',
+          'Matériel (défaillance hardware, obsolescence)'],
+        value:'Non défini' },
       { key:'statut', label:'Statut', type:'select', options:['Ouvert','En cours','Résolu','Fermé'], value:'Ouvert' },
       { key:'date_resolution', label:'Date de résolution', type:'date' }
     ],
@@ -1214,6 +1236,26 @@ function editIncident(i) {
       { key:'type', label:'Type d\'incident *', type:'select', options:['Ransomware / Rançongiciel','Phishing / Hameçonnage','Fuite de données','Déni de service (DDoS)','Compromission de compte','Intrusion réseau','Malware','Ingénierie sociale','Fraude au président (FOVI)','Chaîne d\'approvisionnement','Défaillance matérielle','Erreur humaine / Mauvaise configuration','Menace interne','Atteinte physique / Intrusion','Autre'], value:inc.type },
       { key:'description', label:'Description', value:inc.description },
       { key:'impact', label:'Impact', value:inc.impact },
+      { key:'perimetre', label:'Périmètre', type:'select',
+        options:['Non défini','Local (poste de travail)','Réseau local (LAN / DMZ)',
+          'Réseau étendu (WAN / multi-sites)','Cloud (IaaS / PaaS / SaaS)',
+          'Périmètre Internet (services exposés)',
+          'Chaîne d\'approvisionnement (fournisseurs)',
+          'Systèmes industriels (OT / SCADA / ICS)',
+          'Mobile / Nomade (télétravail)',
+          'Physique (site / salle serveur / datacenter)'],
+        value:inc.perimetre || 'Non défini' },
+      { key:'risque_type', label:'Type de risque', type:'select',
+        options:['Non défini','Physique (accès, intrusion, vol)',
+          'Applicatif (OWASP Top 10, injection, XSS, API)',
+          'Système d\'exploitation (CVE OS, configuration, patch)',
+          'Réseau (sniffing, MitM, DDoS, routage)',
+          'Humain (erreur, négligence, social engineering)',
+          'Organisationnel (gouvernance, conformité, politique)',
+          'Logiciel / Malware (rançon, backdoor, spyware)',
+          'Supply Chain (fournisseur, mise à jour, dépendance)',
+          'Matériel (défaillance hardware, obsolescence)'],
+        value:inc.risque_type || 'Non défini' },
       { key:'statut', label:'Statut', type:'select', options:['Ouvert','En cours','Résolu','Fermé'], value:inc.statut || 'Ouvert' },
       { key:'date_resolution', label:'Date de résolution', type:'date', value:inc.date_resolution || '' }
     ],
