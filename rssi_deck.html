@@ -361,6 +361,16 @@ body{font-family:system-ui,-apple-system,'Inter','Segoe UI',sans-serif;backgroun
   </div>
 </div>
 
+<div id="confirmModal" class="pwd-modal" style="z-index:10000">
+  <div class="pwd-box glass-card" style="max-width:400px">
+    <p id="confirmModalMsg" class="text-sm text-slate-300 mb-4"></p>
+    <div class="flex gap-2 justify-end">
+      <button id="confirmModalCancel" class="btn btn-secondary">Annuler</button>
+      <button id="confirmModalOk" class="btn btn-danger">Confirmer</button>
+    </div>
+  </div>
+</div>
+
 <script>
 /* ============================================================
    MODULE CRYPTO
@@ -1745,6 +1755,23 @@ function refreshFavorites() {
   });
 }
 
+/* Confirm modal */
+function showConfirm(msg) {
+  return new Promise(resolve => {
+    const modal = document.getElementById('confirmModal');
+    const msgEl = document.getElementById('confirmModalMsg');
+    msgEl.textContent = msg;
+    modal.style.display = 'flex';
+    const ok = document.getElementById('confirmModalOk');
+    const cancel = document.getElementById('confirmModalCancel');
+    const cleanup = () => { modal.style.display = 'none'; };
+    const onOk = () => { cleanup(); resolve(true); };
+    const onCancel = () => { cleanup(); resolve(false); };
+    ok.onclick = onOk;
+    cancel.onclick = onCancel;
+  });
+}
+
 /* ============================================================
    EVENT BINDINGS
    ============================================================ */
@@ -2517,14 +2544,14 @@ document.addEventListener('DOMContentLoaded', async function() {
   /* Lock: Create */
   document.getElementById('lockCreateBtn').addEventListener('click', async function() {
     const pwd = document.getElementById('lockPwd').value;
-    const confirm = document.getElementById('lockPwdConfirm').value;
+    const pwdConfirm = document.getElementById('lockPwdConfirm').value;
     if (!pwd || pwd.length < 4) { document.getElementById('lockError').textContent = 'Mot de passe : minimum 4 caractères.'; document.getElementById('lockError').style.display = 'block'; return; }
-    if (pwd !== confirm) { document.getElementById('lockError').textContent = 'Les mots de passe ne correspondent pas.'; document.getElementById('lockError').style.display = 'block'; return; }
+    if (pwd !== pwdConfirm) { document.getElementById('lockError').textContent = 'Les mots de passe ne correspondent pas.'; document.getElementById('lockError').style.display = 'block'; return; }
 
     // Warn if existing vault will be overwritten
     const existing = await FS.readIdb();
     if (existing !== null) {
-      if (!confirm('Un coffre existe déjà dans le navigateur. Créer un nouveau coffre effacera définitivement les données existantes. Continuer ?')) return;
+      if (!await showConfirm('Un coffre existe déjà dans le navigateur. Créer un nouveau coffre effacera définitivement les données existantes. Continuer ?')) return;
       await FS.clearIdb();
     }
 
