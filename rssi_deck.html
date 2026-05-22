@@ -53,6 +53,10 @@ body{font-family:system-ui,-apple-system,'Inter','Segoe UI',sans-serif;backgroun
 .btn-danger{background:rgba(239,68,68,0.15);color:#fca5a5;border:1px solid rgba(239,68,68,0.2)}
 .btn-danger:hover{background:rgba(239,68,68,0.25)}
 .btn-sm{padding:0.4rem 0.8rem;font-size:0.78rem}
+.help-content{font-size:0.85rem;line-height:1.7;color:#cbd5e1}
+.help-content p{margin-bottom:0.75rem}
+.help-content strong{color:#f1f5f9}
+.help-content ul{color:#94a3b8}
 #app{display:none;min-height:100vh}
 #app.active{display:flex}
 #sidebar{width:240px;flex-shrink:0;padding:1rem;display:flex;flex-direction:column;gap:0.25rem;height:100vh;position:sticky;top:0;overflow-y:auto;z-index:10}
@@ -242,6 +246,8 @@ body{font-family:system-ui,-apple-system,'Inter','Segoe UI',sans-serif;backgroun
       <button class="btn btn-secondary btn-sm" id="pwdChangeBtn" title="Changer le mot de passe du coffre"><i class="fas fa-key"></i> Mot de passe</button>
       <span id="fsPathDisplay" class="fs-path" style="display:none"><i class="fas fa-folder"></i> <span id="fsPathText"></span></span>
       <button class="btn btn-secondary btn-sm" id="refreshBtn"><i class="fas fa-rotate"></i> Rafraîchir</button>
+      <button class="btn btn-secondary btn-sm" id="helpBtn" title="Aide"><i class="fas fa-question-circle"></i></button>
+      <button class="btn btn-secondary btn-sm" id="creditBtn" title="Crédits"><span style="font-weight:700;font-size:0.82rem">C</span></button>
     </div>
 
     <div id="viewDashboard" class="view active"></div>
@@ -795,6 +801,16 @@ function renderView(name) {
     });
   }
 }
+
+const HELP_TEXT = {
+  dashboard: '<p>Le tableau de bord offre une vision synthétique de l\'ensemble de votre dispositif de sécurité. Vous y découvrirez le nombre total d\'outils recensés, la répartition par catégorie et par priorité, l\'avancement des checklists des playbooks, le nombre de traitements RGPD et d\'incidents répertoriés, ainsi que le nombre de favoris et de mémos. Ce panorama central vous permet d\'embrasser d\'un seul regard l\'état de votre gouvernance de sécurité.</p>',
+  'outils-tech': '<p>La rubrique des outils techniques inventorie les solutions logicielles dédiées à la sécurité des systèmes d\'information. Chaque fiche décrit la finalité de l\'outil, un lien officiel, des cas d\'usage propres au métier de RSSI, ainsi que les commandes essentielles associées.</p><p>Vous pouvez trier la liste selon l\'ordre par défaut, par ordre alphabétique ou en faisant apparaître vos favoris en tête de chaque catégorie. Le bouton en forme d\'étoile vous permet d\'ajouter un outil à vos favoris pour y accéder rapidement.</p>',
+  'outils-fonctionnels': '<p>La rubrique des outils fonctionnels regroupe les plateformes et services destinés à la gestion de la sécurité : gestion des crises, conformité (GRC), documentation, mots de passe, identité et accès (IAM), sauvegarde et ticketing.</p><p>Chaque fiche présente la description, le lien officiel, les cas d\'usage et les commandes clés. Le tri par favoris vous permet de mettre en avant les outils que vous utilisez le plus fréquemment.</p>',
+  'threat-intel': '<p>Le module de renseignement sur les menaces compile les principales sources d\'information permettant de suivre l\'actualité de la cybersécurité. Chaque source est présentée avec sa catégorie (blogs, CERT, flux techniques, comptes de chercheurs), sa pertinence, un lien d\'accès direct et un indicateur de fraîcheur — ce dernier vous signale si une mise à jour est récente ou ancienne.</p><p>Vous pouvez ajouter, modifier ou supprimer des sources selon vos besoins. Une veille maintenue est essentielle pour anticiper les risques émergents.</p>',
+  frameworks: '<p>La section des référentiels et cadres de conformité rassemble les principaux standards et réglementations applicables à la sécurité des systèmes d\'information.</p><p>Chaque fiche décrit le périmètre du référentiel, sa version, son niveau de maturité, son lien officiel et ses cas d\'usage. Les frameworks sont classés par domaine : gestion des risques, conformité réglementaire, sécurité technique et gouvernance.</p><p>Des calculateurs intégrés vous permettent d\'évaluer les objectifs de reprise (RPO) et de temps de restauration (RTO) en fonction de votre type d\'entreprise et de la nature de l\'impact.</p><p>Utilisez les étoiles pour suivre vos référentiels de prédilection.</p>',
+  gouvernance: '<p>L\'espace de gouvernance vous permet de piloter votre dispositif de sécurité au travers de trois registres :</p><ul class="list-disc list-inside space-y-1"><li><strong>Traitements RGPD</strong> — finalité, catégories de données, personnes concernées, destinataires et mesures de sécurité.</li><li><strong>Incidents de sécurité</strong> — périmètre, type de risque, impact, date et statut.</li><li><strong>Plan d\'actions</strong> — responsable, échéance et état d\'avancement.</li></ul>',
+  memos: '<p>La rubrique des mémos et des playbooks constitue votre carnet de bord opérationnel.</p><p>Les <strong>mémos</strong> vous permettent de rédiger des notes libres au format Markdown avec prévisualisation en direct. Les <strong>playbooks</strong> décrivent les procédures de réponse à incident pas à pas, avec une checklist interactive et un historique permettant de tracer chaque exercice ou déclenchement réel. L\'historique enregistre l\'état des cases cochées au moment de la saisie pour une traçabilité complète.</p><p>Vous trouverez également les contacts d\'urgence essentiels.</p>'
+};
 
 const renderFn = {};
 
@@ -1633,7 +1649,9 @@ function bindModalEvents() {
     const date = document.getElementById('pbHistoDate').value;
     const contenu = document.getElementById('pbHistoContenu').value.trim();
     if (!date || !contenu) { notify('Date et contenu requis.', 'error'); return; }
-    const checks = vault.playbook_checks[pid] ? [...vault.playbook_checks[pid]] : [];
+    const raw = vault.playbook_checks[pid] ? [...vault.playbook_checks[pid]] : [];
+    const checks = new Array(pb.checklist.length).fill(false);
+    for (let i = 0; i < raw.length; i++) { if (raw[i] === true) checks[i] = true; }
     const entry = { date: date, contenu: contenu, checks: checks };
     const isEditing = _histoEditing >= 0 && _histoEditing < pb.historique.length;
     if (isEditing) {
@@ -1685,7 +1703,7 @@ function renderHistorique(pb) {
   return pb.historique.map((h, i) => {
     const checks = h.checks || [];
     const done = checks.filter(Boolean).length;
-    const total = checks.length;
+    const total = pb.checklist.length;
     return `
     <div class="border-b border-white/5 py-2 last:border-0">
       <div class="flex items-center justify-between">
@@ -1699,9 +1717,9 @@ function renderHistorique(pb) {
         </div>
       </div>
       <p class="text-xs text-slate-400 mt-1">${esc(h.contenu)}</p>
-      ${total > 0 ? `<div class="flex gap-1 mt-1 flex-wrap">${checks.map((c, ci) => `
-        <span class="inline-block w-2 h-2 rounded-full ${c ? 'bg-emerald-500' : 'bg-white/10'}" title="${esc(pb.checklist[ci] || '')}"></span>
-      `).join('')}</div>` : ''}
+      <div class="flex gap-1 mt-1 flex-wrap">${pb.checklist.map((_, ci) => `
+        <span class="inline-block w-2 h-2 rounded-full ${checks[ci] ? 'bg-emerald-500' : 'bg-white/10'}" title="${esc(pb.checklist[ci] || '')}"></span>
+      `).join('')}</div>
     </div>`;
   }).join('');
 }
@@ -1796,6 +1814,30 @@ function showSaveLockModal() {
     lock.onclick = () => { cleanup(); resolve('lock'); };
     cancel.onclick = () => { cleanup(); resolve(null); };
   });
+}
+
+/* Help modal */
+function showHelpModal() {
+  const titles = { dashboard:'Dashboard', 'outils-tech':'Outils Techniques', 'outils-fonctionnels':'Outils Fonctionnels',
+    'threat-intel':'Threat Intelligence', frameworks:'Frameworks & Conformité', gouvernance:'Gouvernance', memos:'Mémos & Playbooks' };
+  const overlay = document.getElementById('modalOverlay');
+  document.getElementById('modalTitle').textContent = 'Aide — ' + (titles[currentView] || currentView);
+  document.getElementById('modalBody').innerHTML = '<div class="help-content">' + (HELP_TEXT[currentView] || '<p>Aucune aide disponible pour cette rubrique.</p>') + '</div>';
+  overlay.classList.add('visible');
+  document.body.style.overflow = 'hidden';
+  overlay.scrollTop = 0;
+  bindModalEvents();
+}
+
+/* Credits modal */
+function showCreditsModal() {
+  const overlay = document.getElementById('modalOverlay');
+  document.getElementById('modalTitle').textContent = 'Crédits';
+  document.getElementById('modalBody').innerHTML = '<div class="help-content" style="text-align:center;padding:1rem 0"><p>Application conçue et imaginée par</p><p><a href="https://github.com/bertinstephane42/rssi-deck" target="_blank" style="color:#60a5fa;font-weight:600;font-size:1.1rem">Stéphane Bertin</a></p><p>avec l\'appui d\'OpenCode, agent Big Pickle.</p></div>';
+  overlay.classList.add('visible');
+  document.body.style.overflow = 'hidden';
+  overlay.scrollTop = 0;
+  bindModalEvents();
 }
 
 /* ============================================================
@@ -2718,6 +2760,10 @@ document.addEventListener('DOMContentLoaded', async function() {
     notify('Données rafraîchies.', 'info');
     renderView(currentView);
   });
+
+  /* Help & Credits */
+  document.getElementById('helpBtn').addEventListener('click', showHelpModal);
+  document.getElementById('creditBtn').addEventListener('click', showCreditsModal);
 
   /* Search */
   let searchTimer;
