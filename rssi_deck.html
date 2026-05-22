@@ -945,8 +945,8 @@ renderFn.frameworks = function() {
         <p class="text-xs text-slate-500 mb-3">Estimez le coût financier d&rsquo;un sinistre selon vos objectifs de résilience.</p>
         <div class="calc-group"><label><span class="text-slate-400">Régime horaire d&rsquo;activité</span></label><select id="regimeSelect" class="lock-input" style="font-size:0.85rem"><option value="24">24/7 (24 h/jour, 365 j/an)</option><option value="8">Jours ouvrés (8 h/jour, 365 j/an)</option><option value="7">24/7 réduit (7 j × 8 h)</option><option value="0">Personnalisé</option></select><div id="regimeCustomWrap" style="display:none;margin-top:0.3rem"><label class="text-xs text-slate-400">Heures par jour :</label> <input type="number" id="regimeCustom" class="lock-input" min="1" max="24" value="24" style="width:100px"></div></div>
         <div class="calc-group"><label><span class="text-slate-400">Chiffre d&rsquo;affaires annuel (€)</span></label><input type="number" id="caInput" class="lock-input" placeholder="Ex : 50 000 000" min="0" style="font-size:0.85rem"></div>
-        <div class="calc-group"><label><span class="text-slate-400">RPO &mdash; Perte de données max</span> <span id="rpoVal" class="text-blue-400">4 h</span></label><select id="rpoSelect" class="lock-input" style="font-size:0.85rem"><option value="0.25">15 min</option><option value="0.5">30 min</option><option value="1">1 h</option><option value="2">2 h</option><option value="4" selected>4 h</option><option value="8">8 h</option><option value="12">12 h</option><option value="24">24 h</option></select></div>
-        <div class="calc-group"><label><span class="text-slate-400">RTO &mdash; Temps de récupération max</span> <span id="rtoVal" class="text-blue-400">8 h</span></label><select id="rtoSelect" class="lock-input" style="font-size:0.85rem"><option value="1">1 h</option><option value="2">2 h</option><option value="4">4 h</option><option value="8" selected>8 h</option><option value="12">12 h</option><option value="24">24 h</option><option value="48">48 h</option><option value="72">72 h</option></select></div>
+        <div class="calc-group"><label><span class="text-slate-400">RPO &mdash; Perte de données max</span> <span id="rpoVal" class="text-blue-400">Non défini</span></label><select id="rpoSelect" class="lock-input" style="font-size:0.85rem"><option value="0" selected>Non défini</option><option value="0.25">15 min</option><option value="0.5">30 min</option><option value="1">1 h</option><option value="2">2 h</option><option value="4">4 h</option><option value="8">8 h</option><option value="12">12 h</option><option value="24">24 h</option></select></div>
+        <div class="calc-group"><label><span class="text-slate-400">RTO &mdash; Temps de récupération max</span> <span id="rtoVal" class="text-blue-400">Non défini</span></label><select id="rtoSelect" class="lock-input" style="font-size:0.85rem"><option value="0" selected>Non défini</option><option value="1">1 h</option><option value="2">2 h</option><option value="4">4 h</option><option value="8">8 h</option><option value="12">12 h</option><option value="24">24 h</option><option value="48">48 h</option><option value="72">72 h</option></select></div>
         <div class="border-t border-white/5 pt-3 mt-3">
           <div class="text-xs text-slate-500">Coût estimé par heure d&rsquo;arrêt :</div>
           <div class="calc-result" id="coutHoraireResult" style="font-size:1rem">&mdash;</div>
@@ -1522,18 +1522,18 @@ function updateRpoRto() {
     return;
   }
   const coutHoraire = ca / (365 * heuresJour);
-  const coutRpo = coutHoraire * rpo;
-  const coutRto = coutHoraire * rto;
+  const coutRpo = rpo > 0 ? coutHoraire * rpo : 0;
+  const coutRto = rto > 0 ? coutHoraire * rto : 0;
   const coutTotal = coutRpo + coutRto;
   const fmt = function(v) { return Number(v).toLocaleString('fr-FR', { maximumFractionDigits: 0 }); };
   document.getElementById('coutHoraireResult').innerHTML = '<strong>' + fmt(coutHoraire) + ' €/h</strong>';
-  document.getElementById('coutRpoResult').textContent = fmt(coutRpo) + ' €';
-  document.getElementById('coutRtoResult').textContent = fmt(coutRto) + ' €';
+  document.getElementById('coutRpoResult').textContent = rpo > 0 ? fmt(coutRpo) + ' €' : '—';
+  document.getElementById('coutRtoResult').textContent = rto > 0 ? fmt(coutRto) + ' €' : '—';
   document.getElementById('coutTotalResult').textContent = fmt(coutTotal) + ' €';
   var classe, color;
-  if (rpo <= 0.5 && rto <= 4) { classe = 'A (Excellent)'; color = '#10b981'; }
-  else if (rpo <= 4 && rto <= 24) { classe = 'B (Bon)'; color = '#f59e0b'; }
-  else if (rpo <= 12 && rto <= 48) { classe = 'C (Moyen)'; color = '#f97316'; }
+  if ((rpo <= 0 || rpo <= 0.5) && (rto <= 0 || rto <= 4)) { classe = 'A (Excellent)'; color = '#10b981'; }
+  else if ((rpo <= 0 || rpo <= 4) && (rto <= 0 || rto <= 24)) { classe = 'B (Bon)'; color = '#f59e0b'; }
+  else if ((rpo <= 0 || rpo <= 12) && (rto <= 0 || rto <= 48)) { classe = 'C (Moyen)'; color = '#f97316'; }
   else { classe = 'D (Critique)'; color = '#ef4444'; }
   document.getElementById('classeResilience').innerHTML = 'Classe de résilience : <strong style="color:' + color + '">' + classe + '</strong>';
 }
