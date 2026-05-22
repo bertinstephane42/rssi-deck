@@ -371,6 +371,17 @@ body{font-family:system-ui,-apple-system,'Inter','Segoe UI',sans-serif;backgroun
   </div>
 </div>
 
+<div id="saveLockModal" class="pwd-modal" style="z-index:10000">
+  <div class="pwd-box glass-card" style="max-width:420px">
+    <p id="saveLockMsg" class="text-sm text-slate-300 mb-4">Des modifications n'ont pas été sauvegardées. Que souhaitez-vous faire ?</p>
+    <div class="flex flex-col gap-2">
+      <button id="saveLockSaveBtn" class="btn btn-primary w-full justify-center"><i class="fas fa-floppy-disk mr-1"></i> Sauvegarder &amp; Verrouiller</button>
+      <button id="saveLockLockBtn" class="btn btn-danger w-full justify-center"><i class="fas fa-lock mr-1"></i> Verrouiller sans sauvegarder</button>
+      <button id="saveLockCancelBtn" class="btn btn-secondary w-full justify-center">Annuler</button>
+    </div>
+  </div>
+</div>
+
 <script>
 /* ============================================================
    MODULE CRYPTO
@@ -1772,6 +1783,21 @@ function showConfirm(msg) {
   });
 }
 
+/* Save-before-lock modal */
+function showSaveLockModal() {
+  return new Promise(resolve => {
+    const modal = document.getElementById('saveLockModal');
+    modal.style.display = 'flex';
+    const save = document.getElementById('saveLockSaveBtn');
+    const lock = document.getElementById('saveLockLockBtn');
+    const cancel = document.getElementById('saveLockCancelBtn');
+    const cleanup = () => { modal.style.display = 'none'; };
+    save.onclick = () => { cleanup(); resolve('save'); };
+    lock.onclick = () => { cleanup(); resolve('lock'); };
+    cancel.onclick = () => { cleanup(); resolve(null); };
+  });
+}
+
 /* ============================================================
    EVENT BINDINGS
    ============================================================ */
@@ -2490,7 +2516,16 @@ function updateFsPath() {
   }
 }
 
-function lockApp() {
+async function lockApp() {
+  if (dirty) {
+    const choice = await showSaveLockModal();
+    if (choice === 'save') {
+      await exportVault();
+      if (dirty) return;
+    } else if (choice === null) {
+      return;
+    }
+  }
   vault = null;
   vaultKey = null;
   _sessionKey = null;
