@@ -943,12 +943,12 @@ renderFn.frameworks = function() {
       <div class="glass-card">
         <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3"><i class="fas fa-calculator mr-1"></i> Estimation Amende RGPD</h3>
         <p class="text-xs text-slate-500 mb-3">Simulation basée sur les critères de l\'Article 83 du RGPD.</p>
-        <div class="calc-group"><label><span class="text-slate-400">Gravité de la violation</span> <span id="gravVal" class="text-blue-400">3/5</span></label><input type="range" min="0" max="5" value="3" id="gravSlider"></div>
+        <div class="calc-group"><label><span class="text-slate-400">Gravité de la violation</span> <span id="gravVal" class="text-blue-400">0 - Aucune</span></label><input type="range" min="0" max="5" value="0" id="gravSlider"></div>
         <div class="calc-group"><label><span class="text-slate-400">Personnes concernées</span> <span id="nbreVal" class="text-blue-400">10 000</span></label><input type="range" min="100" max="10000000" value="10000" id="nbreSlider"></div>
         <div class="calc-group"><label><span class="text-slate-400">Mesures correctives</span> <span id="corrVal" class="text-blue-400">2/5</span></label><input type="range" min="1" max="5" value="2" id="corrSlider"></div>
         <div class="border-t border-white/5 pt-3 mt-3">
           <div class="text-xs text-slate-500">Estimation indicative :</div>
-          <div class="calc-result" id="amendeResult">Jusqu'à 1 250 000 €</div>
+          <div class="calc-result" id="amendeResult">Aucune amende (gravité nulle)</div>
           <div class="text-xs text-slate-500 mt-1">Plafond légal : 20M€ ou 4% du CA annuel mondial</div>
         </div>
       </div>
