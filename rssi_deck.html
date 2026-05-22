@@ -1001,18 +1001,20 @@ renderFn.frameworks = function() {
       <div class="glass-card">
         <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3"><i class="fas fa-clock mr-1"></i> Calculateur RPO / RTO &amp; Coût d'Arrêt</h3>
         <p class="text-xs text-slate-500 mb-3">Estimez le coût financier d&rsquo;un sinistre selon vos objectifs de résilience.</p>
-        <div class="calc-group"><label><span class="text-slate-400">Régime horaire d&rsquo;activité</span></label><select id="regimeSelect" class="lock-input" style="font-size:0.85rem"><option value="24">24/7 (24 h/jour, 365 j/an)</option><option value="8">Jours ouvrés (8 h/jour, 365 j/an)</option><option value="7">24/7 réduit (7 j × 8 h)</option><option value="0">Personnalisé</option></select><div id="regimeCustomWrap" style="display:none;margin-top:0.3rem"><label class="text-xs text-slate-400">Heures par jour :</label> <input type="number" id="regimeCustom" class="lock-input" min="1" max="24" value="24" style="width:100px"></div></div>
+        <div class="calc-group"><label><span class="text-slate-400">Régime horaire d&rsquo;activité</span></label><select id="regimeSelect" class="lock-input" style="font-size:0.85rem"><option value="24">24/7 (24 h/jour, 365 j/an)</option><option value="8">Jours ouvrés (8 h/jour, ~245 j/an)</option><option value="7">24/7 réduit (7 j × 8 h)</option><option value="0">Personnalisé</option></select><div id="regimeCustomWrap" style="display:none;margin-top:0.3rem"><label class="text-xs text-slate-400">Heures par jour :</label> <input type="number" id="regimeCustom" class="lock-input" min="1" max="24" value="24" style="width:100px"></div></div>
         <div class="calc-group"><label><span class="text-slate-400">Chiffre d&rsquo;affaires annuel (€)</span></label><input type="number" id="caInput" class="lock-input" placeholder="Ex : 50 000 000" min="0" style="font-size:0.85rem"></div>
-        <div class="calc-group"><label><span class="text-slate-400">RPO &mdash; Perte de données max</span> <span id="rpoVal" class="text-blue-400">Non défini</span></label><select id="rpoSelect" class="lock-input" style="font-size:0.85rem"><option value="0" selected>Non défini</option><option value="0.25">15 min</option><option value="0.5">30 min</option><option value="1">1 h</option><option value="2">2 h</option><option value="4">4 h</option><option value="8">8 h</option><option value="12">12 h</option><option value="24">24 h</option></select></div>
-        <div class="calc-group"><label><span class="text-slate-400">RTO &mdash; Temps de récupération max</span> <span id="rtoVal" class="text-blue-400">Non défini</span></label><select id="rtoSelect" class="lock-input" style="font-size:0.85rem"><option value="0" selected>Non défini</option><option value="1">1 h</option><option value="2">2 h</option><option value="4">4 h</option><option value="8">8 h</option><option value="12">12 h</option><option value="24">24 h</option><option value="48">48 h</option><option value="72">72 h</option></select></div>
+        <div class="calc-group"><label><span class="text-slate-400">Type d&rsquo;entreprise</span></label><select id="typeSelect" class="lock-input" style="font-size:0.85rem"><option value="default">Autre / Généraliste</option><option value="ecommerce">E-commerce / Retail</option><option value="finance">Banque / Finance / Assurance</option><option value="transport">Transport / Logistique</option><option value="industrie">Industrie / Production (OT/SCADA)</option><option value="sante">Santé / Médical</option><option value="formation">Formation / Éducation</option><option value="public">Secteur public / Administration</option><option value="conseil">Conseil / Services professionnels</option><option value="data">Actuariat / Data / R&amp;D</option><option value="hebergement">Hébergement / Cloud / SaaS</option><option value="media">Média / Communication</option></select></div>
+        <div class="calc-group"><label><span class="text-slate-400">RPO &mdash; Perte de données max</span> <span id="rpoVal" class="text-blue-400">Non défini</span></label><select id="rpoSelect" class="lock-input" style="font-size:0.85rem"><option value="0" selected>Non défini</option><option value="0.25">15 min</option><option value="0.5">30 min</option><option value="1">1 h</option><option value="2">2 h</option><option value="4">4 h</option><option value="8">8 h</option><option value="12">12 h</option><option value="24">24 h</option></select><select id="rpoImpactSelect" class="lock-input" style="font-size:0.78rem;margin-top:0.25rem"><option value="defaut">Impact RPO : défaut</option><option value="perte_donnees">Perte de données</option><option value="reconstruction">Coût reconstruction (consultant, re-saisie)</option><option value="incoherences">Incohérences / corruption de données</option><option value="arret_process">Arrêt de process métier</option><option value="non_conformite">Non-conformité réglementaire</option><option value="autre">Autre impact</option></select></div>
+        <div class="calc-group"><label><span class="text-slate-400">RTO &mdash; Temps de récupération max</span> <span id="rtoVal" class="text-blue-400">Non défini</span></label><select id="rtoSelect" class="lock-input" style="font-size:0.85rem"><option value="0" selected>Non défini</option><option value="1">1 h</option><option value="2">2 h</option><option value="4">4 h</option><option value="8">8 h</option><option value="12">12 h</option><option value="24">24 h</option><option value="48">48 h</option><option value="72">72 h</option></select><select id="rtoImpactSelect" class="lock-input" style="font-size:0.78rem;margin-top:0.25rem"><option value="defaut">Impact RTO : défaut</option><option value="perte_ca">Perte de CA directe</option><option value="penalites">Pénalités contractuelles (SLA)</option><option value="crise_interne">Coûts de crise internes</option><option value="reputation">Impact réputation / image</option><option value="non_conformite">Non-conformité réglementaire</option><option value="autre">Autre impact</option></select></div>
         <div class="border-t border-white/5 pt-3 mt-3">
           <div class="text-xs text-slate-500">Coût estimé par heure d&rsquo;arrêt :</div>
           <div class="calc-result" id="coutHoraireResult" style="font-size:1rem">&mdash;</div>
           <div class="grid grid-cols-3 gap-2 mt-2">
-            <div><div class="text-xs text-slate-500">Coût RPO<br><small>(données)</small></div><div class="text-sm font-semibold text-blue-400" id="coutRpoResult">&mdash;</div></div>
-            <div><div class="text-xs text-slate-500">Coût RTO<br><small>(indisponibilité)</small></div><div class="text-sm font-semibold text-amber-400" id="coutRtoResult">&mdash;</div></div>
+            <div><div class="text-xs text-slate-500">Coût RPO<br><small>(données + reconstruction)</small></div><div class="text-sm font-semibold text-blue-400" id="coutRpoResult">&mdash;</div></div>
+            <div><div class="text-xs text-slate-500">Coût RTO<br><small>(arrêt + surcoûts)</small></div><div class="text-sm font-semibold text-amber-400" id="coutRtoResult">&mdash;</div></div>
             <div><div class="text-xs text-slate-500">Coût total</div><div class="text-sm font-semibold text-emerald-400" id="coutTotalResult">&mdash;</div></div>
           </div>
+          <div class="mt-1 text-[0.6rem] text-slate-600" id="coutMultipliers">Sélectionnez un type d'entreprise.</div>
           <div class="mt-2 text-xs" id="classeResilience">Renseignez les champs ci-dessus.</div>
         </div>
       </div>
@@ -1804,7 +1806,7 @@ function bindViewEvents(name) {
       }
     });
     /* RPO/RTO calculator */
-    ['rpoSelect','rtoSelect','caInput','regimeSelect','regimeCustom'].forEach(function(id) {
+    ['rpoSelect','rtoSelect','caInput','regimeSelect','regimeCustom','typeSelect','rpoImpactSelect','rtoImpactSelect'].forEach(function(id) {
       var el = document.getElementById(id);
       if (el) el.oninput = updateRpoRto;
     });
@@ -1983,6 +1985,41 @@ function updateRisque() {
   el.style.color = color;
 }
 
+const RPO_IMPACTS = {
+  defaut:         { label:'Perte de donn\u00e9es',           mult:1.0, fixe:0 },
+  perte_donnees:  { label:'Perte de donn\u00e9es',           mult:1.0, fixe:0 },
+  reconstruction: { label:'Co\u00fbt reconstruction',        mult:0.5, fixe:6000 },
+  incoherences:   { label:'Incoh\u00e9rences / corruption',  mult:1.5, fixe:2000 },
+  arret_process:  { label:'Arr\u00eat process m\u00e9tier',  mult:2.0, fixe:3000 },
+  non_conformite: { label:'Non-conformit\u00e9 r\u00e9glementaire', mult:1.2, fixe:12000 },
+  autre:          { label:'Autre',                           mult:1.0, fixe:0 }
+};
+
+const RTO_IMPACTS = {
+  defaut:         { label:'Perte de CA directe',        mult:1.0, fixe:0 },
+  perte_ca:       { label:'Perte de CA directe',        mult:1.0, fixe:0 },
+  penalites:      { label:'P\u00e9nalit\u00e9s contractuelles',  mult:1.2, fixe:4000 },
+  crise_interne:  { label:'Co\u00fbts de crise internes',       mult:0.8, fixe:8000 },
+  reputation:     { label:'Impact r\u00e9putation / image',     mult:2.0, fixe:2000 },
+  non_conformite: { label:'Non-conformit\u00e9 r\u00e9glementaire', mult:1.5, fixe:18000 },
+  autre:          { label:'Autre',                       mult:1.0, fixe:0 }
+};
+
+const TYPE_MULTIPLIERS = {
+  default:    { rpo:0.3, rto:2.0, recupFixe:2000 },
+  ecommerce:  { rpo:0.7, rto:2.5, recupFixe:5000 },
+  finance:    { rpo:0.9, rto:3.0, recupFixe:15000 },
+  transport:  { rpo:0.5, rto:2.5, recupFixe:12000 },
+  industrie:  { rpo:0.8, rto:3.0, recupFixe:15000 },
+  sante:      { rpo:0.8, rto:2.5, recupFixe:12000 },
+  formation:  { rpo:0.2, rto:1.5, recupFixe:1000 },
+  public:     { rpo:0.3, rto:1.5, recupFixe:3000 },
+  conseil:    { rpo:0.3, rto:1.8, recupFixe:3000 },
+  data:       { rpo:0.9, rto:1.5, recupFixe:10000 },
+  hebergement:{ rpo:0.7, rto:3.0, recupFixe:8000 },
+  media:      { rpo:0.5, rto:2.5, recupFixe:4000 }
+};
+
 function updateRpoRto() {
   const ca = parseFloat(document.getElementById('caInput').value) || 0;
   const regime = parseInt(document.getElementById('regimeSelect').value);
@@ -1995,11 +2032,18 @@ function updateRpoRto() {
     document.getElementById('coutRtoResult').textContent = '—';
     document.getElementById('coutTotalResult').textContent = '—';
     document.getElementById('classeResilience').innerHTML = '<span class="text-slate-500">Renseignez le chiffre d\'affaires.</span>';
+    document.getElementById('coutMultipliers').innerHTML = 'Sélectionnez un type d\'entreprise.';
     return;
   }
-  const coutHoraire = ca / (365 * heuresJour);
-  const coutRpo = rpo > 0 ? coutHoraire * rpo : 0;
-  const coutRto = rto > 0 ? coutHoraire * rto : 0;
+  const typeKey = document.getElementById('typeSelect').value;
+  const mult = TYPE_MULTIPLIERS[typeKey] || TYPE_MULTIPLIERS.default;
+  const RPO_MULT = mult.rpo;
+  const RTO_MULT = mult.rto;
+  const rpoImpact = RPO_IMPACTS[document.getElementById('rpoImpactSelect').value] || RPO_IMPACTS.defaut;
+  const rtoImpact = RTO_IMPACTS[document.getElementById('rtoImpactSelect').value] || RTO_IMPACTS.defaut;
+  const coutHoraire = ca / ((regime === 8 ? 245 : 365) * heuresJour);
+  const coutRpo = rpo > 0 ? mult.recupFixe + rpoImpact.fixe + coutHoraire * rpo * RPO_MULT * rpoImpact.mult : 0;
+  const coutRto = rto > 0 ? rtoImpact.fixe + coutHoraire * rto * RTO_MULT * rtoImpact.mult : 0;
   const coutTotal = coutRpo + coutRto;
   const fmt = function(v) { return Number(v).toLocaleString('fr-FR', { maximumFractionDigits: 0 }); };
   document.getElementById('coutHoraireResult').innerHTML = '<strong>' + fmt(coutHoraire) + ' €/h</strong>';
@@ -2011,7 +2055,15 @@ function updateRpoRto() {
   else if ((rpo <= 0 || rpo <= 4) && (rto <= 0 || rto <= 24)) { classe = 'B (Bon)'; color = '#f59e0b'; }
   else if ((rpo <= 0 || rpo <= 12) && (rto <= 0 || rto <= 48)) { classe = 'C (Moyen)'; color = '#f97316'; }
   else { classe = 'D (Critique)'; color = '#ef4444'; }
-  document.getElementById('classeResilience').innerHTML = 'Classe de résilience : <strong style="color:' + color + '">' + classe + '</strong>';
+  document.getElementById('classeResilience').innerHTML = 'Classe de r\u00e9silience : <strong style="color:' + color + '">' + classe + '</strong>';
+  const typeLabelEl = document.getElementById('typeSelect');
+  const typeLabel = typeLabelEl.options[typeLabelEl.selectedIndex].text;
+  const rpoFixe = mult.recupFixe + rpoImpact.fixe;
+  const rtoFixe = rtoImpact.fixe;
+  document.getElementById('coutMultipliers').innerHTML =
+    'RPO : ' + rpoImpact.label + ' &times;' + RPO_MULT + ' + ' + fmt(rpoFixe) + '\u20AC fixe &middot; '
+    + 'RTO : ' + rtoImpact.label + ' &times;' + RTO_MULT + ' + ' + fmt(rtoFixe) + '\u20AC fixe &middot; '
+    + '<span class="text-slate-500">' + typeLabel + '</span>';
 }
 
 /* ============================================================
