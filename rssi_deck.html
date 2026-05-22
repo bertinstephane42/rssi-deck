@@ -3095,7 +3095,7 @@ function bindViewEvents(name) {
     const btn = document.getElementById('cveSearchBtn');
     if (input && btn) {
       const searchNvd = function(q) {
-        if (q) window.open('https://nvd.nist.gov/vuln/search?query=' + q, '_blank');
+        if (q) window.open('https://nvd.nist.gov/vuln/search?query#/nvd/home?keyword=' + q + '&resultType=records', '_blank');
       };
       input.onkeydown = function(e) {
         if (e.key === 'Enter') searchNvd(encodeURIComponent(this.value.trim()));
