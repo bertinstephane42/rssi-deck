@@ -53,6 +53,7 @@ body{font-family:system-ui,-apple-system,'Inter','Segoe UI',sans-serif;backgroun
 .btn-danger{background:rgba(239,68,68,0.15);color:#fca5a5;border:1px solid rgba(239,68,68,0.2)}
 .btn-danger:hover{background:rgba(239,68,68,0.25)}
 .btn-sm{padding:0.4rem 0.8rem;font-size:0.78rem}
+.btn-xs{padding:0.25rem 0.5rem;font-size:0.68rem;border-radius:6px}
 .help-content{font-size:0.85rem;line-height:1.7;color:#cbd5e1}
 .help-content p{margin-bottom:0.75rem}
 .help-content strong{color:#f1f5f9}
@@ -717,7 +718,10 @@ const DEFAULT_VAULT = {
     { action:"Déployer l'authentification multi-facteurs (MFA)", priorite:'Haute', responsable:'DSI', echeance:'', statut:'À faire' },
     { action:'Sensibiliser les collaborateurs à la cybersécurité', priorite:'Moyenne', responsable:'RSSI', echeance:'', statut:'À faire' }
   ],
-  incidents: []
+  incidents: [],
+  actifs: [],
+  risques: [],
+  indicateurs: []
 };
 
 /* ============================================================
@@ -744,6 +748,9 @@ function migrateVault(v) {
     if (!v.traitements) v.traitements = [];
     if (!v.plan_actions) v.plan_actions = [];
     if (!v.incidents) v.incidents = [];
+    if (!v.actifs) v.actifs = [];
+    if (!v.risques) v.risques = [];
+    if (!v.indicateurs) v.indicateurs = [];
   }
   return v;
 }
@@ -839,6 +846,20 @@ renderFn.dashboard = function() {
           return item ? `<div class="flex items-center gap-3 py-2 border-b border-white/5 last:border-0"><i class="fas ${item.icone || 'fa-cube'} text-blue-400 w-5 text-center"></i><span class="text-sm">${esc(item.nom)}</span><span class="text-xs text-slate-500 ml-auto">${item.categorie || ''}</span></div>` : '';
         }).join('')}</div>
       </div>
+    </div>
+    <div class="glass-card mt-4">
+      <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3"><i class="fas fa-chart-line mr-1"></i> KPIs Personnalisés ${(vault.indicateurs||[]).length > 0 ? `<span class="text-slate-600 font-normal">(${vault.indicateurs.length})</span>` : ''}<button class="float-right btn btn-primary btn-xs" onclick="addKpi()"><i class="fas fa-plus"></i> Ajouter</button></h3>
+      ${(vault.indicateurs||[]).length === 0 ? '<div class="empty-state" style="padding:1rem"><i class="fa-regular fa-chart-bar" style="font-size:1.5rem"></i><p>Aucun KPI personnalisé. Créez vos propres indicateurs de pilotage RSSI.</p></div>' : vault.indicateurs.map((k,i) => {
+        const pct = Math.min(100, Math.round((k.valeur / (k.cible || 1)) * 100));
+        return `<div class="flex items-center gap-3 py-1.5 border-b border-white/5 last:border-0">
+          <div style="min-width:0;flex:1">
+            <div class="flex justify-between text-xs"><span class="text-slate-300">${esc(k.nom||'Indicateur')}</span><span class="text-slate-400">${k.valeur}${k.unite||''} / ${k.cible}${k.unite||''}</span></div>
+            <div class="h-1.5 rounded-full bg-white/5 mt-1 overflow-hidden"><div class="h-full rounded-full transition-all" style="width:${pct}%;background:${k.couleur||'#3b82f6'}"></div></div>
+          </div>
+          <button class="text-xs text-slate-600 hover:text-slate-300 transition-colors" onclick="editKpi(${i})" title="Modifier"><i class="fas fa-pencil-alt"></i></button>
+          <button class="text-xs text-slate-600 hover:text-red-400 transition-colors" onclick="deleteKpi(${i})" title="Supprimer"><i class="fas fa-times"></i></button>
+        </div>`;
+      }).join('')}
     </div>`;
 };
 
@@ -1068,8 +1089,8 @@ renderFn.frameworks = function() {
 renderFn.gouvernance = function() {
   const activeSubtab = document.querySelector('.sub-tab.active');
   const tab = activeSubtab ? activeSubtab.dataset.subtab : 'traitements';
-  const labels = { 'traitements':'Registre des traitements', 'plan-actions':'Plan d\'actions', 'incidents':'Registre des incidents' };
-  const secIds = { 'traitements':'gouvTraitements', 'plan-actions':'gouvPlanActions', 'incidents':'gouvIncidents' };
+  const labels = { 'traitements':'Registre des traitements', 'plan-actions':'Plan d\'actions', 'incidents':'Registre des incidents', 'actifs':'Registre des actifs', 'risques':'Registre des risques' };
+  const secIds = { 'traitements':'gouvTraitements', 'plan-actions':'gouvPlanActions', 'incidents':'gouvIncidents', 'actifs':'gouvActifs', 'risques':'gouvRisques' };
   const subTabs = Object.keys(labels).map(t =>
     `<button class="sub-tab${t===tab?' active':''}" data-subtab="${t}">${labels[t]}</button>`
   ).join('');
@@ -1082,7 +1103,9 @@ renderFn.gouvernance = function() {
 function renderGouvContent(tab) {
   if (tab === 'traitements') return renderTraitements();
   if (tab === 'plan-actions') return renderPlanActions();
-  return renderIncidents();
+  if (tab === 'incidents') return renderIncidents();
+  if (tab === 'actifs') return renderActifs();
+  return renderRisques();
 }
 
 function escDate(d) { return d ? new Date(d).toLocaleDateString('fr-FR') : '—'; }
@@ -1166,6 +1189,9 @@ function showGouvModal(config) {
     if (f.type === 'select') {
       const opts = f.options.map(o => `<option value="${esc(o)}"${f.value === o ? ' selected' : ''}>${esc(o)}</option>`).join('');
       return `<div class="calc-group"><label>${esc(f.label)}</label><select class="lock-input" id="gouvField_${f.key}">${opts}</select></div>`;
+    }
+    if (f.type === 'color') {
+      return `<div class="calc-group"><label>${esc(f.label)}</label><input type="color" id="gouvField_${f.key}" value="${f.value||'#f59e0b'}" style="width:2.5rem;height:2rem;border:0;border-radius:4px;cursor:pointer;padding:2px;background:transparent"></div>`;
     }
     return `<div class="calc-group"><label>${esc(f.label)}</label><input class="lock-input" id="gouvField_${f.key}" value="${esc(f.value||'')}"${f.type === 'date' ? ' type="date"' : ' type="text"'}>`;
   }).join('');
@@ -1459,9 +1485,170 @@ function deleteIncident(i) {
   vault.incidents.splice(i,1); setDirty(); renderGouvSubtab('incidents'); notify('Incident supprimé.','success');
 }
 
+/* Actifs */
+const TYPES_ACTIFS = ['Serveur','Poste de travail','Application','Base de données','Équipement réseau','Périphérique sécurité','Service cloud','Mobile / Nomade','OT / ICS','Local / Bâtiment'];
+const CRITICITE_ACTIFS = ['Haute','Moyenne','Basse'];
+const STATUTS_ACTIFS = ['Actif','Inactif','Décommissionné'];
+
+function renderActifs() {
+  const items = vault.actifs || [];
+  return `
+    <div class="flex items-center gap-2 mb-3"><button class="btn btn-primary btn-sm" onclick="addActif()"><i class="fas fa-plus"></i> Ajouter</button></div>
+    ${items.length === 0 ? '<div class="empty-state" style="padding:1.5rem"><i class="fa-regular fa-server"></i><p>Aucun actif enregistré. Ajoutez votre premier actif informatique.</p></div>' : `
+    <div style="overflow-x:auto"><table class="gouv-table">
+      <thead><tr><th>Nom</th><th>Type</th><th>Propriétaire</th><th>Criticité</th><th>Localisation</th><th>Statut</th><th class="gouv-actions"></th></tr></thead>
+      <tbody>${items.map((a,i) => {
+        const critCls = 'gouv-prio-' + (a.criticite||'moyenne').toLowerCase();
+        return `<tr>
+          <td><strong>${esc(a.nom||'')}</strong></td>
+          <td>${esc(a.type||'')}</td>
+          <td>${esc(a.proprietaire||'')}</td>
+          <td><span class="${critCls}">${esc(a.criticite||'Moyenne')}</span></td>
+          <td>${esc(a.localisation||'')}</td>
+          <td>${statutBadge(a.statut||'Actif')}</td>
+          <td class="gouv-actions">
+            <button onclick="editActif(${i})" title="Modifier"><i class="fas fa-pencil-alt"></i></button>
+            <button onclick="deleteActif(${i})" title="Supprimer"><i class="fas fa-trash"></i></button>
+          </td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table></div>`}
+    <div class="text-[0.65rem] text-slate-600 mt-2">${items.length} actif(s) enregistré(s)</div>`;
+}
+function addActif() {
+  showGouvModal({ title:'Nouvel actif', saveLabel:'Ajouter',
+    fields:[
+      { key:'nom', label:'Nom *' },
+      { key:'type', label:'Type', type:'select', options:TYPES_ACTIFS, value:'Serveur' },
+      { key:'proprietaire', label:'Propriétaire' },
+      { key:'criticite', label:'Criticité', type:'select', options:CRITICITE_ACTIFS, value:'Moyenne' },
+      { key:'localisation', label:'Localisation' },
+      { key:'statut', label:'Statut', type:'select', options:STATUTS_ACTIFS, value:'Actif' }
+    ],
+    validate: d => d.nom ? null : 'Le nom est obligatoire.',
+    onSave: d => { vault.actifs.push(d); setDirty(); renderGouvSubtab('actifs'); notify('Actif ajouté.','success'); }
+  });
+}
+function editActif(i) {
+  const a = vault.actifs[i]; if (!a) return;
+  showGouvModal({ title:'Modifier l\'actif', saveLabel:'Enregistrer',
+    fields:[
+      { key:'nom', label:'Nom *', value:a.nom },
+      { key:'type', label:'Type', type:'select', options:TYPES_ACTIFS, value:TYPES_ACTIFS.includes(a.type) ? a.type : 'Serveur' },
+      { key:'proprietaire', label:'Propriétaire', value:a.proprietaire },
+      { key:'criticite', label:'Criticité', type:'select', options:CRITICITE_ACTIFS, value:CRITICITE_ACTIFS.includes(a.criticite) ? a.criticite : 'Moyenne' },
+      { key:'localisation', label:'Localisation', value:a.localisation },
+      { key:'statut', label:'Statut', type:'select', options:STATUTS_ACTIFS, value:STATUTS_ACTIFS.includes(a.statut) ? a.statut : 'Actif' }
+    ],
+    validate: d => d.nom ? null : 'Le nom est obligatoire.',
+    onSave: d => { vault.actifs[i] = d; setDirty(); renderGouvSubtab('actifs'); notify('Actif mis à jour.','success'); }
+  });
+}
+function deleteActif(i) {
+  if (!confirm('Supprimer cet actif ?')) return;
+  vault.actifs.splice(i,1); setDirty(); renderGouvSubtab('actifs'); notify('Actif supprimé.','success');
+}
+
+/* Risques */
+const TRAITEMENTS_RISQUE = ['Accepté','Réduit','Transféré','Évité'];
+
+function renderRisques() {
+  const items = vault.risques || [];
+  return `
+    <div class="flex items-center gap-2 mb-3"><button class="btn btn-primary btn-sm" onclick="addRisque()"><i class="fas fa-plus"></i> Ajouter</button></div>
+    ${items.length === 0 ? '<div class="empty-state" style="padding:1.5rem"><i class="fa-regular fa-triangle-exclamation"></i><p>Aucun risque enregistré. Ajoutez votre première analyse de risque.</p></div>' : `
+    <div style="overflow-x:auto"><table class="gouv-table">
+      <thead><tr><th>Menace / Scénario</th><th>Actif</th><th>Vrais.</th><th>Grav.</th><th>Niveau</th><th>Traitement</th><th>Responsable</th><th class="gouv-actions"></th></tr></thead>
+      <tbody>${items.map((r,i) => {
+        const lvl = (r.vraisemblance||3) * (r.gravite||3);
+        const cls = lvl <= 4 ? 'gouv-prio-basse' : lvl <= 9 ? 'gouv-prio-moyenne' : 'gouv-prio-haute';
+        return `<tr>
+          <td><strong>${esc(r.menace||'')}</strong></td>
+          <td>${esc(r.actif_concerne||'')}</td>
+          <td>${r.vraisemblance||3}/5</td>
+          <td>${r.gravite||3}/5</td>
+          <td><span class="${cls}">${lvl}/25</span></td>
+          <td>${statutBadge(r.traitement||'Accepté')}</td>
+          <td>${esc(r.responsable||'')}</td>
+          <td class="gouv-actions">
+            <button onclick="editRisque(${i})" title="Modifier"><i class="fas fa-pencil-alt"></i></button>
+            <button onclick="deleteRisque(${i})" title="Supprimer"><i class="fas fa-trash"></i></button>
+          </td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table></div>`}
+    <div class="text-[0.65rem] text-slate-600 mt-2">${items.length} risque(s) enregistré(s)</div>`;
+}
+function addRisque() {
+  showGouvModal({ title:'Nouveau risque', saveLabel:'Ajouter',
+    fields:[
+      { key:'menace', label:'Menace / Scénario *' },
+      { key:'actif_concerne', label:'Actif concerné' },
+      { key:'vraisemblance', label:'Vraisemblance (1-5)', type:'select', options:['1','2','3','4','5'], value:'3' },
+      { key:'gravite', label:'Gravité (1-5)', type:'select', options:['1','2','3','4','5'], value:'3' },
+      { key:'traitement', label:'Traitement', type:'select', options:TRAITEMENTS_RISQUE, value:'Accepté' },
+      { key:'responsable', label:'Responsable' }
+    ],
+    validate: d => d.menace ? null : 'La menace est obligatoire.',
+    onSave: d => { vault.risques.push(d); setDirty(); renderGouvSubtab('risques'); notify('Risque ajouté.','success'); }
+  });
+}
+function editRisque(i) {
+  const r = vault.risques[i]; if (!r) return;
+  showGouvModal({ title:'Modifier le risque', saveLabel:'Enregistrer',
+    fields:[
+      { key:'menace', label:'Menace / Scénario *', value:r.menace },
+      { key:'actif_concerne', label:'Actif concerné', value:r.actif_concerne },
+      { key:'vraisemblance', label:'Vraisemblance (1-5)', type:'select', options:['1','2','3','4','5'], value:String(r.vraisemblance||3) },
+      { key:'gravite', label:'Gravité (1-5)', type:'select', options:['1','2','3','4','5'], value:String(r.gravite||3) },
+      { key:'traitement', label:'Traitement', type:'select', options:TRAITEMENTS_RISQUE, value:TRAITEMENTS_RISQUE.includes(r.traitement) ? r.traitement : 'Accepté' },
+      { key:'responsable', label:'Responsable', value:r.responsable }
+    ],
+    validate: d => d.menace ? null : 'La menace est obligatoire.',
+    onSave: d => { vault.risques[i] = d; setDirty(); renderGouvSubtab('risques'); notify('Risque mis à jour.','success'); }
+  });
+}
+function deleteRisque(i) {
+  if (!confirm('Supprimer ce risque ?')) return;
+  vault.risques.splice(i,1); setDirty(); renderGouvSubtab('risques'); notify('Risque supprimé.','success');
+}
+
+/* KPIs personnalisés */
+function addKpi() {
+  showGouvModal({ title:'Nouvel indicateur (KPI)', saveLabel:'Ajouter',
+    fields:[
+      { key:'nom', label:'Nom *' },
+      { key:'valeur', label:'Valeur actuelle', value:'0' },
+      { key:'cible', label:'Objectif (cible)', value:'100' },
+      { key:'unite', label:'Unité (%, €, cat., …)' },
+      { key:'couleur', label:'Couleur', type:'color', value:'#f59e0b' }
+    ],
+    validate: d => d.nom ? null : 'Le nom est obligatoire.',
+    onSave: d => { d.valeur = parseFloat(d.valeur)||0; d.cible = parseFloat(d.cible)||1; vault.indicateurs.push(d); setDirty(); renderView('dashboard'); notify('KPI ajouté.','success'); }
+  });
+}
+function editKpi(i) {
+  const k = vault.indicateurs[i]; if (!k) return;
+  showGouvModal({ title:'Modifier le KPI', saveLabel:'Enregistrer',
+    fields:[
+      { key:'nom', label:'Nom *', value:k.nom },
+      { key:'valeur', label:'Valeur actuelle', value:String(k.valeur) },
+      { key:'cible', label:'Objectif (cible)', value:String(k.cible) },
+      { key:'unite', label:'Unité (%, €, cat., …)', value:k.unite||'' },
+      { key:'couleur', label:'Couleur', type:'color', value:k.couleur||'#f59e0b' }
+    ],
+    validate: d => d.nom ? null : 'Le nom est obligatoire.',
+    onSave: d => { d.valeur = parseFloat(d.valeur)||0; d.cible = parseFloat(d.cible)||1; vault.indicateurs[i] = d; setDirty(); renderView('dashboard'); notify('KPI mis à jour.','success'); }
+  });
+}
+function deleteKpi(i) {
+  if (!confirm('Supprimer ce KPI ?')) return;
+  vault.indicateurs.splice(i,1); setDirty(); renderView('dashboard'); notify('KPI supprimé.','success');
+}
+
 function renderGouvSubtab(tab) {
   document.querySelectorAll('.gouv-section').forEach(s => s.style.display = 'none');
-  const map = { 'traitements':'gouvTraitements', 'plan-actions':'gouvPlanActions', 'incidents':'gouvIncidents' };
+  const map = { 'traitements':'gouvTraitements', 'plan-actions':'gouvPlanActions', 'incidents':'gouvIncidents', 'actifs':'gouvActifs', 'risques':'gouvRisques' };
   document.getElementById(map[tab]).style.display = 'block';
   document.getElementById(map[tab]).innerHTML = renderGouvContent(tab);
 }
@@ -1850,11 +2037,15 @@ function bindViewEvents(name) {
     const input = document.getElementById('cveSearch');
     const btn = document.getElementById('cveSearchBtn');
     if (input && btn) {
+      const searchNvd = function(q) {
+        if (q) window.open('https://nvd.nist.gov/vuln/search?query=' + q, '_blank');
+      };
       input.onkeydown = function(e) {
-        if (e.key === 'Enter') {
-          const q = encodeURIComponent(this.value.trim());
-          if (q) btn.href = 'https://nvd.nist.gov/vuln/search?query=' + q;
-        }
+        if (e.key === 'Enter') searchNvd(encodeURIComponent(this.value.trim()));
+      };
+      btn.onclick = function(e) {
+        const q = encodeURIComponent(input.value.trim());
+        if (q) { e.preventDefault(); searchNvd(q); }
       };
     }
   }
