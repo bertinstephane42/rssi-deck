@@ -327,7 +327,14 @@ body{font-family:system-ui,-apple-system,'Inter','Segoe UI',sans-serif;backgroun
   <div class="pwd-box glass-card">
     <p id="pwdModalMsg" class="text-slate-300">Mot de passe pour chiffrer le coffre :</p>
     <input type="password" id="pwdModalInput" class="lock-input" placeholder="Mot de passe" autocomplete="new-password">
+    <div id="pwdStrengthBar" class="flex items-center gap-2 mt-2" style="display:none">
+      <div class="flex-1 h-1.5 rounded-full bg-white/5"><div id="pwdStrengthFill" class="h-full rounded-full transition-all" style="width:0%;background:#64748b"></div></div>
+      <span id="pwdStrengthLabel" class="text-xs whitespace-nowrap text-slate-500"></span>
+    </div>
     <p id="pwdModalError" class="text-xs text-red-400 mt-2 text-center" style="display:none"></p>
+    <label id="pwdModalConfirmExportWrap" style="display:none" class="flex items-center gap-2 mt-2 text-xs text-slate-400 justify-center cursor-pointer">
+      <input type="checkbox" id="pwdModalConfirmExport" class="cursor-pointer"> Je confirme l'export du coffre vers un fichier
+    </label>
     <div class="flex gap-2 mt-3">
       <button id="pwdModalCancel" class="btn btn-secondary flex-1 justify-center">Annuler</button>
       <button id="pwdModalConfirm" class="btn btn-primary flex-1 justify-center">Confirmer</button>
@@ -340,24 +347,31 @@ body{font-family:system-ui,-apple-system,'Inter','Segoe UI',sans-serif;backgroun
    MODULE CRYPTO
    ============================================================ */
 const Crypto = (() => {
+  function b64(buf) { return btoa(String.fromCharCode(...new Uint8Array(buf))); }
+  function unb64(s) { return new Uint8Array(atob(s).split('').map(c=>c.charCodeAt(0))); }
   async function deriveKey(pwd, salt) {
     const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(pwd), 'PBKDF2', false, ['deriveKey']);
     return crypto.subtle.deriveKey({ name:'PBKDF2', salt, iterations:100000, hash:'SHA-256' }, key,
       { name:'AES-GCM', length:256 }, false, ['encrypt','decrypt']);
   }
   return {
+    deriveKey(pwd, salt) { return deriveKey(pwd, salt); },
     async encrypt(data, pwd) {
       const salt = crypto.getRandomValues(new Uint8Array(16));
       const iv = crypto.getRandomValues(new Uint8Array(12));
       const key = await deriveKey(pwd, salt);
       const enc = new TextEncoder().encode(JSON.stringify(data));
       const ct = new Uint8Array(await crypto.subtle.encrypt({ name:'AES-GCM', iv }, key, enc));
-      return { salt: btoa(String.fromCharCode(...salt)), iv: btoa(String.fromCharCode(...iv)), ciphertext: btoa(String.fromCharCode(...ct)) };
+      return { salt: b64(salt), iv: b64(iv), ciphertext: b64(ct) };
+    },
+    async encryptWithKey(data, key, salt) {
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+      const enc = new TextEncoder().encode(JSON.stringify(data));
+      const ct = new Uint8Array(await crypto.subtle.encrypt({ name:'AES-GCM', iv }, key, enc));
+      return { salt: b64(salt), iv: b64(iv), ciphertext: b64(ct) };
     },
     async decrypt(obj, pwd) {
-      const salt = new Uint8Array(atob(obj.salt).split('').map(c=>c.charCodeAt(0)));
-      const iv = new Uint8Array(atob(obj.iv).split('').map(c=>c.charCodeAt(0)));
-      const ct = new Uint8Array(atob(obj.ciphertext).split('').map(c=>c.charCodeAt(0)));
+      const salt = unb64(obj.salt); const iv = unb64(obj.iv); const ct = unb64(obj.ciphertext);
       const key = await deriveKey(pwd, salt);
       const pt = await crypto.subtle.decrypt({ name:'AES-GCM', iv }, key, ct);
       return JSON.parse(new TextDecoder().decode(pt));
@@ -664,6 +678,8 @@ const DEFAULT_VAULT = {
    ============================================================ */
 let vault = null;          // plaintext data
 let vaultKey = null;       // derived CryptoKey (held only in memory)
+let _sessionKey = null;    // cached CryptoKey (non-exportable, in-memory only)
+let _sessionSalt = null;   // salt paired with _sessionKey
 let dirty = false;
 let currentView = 'dashboard';
 let chartInstance = null;
@@ -1906,10 +1922,18 @@ async function exportVault() {
     if (dirHandle) fsaReady = true;
   }
 
-  // Ask password → encrypt
-  const pwd = await askPassword('Mot de passe pour chiffrer le coffre :');
-  if (!pwd) return;
-  const encrypted = await Crypto.encrypt(vault, pwd);
+  // Encrypt (use cached key if available, else prompt password → derive key)
+  let encrypted;
+  if (_sessionKey && _sessionSalt) {
+    encrypted = await Crypto.encryptWithKey(vault, _sessionKey, _sessionSalt);
+  } else {
+    const pwd = await askPasswordWithStrength({ msg:'Mot de passe pour chiffrer le coffre :', showStrength:true });
+    if (!pwd) return;
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    _sessionKey = await Crypto.deriveKey(pwd, salt);
+    _sessionSalt = salt;
+    encrypted = await Crypto.encryptWithKey(vault, _sessionKey, _sessionSalt);
+  }
   encrypted.version = vault.version;
   encrypted.last_updated = vault.last_updated;
   const content = JSON.stringify(encrypted, null, 2);
@@ -1939,9 +1963,19 @@ async function exportVault() {
 async function exportVaultToDisk() {
   if (!vault) return;
   vault.last_updated = new Date().toISOString();
-  const pwd = await askPassword('Mot de passe pour chiffrer le coffre :');
-  if (!pwd) return;
-  const encrypted = await Crypto.encrypt(vault, pwd);
+
+  let encrypted;
+  if (_sessionKey && _sessionSalt) {
+    if (!confirm('Exporter le coffre chiffré vers un fichier .json ?')) return;
+    encrypted = await Crypto.encryptWithKey(vault, _sessionKey, _sessionSalt);
+  } else {
+    const pwd = await askPasswordWithStrength({ msg:'Mot de passe pour chiffrer l\'export :', showStrength:true, requireConfirm:true });
+    if (!pwd) return;
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    _sessionKey = await Crypto.deriveKey(pwd, salt);
+    _sessionSalt = salt;
+    encrypted = await Crypto.encryptWithKey(vault, _sessionKey, _sessionSalt);
+  }
   encrypted.version = vault.version;
   encrypted.last_updated = vault.last_updated;
   await _downloadFallback(JSON.stringify(encrypted, null, 2));
@@ -1964,6 +1998,10 @@ function askPassword(msg) {
     const input = document.getElementById('pwdModalInput');
     const errEl = document.getElementById('pwdModalError');
     const msgEl = document.getElementById('pwdModalMsg');
+    const strengthBar = document.getElementById('pwdStrengthBar');
+    const exportWrap = document.getElementById('pwdModalConfirmExportWrap');
+    strengthBar.style.display = 'none';
+    exportWrap.style.display = 'none';
     msgEl.textContent = msg;
     input.value = '';
     errEl.style.display = 'none';
@@ -1991,6 +2029,88 @@ function askPassword(msg) {
   });
 }
 
+function checkPwdStrength(pwd) {
+  let score = 0;
+  if (pwd.length >= 8) score++;
+  if (pwd.length >= 12) score++;
+  if (pwd.length >= 16) score++;
+  if (/[a-z]/.test(pwd)) score++;
+  if (/[A-Z]/.test(pwd)) score++;
+  if (/[0-9]/.test(pwd)) score++;
+  if (/[^a-zA-Z0-9]/.test(pwd)) score++;
+  const label = score <= 2 ? 'Faible' : score <= 4 ? 'Moyen' : 'Fort';
+  const color = score <= 2 ? '#ef4444' : score <= 4 ? '#f59e0b' : '#10b981';
+  return { score: Math.min(score, 7), max: 7, label, color };
+}
+
+function askPasswordWithStrength(options) {
+  return new Promise(resolve => {
+    const modal = document.getElementById('pwdModal');
+    const input = document.getElementById('pwdModalInput');
+    const errEl = document.getElementById('pwdModalError');
+    const msgEl = document.getElementById('pwdModalMsg');
+    const strengthBar = document.getElementById('pwdStrengthBar');
+    const strengthFill = document.getElementById('pwdStrengthFill');
+    const strengthLabel = document.getElementById('pwdStrengthLabel');
+    const exportWrap = document.getElementById('pwdModalConfirmExportWrap');
+    const exportCheck = document.getElementById('pwdModalConfirmExport');
+    const confirmBtn = document.getElementById('pwdModalConfirm');
+    const cancelBtn = document.getElementById('pwdModalCancel');
+
+    msgEl.textContent = options.msg || 'Mot de passe :';
+    input.value = '';
+    errEl.style.display = 'none';
+    exportCheck.checked = false;
+
+    if (options.showStrength) {
+      strengthBar.style.display = 'flex';
+      updateStrength();
+    } else {
+      strengthBar.style.display = 'none';
+    }
+
+    exportWrap.style.display = options.requireConfirm ? 'flex' : 'none';
+
+    modal.style.display = 'flex';
+    setTimeout(() => input.focus(), 100);
+
+    function updateStrength() {
+      const pwd = input.value;
+      if (!pwd) { strengthFill.style.width = '0%'; strengthFill.style.background = '#64748b'; strengthLabel.textContent = ''; return; }
+      const s = checkPwdStrength(pwd);
+      strengthFill.style.width = Math.round(s.score / s.max * 100) + '%';
+      strengthFill.style.background = s.color;
+      strengthLabel.textContent = s.label + ' (' + s.score + '/' + s.max + ')';
+      strengthLabel.style.color = s.color;
+    }
+    input.oninput = options.showStrength ? updateStrength : null;
+
+    const cleanup = () => { modal.style.display = 'none'; input.value = ''; input.oninput = null; };
+    const onConfirm = () => {
+      const pwd = input.value;
+      if (!pwd || pwd.length < 4) {
+        errEl.textContent = 'Mot de passe : minimum 4 caractères.';
+        errEl.style.display = 'block';
+        return;
+      }
+      if (options.requireConfirm && !exportCheck.checked) {
+        errEl.textContent = 'Veuillez cocher la confirmation d\'export.';
+        errEl.style.display = 'block';
+        return;
+      }
+      cleanup();
+      resolve(pwd);
+    };
+    const onCancel = () => { cleanup(); resolve(null); };
+    confirmBtn.onclick = onConfirm;
+    cancelBtn.onclick = onCancel;
+    input.onkeydown = e => {
+      if (e.key === 'Enter') onConfirm();
+      if (e.key === 'Escape') onCancel();
+    };
+  });
+}
+
 async function importVault(file, pwd) {
   try {
     const text = await file.text();
@@ -2002,6 +2122,9 @@ async function importVault(file, pwd) {
     vault = data;
     migrateVault(vault);
     vaultKey = true;
+    const _s = new Uint8Array(atob(encrypted.salt).split('').map(c=>c.charCodeAt(0)));
+    _sessionKey = await Crypto.deriveKey(pwd, _s);
+    _sessionSalt = _s;
     dirty = false;
     // Auto-save encrypted content to IDB
     await FS.writeVault(text);
@@ -2025,6 +2148,9 @@ async function decryptFromHandle(pwd) {
     vault = data;
     migrateVault(vault);
     vaultKey = true;
+    const _s = new Uint8Array(atob(encrypted.salt).split('').map(c=>c.charCodeAt(0)));
+    _sessionKey = await Crypto.deriveKey(pwd, _s);
+    _sessionSalt = _s;
     dirty = false;
     unlockApp();
     notify('Coffre déchiffré et chargé avec succès.', 'success');
@@ -2063,6 +2189,8 @@ function updateFsPath() {
 function lockApp() {
   vault = null;
   vaultKey = null;
+  _sessionKey = null;
+  _sessionSalt = null;
   dirty = false;
   _pendingImportFile = null;
   document.getElementById('app').classList.remove('active');
@@ -2144,11 +2272,14 @@ document.addEventListener('DOMContentLoaded', async function() {
     vault = JSON.parse(JSON.stringify(DEFAULT_VAULT));
     vault.last_updated = new Date().toISOString();
     vaultKey = true;
+    const _s = crypto.getRandomValues(new Uint8Array(16));
+    _sessionKey = await Crypto.deriveKey(pwd, _s);
+    _sessionSalt = _s;
     dirty = false;
 
     // Encrypt and write (IDB always, FSA if handle exists)
     try {
-      const encrypted = await Crypto.encrypt(vault, pwd);
+      const encrypted = await Crypto.encryptWithKey(vault, _sessionKey, _sessionSalt);
       encrypted.version = vault.version;
       encrypted.last_updated = vault.last_updated;
       await FS.writeVault(JSON.stringify(encrypted, null, 2));
