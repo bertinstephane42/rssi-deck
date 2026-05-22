@@ -168,6 +168,7 @@ body{font-family:system-ui,-apple-system,'Inter','Segoe UI',sans-serif;backgroun
 .gouv-table .gouv-actions{white-space:nowrap;text-align:right}
 .gouv-table .gouv-actions button{background:none;border:none;color:#64748b;cursor:pointer;padding:0.2rem 0.35rem;border-radius:4px;font-size:0.75rem;transition:all 0.15s}
 .gouv-table .gouv-actions button:hover{color:#60a5fa;background:rgba(59,130,246,0.1)}
+.gouv-prio-critique{color:#ef4444;font-weight:700}
 .gouv-prio-haute{color:#f87171}
 .gouv-prio-moyenne{color:#fbbf24}
 .gouv-prio-basse{color:#94a3b8}
@@ -403,7 +404,7 @@ body{font-family:system-ui,-apple-system,'Inter','Segoe UI',sans-serif;backgroun
    MODULE CRYPTO
    ============================================================ */
 const Crypto = (() => {
-  function b64(buf) { return btoa(String.fromCharCode(...new Uint8Array(buf))); }
+  function b64(buf) { return btoa(Array.from(new Uint8Array(buf), function(b) { return String.fromCharCode(b); }).join('')); }
   function unb64(s) { return new Uint8Array(atob(s).split('').map(c=>c.charCodeAt(0))); }
   async function deriveKey(pwd, salt) {
     const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(pwd), 'PBKDF2', false, ['deriveKey']);
@@ -523,18 +524,18 @@ const FS = (() => {
       }
     },
 
-    /* — Unified read (FSA preferred, IDB fallback) — */
+    /* — Unified read (IDB first, FSA fallback) — */
     async readVault() {
+      const idbText = await this.readIdb();
+      if (idbText !== null) return idbText;
       if (this.supportsApi() && _dirHandle) {
         try {
           const fh = await this.getFileHandle(false);
           const file = await fh.getFile();
           return file.text();
-        } catch(e) { /* fall through to IDB */ }
+        } catch(e) { /* fall through to error */ }
       }
-      const text = await this.readIdb();
-      if (text === null) throw new Error('Aucun coffre trouvé.');
-      return text;
+      throw new Error('Aucun coffre trouvé.');
     },
 
     async migrateOldHandle() {
@@ -855,6 +856,8 @@ function migrateVault(v) {
     if (!v.aipd) v.aipd = [];
     if (!v.maturite) v.maturite = [];
     if (!v.prestataires) v.prestataires = [];
+    if (!v.outils_techniques) v.outils_techniques = [];
+    if (!v.outils_fonctionnels) v.outils_fonctionnels = [];
     if (v.pssi && v.pssi.sections) {
       const existingIds = new Set(v.pssi.sections.map(function(s){return s.id;}));
       DEFAULT_VAULT.pssi.sections.forEach(function(def) {
@@ -890,7 +893,7 @@ function sortTools(tools, mode) {
 /* ============================================================
    RENDER ENGINE
    ============================================================ */
-function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 
 function renderAll() {
   renderView(currentView);
@@ -1678,7 +1681,7 @@ function renderRisques() {
       <thead><tr><th>Menace / Scénario</th><th>Actif</th><th>Vrais.</th><th>Grav.</th><th>Niveau</th><th>Traitement</th><th>Responsable</th><th class="gouv-actions"></th></tr></thead>
       <tbody>${items.map((r,i) => {
         const lvl = (r.vraisemblance||3) * (r.gravite||3);
-        const cls = lvl <= 4 ? 'gouv-prio-basse' : lvl <= 9 ? 'gouv-prio-moyenne' : 'gouv-prio-haute';
+        const cls = lvl <= 4 ? 'gouv-prio-basse' : lvl <= 9 ? 'gouv-prio-moyenne' : lvl <= 15 ? 'gouv-prio-haute' : 'gouv-prio-critique';
         return `<tr>
           <td><strong>${esc(r.menace||'')}</strong></td>
           <td>${esc(r.actif_concerne||'')}</td>
@@ -2194,14 +2197,16 @@ function renderAipd() {
     ${items.length === 0 ? '<div class="empty-state" style="padding:1.5rem"><i class="fa-regular fa-file-shield"></i><p>Aucune AIPD enregistrée. Ajoutez votre première analyse d\'impact.</p></div>' : `
     <div style="overflow-x:auto"><table class="gouv-table">
       <thead><tr><th>Traitement</th><th>Type</th><th>Base juridique</th><th>Responsable</th><th>Gravité</th><th>Risques</th><th>Mesures</th><th>Statut</th><th>Évaluation</th><th>Révision</th><th class="gouv-actions"></th></tr></thead>
-      <tbody>${items.map((a,i) => { return `<tr>
+      <tbody>${items.map((a,i) => {
+        const descR = esc(a.description_risques||''); const mesures = esc(a.mesures||'');
+        return `<tr>
           <td><strong>${esc(a.traitement||'')}</strong></td>
           <td class="text-slate-400">${esc(a.type_traitement||'—')}</td>
           <td class="text-slate-400">${esc(a.base_juridique||'—')}</td>
           <td>${esc(a.responsable||'')}</td>
           <td>${a.gravite_risque ? '<span class="gravite-badge gravite-'+esc(a.gravite_risque).toLowerCase()+'">'+esc(a.gravite_risque)+'</span>' : '—'}</td>
-          <td>${(esc(a.description_risques||'').length > 50 ? esc(a.description_risques).slice(0,50)+'\u2026' : esc(a.description_risques||''))}</td>
-          <td>${(esc(a.mesures||'').length > 50 ? esc(a.mesures).slice(0,50)+'\u2026' : esc(a.mesures||''))}</td>
+          <td>${(descR.length > 50 ? descR.slice(0,50)+'\u2026' : descR)}</td>
+          <td>${(mesures.length > 50 ? mesures.slice(0,50)+'\u2026' : mesures)}</td>
           <td>${statutBadge(a.statut||'En cours')}</td>
           <td>${escDate(a.date_evaluation)}</td>
           <td>${escDate(a.date_revision)}</td>
@@ -2214,6 +2219,7 @@ function renderAipd() {
     <div class="text-[0.65rem] text-slate-600 mt-2">${items.length} AIPD(s) enregistr\u00e9e(s)</div>`;
 }
 function addAipd() {
+  if (!Array.isArray(vault.aipd)) vault.aipd = [];
   showGouvModal({ title:'Nouvelle AIPD / DPIA', saveLabel:'Ajouter',
     fields:[
       { key:'traitement', label:'Traitement concern\u00e9 *' },
@@ -2232,6 +2238,7 @@ function addAipd() {
   });
 }
 function editAipd(i) {
+  if (!Array.isArray(vault.aipd)) vault.aipd = [];
   const a = vault.aipd[i]; if (!a) return;
   showGouvModal({ title:"Modifier l'AIPD", saveLabel:'Enregistrer',
     fields:[
@@ -2311,25 +2318,26 @@ function addMaturiteDomaine() {
     validate: function(d) { return d.domaine ? null : 'Le domaine est obligatoire.'; },
     onSave: function(d) { d.niveau_actuel = parseInt(d.niveau_actuel)||1; d.niveau_cible = parseInt(d.niveau_cible)||3; vault.maturite.push(d); setDirty(); renderGouvSubtab('maturite'); notify('Domaine ajout\u00e9.','success'); }
   });
-  document.getElementById('gouvField_domaine').addEventListener('change', populateSousDomaine);
+  document.getElementById('gouvField_domaine').addEventListener('change', populateSousDomaine, { once: true });
 }
 function editMaturiteDomaine(i) {
   const m = vault.maturite[i]; if (!m) return;
   const domaineVal = DOMAINES_MATURITE.includes(m.domaine) ? m.domaine : DOMAINES_MATURITE[0];
   const sdOptions = SOUS_DOMAINES_MATURITE[domaineVal] || [];
-  const sdVal = sdOptions.includes(m.sous_domaine) ? m.sous_domaine : (sdOptions[0]||'');
+  const hasLegacySd = 'sous_domaine' in m;
+  const sdVal = hasLegacySd ? (sdOptions.includes(m.sous_domaine) ? m.sous_domaine : (sdOptions[0]||'')) : '';
   showGouvModal({ title:'Modifier le domaine', saveLabel:'Enregistrer',
     fields:[
       { key:'domaine', label:'Domaine *', type:'select', options:DOMAINES_MATURITE, value:domaineVal },
-      { key:'sous_domaine', label:'Sous-domaine NIST CSF', type:'select', options:sdOptions, value:sdVal },
+      { key:'sous_domaine', label:'Sous-domaine NIST CSF', type:'select', options:['', ...sdOptions], value:sdVal },
       { key:'niveau_actuel', label:'Niveau actuel (1-5)', type:'select', options:NIVEAUX_MATURITE, value:String(m.niveau_actuel||1) },
       { key:'niveau_cible', label:'Niveau cible (1-5)', type:'select', options:NIVEAUX_MATURITE, value:String(m.niveau_cible||3) },
       { key:'observations', label:'Observations', value:m.observations||'' }
     ],
     validate: function(d) { return d.domaine ? null : 'Le domaine est obligatoire.'; },
-    onSave: function(d) { d.niveau_actuel = parseInt(d.niveau_actuel)||1; d.niveau_cible = parseInt(d.niveau_cible)||3; vault.maturite[i] = d; setDirty(); renderGouvSubtab('maturite'); notify('Domaine mis \u00e0 jour.','success'); }
+    onSave: function(d) { d.niveau_actuel = parseInt(d.niveau_actuel)||1; d.niveau_cible = parseInt(d.niveau_cible)||3; if (!d.sous_domaine) delete d.sous_domaine; vault.maturite[i] = d; setDirty(); renderGouvSubtab('maturite'); notify('Domaine mis \u00e0 jour.','success'); }
   });
-  document.getElementById('gouvField_domaine').addEventListener('change', populateSousDomaine);
+  document.getElementById('gouvField_domaine').addEventListener('change', populateSousDomaine, { once: true });
 }
 async function deleteMaturiteDomaine(i) {
   if (!await showConfirm('Supprimer ce domaine ?')) return;
@@ -3238,9 +3246,8 @@ async function exportVault() {
     const pwd = await askPasswordWithStrength({ msg:'Mot de passe pour chiffrer le coffre :', showStrength:true });
     if (!pwd) return;
     const salt = crypto.getRandomValues(new Uint8Array(16));
-    _sessionKey = await Crypto.deriveKey(pwd, salt);
-    _sessionSalt = salt;
-    encrypted = await Crypto.encryptWithKey(vault, _sessionKey, _sessionSalt);
+    const exportKey = await Crypto.deriveKey(pwd, salt);
+    encrypted = await Crypto.encryptWithKey(vault, exportKey, salt);
   }
   encrypted.version = vault.version;
   encrypted.last_updated = vault.last_updated;
@@ -3280,9 +3287,8 @@ async function exportVaultToDisk() {
     const pwd = await askPasswordWithStrength({ msg:'Mot de passe pour chiffrer l\'export :', showStrength:true, requireConfirm:true });
     if (!pwd) return;
     const salt = crypto.getRandomValues(new Uint8Array(16));
-    _sessionKey = await Crypto.deriveKey(pwd, salt);
-    _sessionSalt = salt;
-    encrypted = await Crypto.encryptWithKey(vault, _sessionKey, _sessionSalt);
+    const exportKey = await Crypto.deriveKey(pwd, salt);
+    encrypted = await Crypto.encryptWithKey(vault, exportKey, salt);
   }
   encrypted.version = vault.version;
   encrypted.last_updated = vault.last_updated;
@@ -3295,7 +3301,7 @@ async function _downloadFallback(content) {
   a.href = URL.createObjectURL(blob);
   a.download = 'rssi_coffre_' + new Date().toISOString().replace(/[:-]/g,'_').slice(0,16) + '.json';
   a.click();
-  URL.revokeObjectURL(a.href);
+  setTimeout(function() { URL.revokeObjectURL(a.href); }, 10000);
   dirty = false;
   notify('Coffre chiffré téléchargé.', 'success');
 }
@@ -3340,7 +3346,7 @@ function genererRapportExecutif() {
   const nRisques = (vault.risques||[]).length;
   const nIncidents = (vault.incidents||[]).length;
   const nPlan = (vault.plan_actions||[]).length;
-  const nPlaybooks = vault.playbooks.length;
+  const nPlaybooks = (vault.playbooks||[]).length;
   html += `<h2>Synthèse chiffrée</h2><div>`;
   html += `<span class="stat"><div class="stat-val">${nTech+nFonc}</div><div class="stat-lbl">Outils</div></span>`;
   html += `<span class="stat"><div class="stat-val">${nActifs}</div><div class="stat-lbl">Actifs</div></span>`;
@@ -3355,8 +3361,10 @@ function genererRapportExecutif() {
   if (kpis.length) {
     html += `<h2>KPIs personnalisés</h2><table><thead><tr><th>Indicateur</th><th>Valeur</th><th>Cible</th><th>Progression</th></tr></thead><tbody>`;
     kpis.forEach(k => {
-      const pct = Math.min(100, Math.round((k.valeur / (k.cible||1)) * 100));
-      html += `<tr><td>${escHtml(k.nom)}</td><td>${k.valeur}${escHtml(k.unite||'')}</td><td>${k.cible}${escHtml(k.unite||'')}</td><td>${pctBar(pct, '#3b82f6')} <span style="font-size:8pt">${pct}%</span></td></tr>`;
+      const val = parseFloat(k.valeur)||0;
+      const cible = parseFloat(k.cible)||1;
+      const pct = Math.min(100, Math.round((val / cible) * 100));
+      html += `<tr><td>${escHtml(k.nom)}</td><td>${escHtml(k.valeur??'')}${escHtml(k.unite||'')}</td><td>${escHtml(k.cible??'')}${escHtml(k.unite||'')}</td><td>${pctBar(pct, '#3b82f6')} <span style="font-size:8pt">${pct}%</span></td></tr>`;
     });
     html += `</tbody></table>`;
   }
@@ -3931,11 +3939,11 @@ document.addEventListener('DOMContentLoaded', async function() {
     if (!_pendingImportFile) { document.getElementById('lockError').textContent = 'Sélectionnez d\'abord un fichier .json.'; document.getElementById('lockError').style.display = 'block'; return; }
     if (!pwd) { document.getElementById('lockError').textContent = 'Saisissez le mot de passe du coffre.'; document.getElementById('lockError').style.display = 'block'; return; }
     if (_hadVaultBeforeLock) {
-      const ok = await showConfirm("L'importation va supprimer le coffre actuellement en mémoire et le remplacer par le fichier sélectionné. Voulez-vous continuer ?");
+      const ok = await showConfirm("Un coffre était ouvert précédemment. L'importation va remplacer définitivement son contenu par le fichier sélectionné. Voulez-vous continuer ?");
       if (!ok) return;
-      _hadVaultBeforeLock = false;
     }
     await importVault(_pendingImportFile, pwd);
+    _hadVaultBeforeLock = false;
     // After import, subsequent saves will use the stored dir handle
     // If no dir handle set yet, next exportVault will prompt for directory
   });
