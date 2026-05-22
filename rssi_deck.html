@@ -140,6 +140,7 @@ body{font-family:system-ui,-apple-system,'Inter','Segoe UI',sans-serif;backgroun
 .badge-low{background:rgba(16,185,129,0.12);color:#6ee7b7}
 .chart-wrap{max-width:100%;height:180px;margin:0.5rem 0}
 .grid-bento{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1rem}
+.roadmap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:0.75rem;align-items:start}
 .grid-bento-wide{display:grid;grid-template-columns:1fr;gap:1rem}
 @media(min-width:768px){.grid-bento-wide{grid-template-columns:1fr 1fr}}
 .notif{position:fixed;top:1rem;right:1rem;z-index:30000;padding:0.75rem 1.25rem;border-radius:8px;font-size:0.85rem;font-weight:500;box-shadow:0 8px 24px rgba(0,0,0,0.4);transform:translateX(120%);transition:transform 0.3s cubic-bezier(0.16,1,0.3,1);max-width:360px}
@@ -230,6 +231,7 @@ body{font-family:system-ui,-apple-system,'Inter','Segoe UI',sans-serif;backgroun
     <button class="nav-item" data-view="frameworks"><i class="fas fa-scale-balanced"></i><span>Frameworks</span></button>
     <button class="nav-item" data-view="gouvernance"><i class="fas fa-landmark"></i><span>Gouvernance</span></button>
     <button class="nav-item" data-view="memos"><i class="fas fa-book"></i><span>Mémos &amp; Playbooks</span></button>
+    <button class="nav-item" data-view="roadmap"><i class="fas fa-road"></i><span>Roadmap</span></button>
     <div style="flex:1"></div>
     <button class="nav-item text-red-400 hover:text-red-300" id="lockBtn"><i class="fas fa-lock"></i><span>Verrouiller</span></button>
   </aside>
@@ -249,6 +251,7 @@ body{font-family:system-ui,-apple-system,'Inter','Segoe UI',sans-serif;backgroun
       <button class="btn btn-secondary btn-sm" id="refreshBtn"><i class="fas fa-rotate"></i> Rafraîchir</button>
       <button class="btn btn-secondary btn-sm" id="helpBtn" title="Aide"><i class="fas fa-question-circle"></i></button>
       <button class="btn btn-secondary btn-sm" id="creditBtn" title="Crédits"><span style="font-weight:700;font-size:0.82rem">C</span></button>
+      <button class="btn btn-secondary btn-sm" id="reportBtn" title="Rapport exécutif PDF"><i class="fas fa-file-pdf"></i> Rapport</button>
     </div>
 
     <div id="viewDashboard" class="view active"></div>
@@ -258,6 +261,7 @@ body{font-family:system-ui,-apple-system,'Inter','Segoe UI',sans-serif;backgroun
     <div id="viewFrameworks" class="view"></div>
     <div id="viewGouvernance" class="view"></div>
     <div id="viewMemos" class="view"></div>
+    <div id="viewRoadmap" class="view"></div>
   </div>
 </div>
 
@@ -721,7 +725,37 @@ const DEFAULT_VAULT = {
   incidents: [],
   actifs: [],
   risques: [],
-  indicateurs: []
+  indicateurs: [],
+  pssi: {
+    organisation: '',
+    version: '1.0',
+    date_validation: '',
+    date_prochaine_revue: '',
+    sections: [
+      { id:'s1', titre:"Engagement de la direction",              statut:'Rédaction', contenu:'' },
+      { id:'s2', titre:"Périmètre de la PSSI",                    statut:'Rédaction', contenu:'' },
+      { id:'s3', titre:"Organisation de la sécurité SSI",         statut:'Rédaction', contenu:'' },
+      { id:'s4', titre:"Gestion des accès et habilitations",      statut:'Rédaction', contenu:'' },
+      { id:'s5', titre:"Politique de mots de passe",              statut:'Rédaction', contenu:'' },
+      { id:'s6', titre:"Charte d'utilisation des ressources",     statut:'Rédaction', contenu:'' },
+      { id:'s7', titre:"Gestion des incidents de sécurité",       statut:'Rédaction', contenu:'' },
+      { id:'s8', titre:"Continuité d'activité (PCA/PRA)",         statut:'Rédaction', contenu:'' },
+      { id:'s9', titre:"Gestion des tiers et prestataires",       statut:'Rédaction', contenu:'' },
+      { id:'s10', titre:"Conformité RGPD et réglementaire",       statut:'Rédaction', contenu:'' }
+    ]
+  },
+  feuille_route: [
+    { id:'fr1', titre:"Mise en conformité NIS 2", description:"Audit gap analysis, plan de mise en conformité, déploiement", trimestre:'2025-T3', statut:'En cours', avancement:35, priorite:'Haute', categorie:'Conformité', responsable:'RSSI' },
+    { id:'fr2', titre:"Déploiement MFA généralisé", description:"MFA sur tous les accès distants et privilégiés", trimestre:'2025-T2', statut:'En cours', avancement:60, priorite:'Haute', categorie:'Sécurité technique', responsable:'DSI' },
+    { id:'fr3', titre:"Refonte de la PSSI", description:"Mise à jour complète de la politique de sécurité", trimestre:'2025-T4', statut:'À faire', avancement:0, priorite:'Haute', categorie:'Gouvernance', responsable:'RSSI' },
+    { id:'fr4', titre:"Campagne de sensibilisation", description:"Sessions de formation pour l'ensemble des collaborateurs", trimestre:'2025-T3', statut:'En cours', avancement:25, priorite:'Moyenne', categorie:'Sensibilisation', responsable:'RSSI' },
+    { id:'fr5', titre:"Audit RGPD approfondi", description:"Audit complet des traitements et sous-traitants", trimestre:'2025-T4', statut:'À faire', avancement:0, priorite:'Haute', categorie:'Conformité', responsable:'DPO' },
+    { id:'fr6', titre:"Déploiement SIEM centralisé", description:"Collecte et corrélation des logs de sécurité", trimestre:'2025-T3', statut:'En cours', avancement:40, priorite:'Haute', categorie:'Sécurité technique', responsable:'DSI' },
+    { id:'fr7', titre:"Mise en place d'un SOC interne", description:"Équipe et outils de surveillance 24/7", trimestre:'2026-T1', statut:'À faire', avancement:0, priorite:'Moyenne', categorie:'Organisation', responsable:'RSSI' },
+    { id:'fr8', titre:"Exercice de crise annuel", description:"Simulation grandeur nature avec cellule de crise", trimestre:'2025-T4', statut:'En cours', avancement:10, priorite:'Moyenne', categorie:'Organisation', responsable:'RSSI' },
+    { id:'fr9', titre:"Renforcement backup PCA/PRA", description:"Sauvegardes immuables et tests de restauration", trimestre:'2025-T3', statut:'À faire', avancement:0, priorite:'Haute', categorie:'Sécurité technique', responsable:'DSI' },
+    { id:'fr10', titre:"Gouvernance des identités (IAM)", description:"SSO, RBAC et revue des accès trimestrielle", trimestre:'2026-T1', statut:'À faire', avancement:0, priorite:'Moyenne', categorie:'Gouvernance', responsable:'DSI' }
+  ]
 };
 
 /* ============================================================
@@ -751,6 +785,9 @@ function migrateVault(v) {
     if (!v.actifs) v.actifs = [];
     if (!v.risques) v.risques = [];
     if (!v.indicateurs) v.indicateurs = [];
+    if (!v.pssi) v.pssi = DEFAULT_VAULT.pssi;
+    if (v.pssi && !v.pssi.sections) v.pssi.sections = DEFAULT_VAULT.pssi.sections;
+    if (!v.feuille_route) v.feuille_route = DEFAULT_VAULT.feuille_route;
   }
   return v;
 }
@@ -794,10 +831,10 @@ function renderView(name) {
     b.classList.toggle('active', b.dataset.view === name);
   });
   const titles = { dashboard:'Dashboard', 'outils-tech':'Outils Techniques', 'outils-fonctionnels':'Outils Fonctionnels',
-    'threat-intel':'Threat Intelligence', frameworks:'Frameworks & Conformité', gouvernance:'Gouvernance', memos:'Mémos & Playbooks' };
+    'threat-intel':'Threat Intelligence', frameworks:'Frameworks & Conformité', gouvernance:'Gouvernance', memos:'Mémos & Playbooks', roadmap:'Feuille de route' };
   document.getElementById('viewTitle').textContent = titles[name] || name;
   const viewMap = { dashboard:'viewDashboard', 'outils-tech':'viewOutilsTech', 'outils-fonctionnels':'viewOutilsFonctionnels',
-    'threat-intel':'viewThreatIntel', frameworks:'viewFrameworks', gouvernance:'viewGouvernance', memos:'viewMemos' };
+    'threat-intel':'viewThreatIntel', frameworks:'viewFrameworks', gouvernance:'viewGouvernance', memos:'viewMemos', roadmap:'viewRoadmap' };
   const el = document.getElementById(viewMap[name]);
   el.classList.add('active');
   el.innerHTML = renderFn[name]();
@@ -816,7 +853,8 @@ const HELP_TEXT = {
   'threat-intel': '<p>Le module de renseignement sur les menaces compile les principales sources d\'information permettant de suivre l\'actualité de la cybersécurité. Chaque source est présentée avec sa catégorie (blogs, CERT, flux techniques, comptes de chercheurs), sa pertinence, un lien d\'accès direct et un indicateur de fraîcheur — ce dernier vous signale si une mise à jour est récente ou ancienne.</p><p>Vous pouvez ajouter, modifier ou supprimer des sources selon vos besoins. Une veille maintenue est essentielle pour anticiper les risques émergents.</p>',
   frameworks: '<p>La section des référentiels et cadres de conformité rassemble les principaux standards et réglementations applicables à la sécurité des systèmes d\'information.</p><p>Chaque fiche décrit le périmètre du référentiel, sa version, son niveau de maturité, son lien officiel et ses cas d\'usage. Les frameworks sont classés par domaine : gestion des risques, conformité réglementaire, sécurité technique et gouvernance.</p><p>Des calculateurs intégrés vous permettent d\'évaluer les objectifs de reprise (RPO) et de temps de restauration (RTO) en fonction de votre type d\'entreprise et de la nature de l\'impact.</p><p>Utilisez les étoiles pour suivre vos référentiels de prédilection.</p>',
   gouvernance: '<p>L\'espace de gouvernance vous permet de piloter votre dispositif de sécurité au travers de trois registres :</p><ul class="list-disc list-inside space-y-1"><li><strong>Traitements RGPD</strong> — finalité, catégories de données, personnes concernées, destinataires et mesures de sécurité.</li><li><strong>Incidents de sécurité</strong> — périmètre, type de risque, impact, date et statut.</li><li><strong>Plan d\'actions</strong> — responsable, échéance et état d\'avancement.</li></ul>',
-  memos: '<p>La rubrique des mémos et des playbooks constitue votre carnet de bord opérationnel.</p><p>Les <strong>mémos</strong> vous permettent de rédiger des notes libres au format Markdown avec prévisualisation en direct. Les <strong>playbooks</strong> décrivent les procédures de réponse à incident pas à pas, avec une checklist interactive et un historique permettant de tracer chaque exercice ou déclenchement réel. L\'historique enregistre l\'état des cases cochées au moment de la saisie pour une traçabilité complète.</p><p>Vous trouverez également les contacts d\'urgence essentiels.</p>'
+  memos: '<p>La rubrique des mémos et des playbooks constitue votre carnet de bord opérationnel.</p><p>Les <strong>mémos</strong> vous permettent de rédiger des notes libres au format Markdown avec prévisualisation en direct. Les <strong>playbooks</strong> décrivent les procédures de réponse à incident pas à pas, avec une checklist interactive et un historique permettant de tracer chaque exercice ou déclenchement réel. L\'historique enregistre l\'état des cases cochées au moment de la saisie pour une traçabilité complète.</p><p>Vous trouverez également les contacts d\'urgence essentiels.</p>',
+  roadmap: '<p>La feuille de route stratégique vous permet de planifier et suivre l\'avancement de vos initiatives de sécurité sur plusieurs trimestres. Chaque jalon est rattaché à une catégorie (sécurité technique, conformité, organisation, gouvernance, sensibilisation) et dispose d\'un statut et d\'un indicateur d\'avancement.</p><p>La vue trimestrielle offre une vision claire des priorités et des échéances. Utilisez-la pour présenter votre plan d\'action au comité de direction.</p>'
 };
 
 const renderFn = {};
@@ -860,7 +898,8 @@ renderFn.dashboard = function() {
           <button class="text-xs text-slate-600 hover:text-red-400 transition-colors" onclick="deleteKpi(${i})" title="Supprimer"><i class="fas fa-times"></i></button>
         </div>`;
       }).join('')}
-    </div>`;
+    </div>
+    <div class="flex justify-center mt-4"><button class="btn btn-primary btn-sm" onclick="genererRapportExecutif()"><i class="fas fa-file-pdf"></i> Générer un rapport exécutif</button></div>`;
 };
 
 function buildGauge(label, pct, color, sub) {
@@ -1089,8 +1128,8 @@ renderFn.frameworks = function() {
 renderFn.gouvernance = function() {
   const activeSubtab = document.querySelector('.sub-tab.active');
   const tab = activeSubtab ? activeSubtab.dataset.subtab : 'traitements';
-  const labels = { 'traitements':'Registre des traitements', 'plan-actions':'Plan d\'actions', 'incidents':'Registre des incidents', 'actifs':'Registre des actifs', 'risques':'Registre des risques' };
-  const secIds = { 'traitements':'gouvTraitements', 'plan-actions':'gouvPlanActions', 'incidents':'gouvIncidents', 'actifs':'gouvActifs', 'risques':'gouvRisques' };
+  const labels = { 'traitements':'Registre des traitements', 'plan-actions':'Plan d\'actions', 'incidents':'Registre des incidents', 'actifs':'Registre des actifs', 'risques':'Registre des risques', 'pssi':'Politique (PSSI)' };
+  const secIds = { 'traitements':'gouvTraitements', 'plan-actions':'gouvPlanActions', 'incidents':'gouvIncidents', 'actifs':'gouvActifs', 'risques':'gouvRisques', 'pssi':'gouvPssi' };
   const subTabs = Object.keys(labels).map(t =>
     `<button class="sub-tab${t===tab?' active':''}" data-subtab="${t}">${labels[t]}</button>`
   ).join('');
@@ -1105,7 +1144,8 @@ function renderGouvContent(tab) {
   if (tab === 'plan-actions') return renderPlanActions();
   if (tab === 'incidents') return renderIncidents();
   if (tab === 'actifs') return renderActifs();
-  return renderRisques();
+  if (tab === 'risques') return renderRisques();
+  return renderPssi();
 }
 
 function escDate(d) { return d ? new Date(d).toLocaleDateString('fr-FR') : '—'; }
@@ -1646,9 +1686,219 @@ function deleteKpi(i) {
   vault.indicateurs.splice(i,1); setDirty(); renderView('dashboard'); notify('KPI supprimé.','success');
 }
 
+/* PSSI */
+const STATUTS_PSSI = ['Rédaction','Validé','En révision','Publié'];
+const CLAUSES_PSSI = {
+  s1: [
+    "La direction s'engage à allouer les ressources nécessaires à la sécurité des systèmes d'information.",
+    "La présente PSSI s'applique à l'ensemble des collaborateurs, prestataires et partenaires ayant accès aux ressources informatiques.",
+    "Tout manquement à la présente politique pourra entraîner des sanctions disciplinaires conformément au règlement intérieur."
+  ],
+  s2: [
+    "Le périmètre de la PSSI couvre l'ensemble des systèmes d'information, infrastructures, applications et données de l'organisation.",
+    "Sont inclus les équipements mobiles, terminaux nomades et accès distants utilisés à des fins professionnelles.",
+    "Les prestataires et sous-traitants traitant des données pour le compte de l'organisation sont également concernés."
+  ],
+  s3: [
+    "Le RSSI est le garant de la politique de sécurité et pilote le dispositif SSI.",
+    "Un comité de sécurité se réunit trimestriellement pour valider les orientations et suivre les indicateurs.",
+    "Les responsabilités en matière de sécurité sont définies dans une matrice RACI diffusée à l'ensemble des parties prenantes."
+  ],
+  s4: [
+    "L'accès aux ressources est basé sur le principe du moindre privilège : seuls les droits strictement nécessaires sont accordés.",
+    "Les accès privilégiés font l'objet d'une revue trimestrielle par le responsable hiérarchique.",
+    "Tout compte partagé est interdit. Chaque utilisateur dispose d'un identifiant personnel et nominatif.",
+    "L'authentification multi-facteurs (MFA) est obligatoire pour tout accès distant et tout accès privilégié."
+  ],
+  s5: [
+    "Les mots de passe doivent comporter un minimum de 12 caractères avec des majuscules, minuscules, chiffres et caractères spéciaux.",
+    "Le renouvellement des mots de passe est obligatoire tous les 90 jours pour les accès critiques.",
+    "Les mots de passe ne doivent pas être réutilisés sur plusieurs services.",
+    "L'utilisation d'un gestionnaire de mots de passe d'entreprise est obligatoire pour les équipes techniques."
+  ],
+  s6: [
+    "Les ressources informatiques mises à disposition sont exclusivement réservées à un usage professionnel.",
+    "L'installation de logiciels non autorisés est interdite. Toute demande doit passer par le service informatique.",
+    "Les supports amovibles (clés USB, disques externes) sont interdits sur les postes de travail sans autorisation expresse du RSSI."
+  ],
+  s7: [
+    "Tout incident de sécurité doit être signalé au RSSI dans un délai maximum de 1 heure suivant sa détection.",
+    "Une procédure d'escalade est définie selon la criticité : niveau 1 (faible) à niveau 4 (critique).",
+    "Les incidents confirmés sont tracés dans le registre des incidents avec analyse des causes et actions correctives.",
+    "L'obligation de notification CNIL sous 72 heures s'applique pour toute violation de données personnelles."
+  ],
+  s8: [
+    "Le PCA définit les procédures permettant d'assurer la continuité des activités essentielles en cas de sinistre.",
+    "Le PRA précise les modalités de restauration des systèmes d'information critiques dans les délais RTO définis.",
+    "Un test de basculement est réalisé au minimum une fois par an et donne lieu à un rapport d'évaluation.",
+    "Les sauvegardes critiques suivent la règle 3-2-1 : 3 copies, 2 supports différents, 1 copie hors site."
+  ],
+  s9: [
+    "Tout prestataire accédant aux systèmes d'information doit signer une clause de confidentialité et de sécurité.",
+    "Les sous-traitants traitant des données personnelles doivent être référencés dans le registre des traitements RGPD.",
+    "Un audit de sécurité peut être réalisé chez tout prestataire jugé critique, à sa charge."
+  ],
+  s10: [
+    "L'organisation se conforme au Règlement Général sur la Protection des Données (RGPD) et au registre des traitements associé.",
+    "Les droits des personnes (accès, rectification, effacement, portabilité) sont garantis sous un délai maximum de 30 jours.",
+    "Une analyse d'impact (AIPD / DPIA) est réalisée pour tout traitement de données à haut risque."
+  ]
+};
+
+function renderPssi() {
+  const p = (vault.pssi || { organisation:'', version:'1.0', date_validation:'', date_prochaine_revue:'', sections:[] });
+  const sections = p.sections || [];
+  const completed = sections.filter(s => s.statut === 'Publié').length;
+  const prct = sections.length ? Math.round(completed/sections.length*100) : 0;
+  const globalCls = prct === 100 ? 'text-emerald-400' : prct >= 50 ? 'text-amber-400' : 'text-blue-400';
+  return `
+    <div class="flex items-start gap-4 mb-4 flex-wrap">
+      <div class="flex-1 min-w-0">
+        <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2"><i class="fas fa-file-shield mr-1"></i> Politique de Sécurité des Systèmes d'Information</h3>
+        <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-400">
+          <span>Organisation : <strong class="text-slate-300">${esc(p.organisation||'Non renseignée')}</strong></span>
+          <span>Version : <strong class="text-slate-300">${esc(p.version||'1.0')}</strong></span>
+          <span>Validé le : <strong class="text-slate-300">${p.date_validation ? new Date(p.date_validation).toLocaleDateString('fr-FR') : '—'}</strong></span>
+          <span>Prochaine revue : <strong class="text-slate-300">${p.date_prochaine_revue ? new Date(p.date_prochaine_revue).toLocaleDateString('fr-FR') : '—'}</strong></span>
+        </div>
+        <div class="mt-2 flex items-center gap-3">
+          <div class="flex-1 h-1.5 rounded-full bg-white/5 overflow-hidden"><div class="h-full rounded-full ${globalCls}" style="width:${prct}%"></div></div>
+          <span class="text-xs font-mono ${globalCls}">${completed}/${sections.length} publiée(s)</span>
+        </div>
+      </div>
+      <div class="flex gap-2 flex-shrink-0">
+        <button class="btn btn-secondary btn-xs" onclick="editPssiMeta()"><i class="fas fa-gear"></i></button>
+        <button class="btn btn-primary btn-xs" onclick="addPssiSection()"><i class="fas fa-plus"></i> Section</button>
+        <button class="btn btn-secondary btn-xs" onclick="togglePssiDocument()" id="pssiDocBtn"><i class="fas fa-file-lines"></i> Document complet</button>
+      </div>
+    </div>
+    <div id="pssiListView">
+    ${sections.length === 0 ? '<div class="empty-state" style="padding:1.5rem"><i class="fa-regular fa-file-lines"></i><p>Aucune section. Créez votre première section de politique de sécurité.</p></div>' : sections.map((s, i) => {
+      const dot = s.statut === 'Publié' ? 'bg-emerald-500' : s.statut === 'Validé' ? 'bg-blue-500' : s.statut === 'En révision' ? 'bg-amber-500' : 'bg-slate-500';
+      return `<div class="flex items-center gap-3 py-2 border-b border-white/5 last:border-0">
+        <span class="w-2 h-2 rounded-full flex-shrink-0 ${dot}"></span>
+        <span class="text-sm text-slate-300 flex-1 min-w-0 truncate">${esc(s.titre || 'Section sans titre')}</span>
+        <span class="text-xs text-slate-500">${s.statut||'Rédaction'}</span>
+        <div class="flex gap-1">
+          <button class="text-xs text-slate-600 hover:text-slate-300 transition-colors" onclick="editPssiSection(${i})" title="Modifier"><i class="fas fa-pencil-alt"></i></button>
+          <button class="text-xs text-slate-600 hover:text-red-400 transition-colors" onclick="deletePssiSection(${i})" title="Supprimer"><i class="fas fa-times"></i></button>
+        </div>
+      </div>`;
+    }).join('')}
+    </div>
+    <div id="pssiDocView" style="display:none" class="glass-card p-4 mt-2 text-sm text-slate-300 leading-relaxed space-y-4"></div>`;
+}
+
+function togglePssiDocument() {
+  const list = document.getElementById('pssiListView');
+  const doc = document.getElementById('pssiDocView');
+  const btn = document.getElementById('pssiDocBtn');
+  if (!list || !doc) return;
+  if (doc.style.display === 'block') { doc.style.display = 'none'; list.style.display = ''; btn.innerHTML = '<i class="fas fa-file-lines"></i> Document complet'; return; }
+  list.style.display = 'none';
+  doc.style.display = 'block';
+  btn.innerHTML = '<i class="fas fa-list"></i> Vue liste';
+  const p = vault.pssi || { sections:[] };
+  doc.innerHTML = (p.sections||[]).filter(s => s.contenu && s.contenu.trim()).map(s => {
+    const md = window.marked ? marked.parse(s.contenu) : esc(s.contenu);
+    return `<div><h4 class="text-sm font-semibold text-slate-200 mb-1">${esc(s.titre)} <span class="text-xs font-normal text-slate-500">(${esc(s.statut||'')})</span></h4>${md}</div>`;
+  }).join('') || '<p class="text-slate-500">Aucun contenu rédigé. Éditez les sections pour ajouter du contenu.</p>';
+}
+
+function editPssiMeta() {
+  const p = vault.pssi || {};
+  showGouvModal({ title:'Paramètres de la PSSI', saveLabel:'Enregistrer',
+    fields:[
+      { key:'organisation', label:'Organisation', value:p.organisation||'' },
+      { key:'version', label:'Version', value:p.version||'1.0' },
+      { key:'date_validation', label:'Date de validation', type:'date', value:p.date_validation||'' },
+      { key:'date_prochaine_revue', label:'Prochaine revue', type:'date', value:p.date_prochaine_revue||'' }
+    ],
+    onSave: d => {
+      if (!vault.pssi) vault.pssi = { sections:[] };
+      Object.assign(vault.pssi, d);
+      setDirty(); renderGouvSubtab('pssi'); notify('Paramètres mis à jour.','success');
+    }
+  });
+}
+
+function editPssiSection(i) {
+  const sec = (vault.pssi && vault.pssi.sections) ? vault.pssi.sections[i] : null;
+  if (!sec) return;
+  const clauses = CLAUSES_PSSI[sec.id] || [];
+  const clausesOpts = clauses.map(c => `<option value="${esc(c)}">${esc(c.slice(0,60))}…</option>`).join('');
+  const overlay = document.getElementById('gouvModal');
+  const content = document.getElementById('gouvModalContent');
+  content.innerHTML = `<div style="text-align:left">
+    <h3 class="text-sm font-semibold mb-3" style="text-align:center">Modifier : ${esc(sec.titre)}</h3>
+    <div class="calc-group"><label>Titre</label><input class="lock-input" id="pssiField_titre" value="${esc(sec.titre)}"></div>
+    <div class="calc-group"><label>Statut</label><select class="lock-input" id="pssiField_statut">${STATUTS_PSSI.map(s => `<option value="${s}"${s===sec.statut?' selected':''}>${s}</option>`).join('')}</select></div>
+    <div class="calc-group"><label>Contenu (Markdown)</label><textarea class="lock-input" id="pssiField_contenu" rows="8" style="resize:vertical;font-size:0.8rem">${esc(sec.contenu||'')}</textarea></div>
+    ${clauses.length ? `
+    <div class="calc-group"><label>Clauses suggérées</label>
+      <div class="flex gap-1"><select class="lock-input flex-1" id="pssiClauseSelect">${clausesOpts}</select>
+      <button class="btn btn-primary btn-xs" id="pssiClauseInsBtn"><i class="fas fa-plus"></i></button></div>
+      <div class="text-[0.6rem] text-slate-600 mt-1">Sélectionnez une clause et cliquez + pour l'ajouter au contenu.</div>
+    </div>` : ''}
+    <div id="gouvEditError" class="text-xs text-red-400 mb-2" style="display:none"></div>
+    <div class="flex gap-2" style="justify-content:center;margin-top:1rem">
+      <button class="btn btn-primary btn-sm" id="pssiEditSave">Enregistrer</button>
+      <button class="btn btn-secondary btn-sm" id="gouvEditCancel2">Annuler</button>
+    </div>
+  </div>`;
+  overlay.style.display = 'flex';
+  const clauseBtn = document.getElementById('pssiClauseInsBtn');
+  if (clauseBtn) {
+    clauseBtn.onclick = function() {
+      const ta = document.getElementById('pssiField_contenu');
+      const sel = document.getElementById('pssiClauseSelect');
+      if (ta && sel) ta.value += (ta.value ? '\n\n' : '') + sel.value;
+    };
+  }
+  const onCancel = () => { overlay.style.display = 'none'; saveBtn.removeEventListener('click', onSave); };
+  const saveBtn = document.getElementById('pssiEditSave');
+  const cancelBtn = document.getElementById('gouvEditCancel2');
+  const onSave = () => {
+    const t = document.getElementById('pssiField_titre').value.trim();
+    if (!t) { document.getElementById('gouvEditError').textContent = 'Le titre est obligatoire.'; document.getElementById('gouvEditError').style.display = 'block'; return; }
+    sec.titre = t;
+    sec.statut = document.getElementById('pssiField_statut').value;
+    sec.contenu = document.getElementById('pssiField_contenu').value;
+    document.getElementById('gouvEditError').style.display = 'none';
+    overlay.style.display = 'none';
+    saveBtn.removeEventListener('click', onSave);
+    cancelBtn.removeEventListener('click', onCancel);
+    setDirty(); renderGouvSubtab('pssi'); notify('Section mise à jour.','success');
+  };
+  saveBtn.addEventListener('click', onSave);
+  cancelBtn.addEventListener('click', onCancel);
+}
+
+function addPssiSection() {
+  showGouvModal({ title:'Nouvelle section PSSI', saveLabel:'Ajouter',
+    fields:[
+      { key:'titre', label:'Titre *' },
+      { key:'statut', label:'Statut', type:'select', options:STATUTS_PSSI, value:'Rédaction' }
+    ],
+    validate: d => d.titre ? null : 'Le titre est obligatoire.',
+    onSave: d => {
+      if (!vault.pssi) vault.pssi = { sections:[] };
+      if (!vault.pssi.sections) vault.pssi.sections = [];
+      vault.pssi.sections.push({ id:'s_custom_' + Date.now(), titre:d.titre, statut:d.statut, contenu:'' });
+      setDirty(); renderGouvSubtab('pssi'); notify('Section ajoutée.','success');
+    }
+  });
+}
+function deletePssiSection(i) {
+  if (!vault.pssi || !vault.pssi.sections || !vault.pssi.sections[i]) return;
+  if (!confirm('Supprimer la section « ' + vault.pssi.sections[i].titre + ' » ?')) return;
+  vault.pssi.sections.splice(i,1);
+  setDirty(); renderGouvSubtab('pssi'); notify('Section supprimée.','success');
+}
+
 function renderGouvSubtab(tab) {
   document.querySelectorAll('.gouv-section').forEach(s => s.style.display = 'none');
-  const map = { 'traitements':'gouvTraitements', 'plan-actions':'gouvPlanActions', 'incidents':'gouvIncidents', 'actifs':'gouvActifs', 'risques':'gouvRisques' };
+  const map = { 'traitements':'gouvTraitements', 'plan-actions':'gouvPlanActions', 'incidents':'gouvIncidents', 'actifs':'gouvActifs', 'risques':'gouvRisques', 'pssi':'gouvPssi' };
   document.getElementById(map[tab]).style.display = 'block';
   document.getElementById(map[tab]).innerHTML = renderGouvContent(tab);
 }
@@ -1717,6 +1967,111 @@ renderFn.memos = function() {
       </div>
     </div>`;
 };
+
+/* ---------- FEUILLE DE ROUTE ---------- */
+const CATEGORIES_ROADMAP = ['Sécurité technique','Conformité','Organisation','Gouvernance','Sensibilisation'];
+const CAT_COLORS_ROADMAP = { 'Sécurité technique':'#ef4444', 'Conformité':'#3b82f6', 'Organisation':'#f59e0b', 'Gouvernance':'#8b5cf6', 'Sensibilisation':'#10b981' };
+const STATUTS_ROADMAP = ['À faire','En cours','Fait','Bloqué'];
+
+renderFn.roadmap = function() {
+  const items = vault.feuille_route || [];
+  const quarters = {};
+  items.forEach(r => {
+    const q = r.trimestre || 'Non défini';
+    if (!quarters[q]) quarters[q] = [];
+    quarters[q].push(r);
+  });
+  const sortedQuarters = Object.keys(quarters).sort();
+  const done = items.filter(r => r.statut === 'Fait').length;
+  const total = items.length;
+  const pct = total ? Math.round(done/total*100) : 0;
+  const blk = items.filter(r => r.statut === 'Bloqué').length;
+  const trClass = pct === 100 ? 'text-emerald-400' : blk > 0 ? 'text-red-400' : 'text-amber-400';
+  return `
+    <div class="glass-card mb-4 p-3">
+      <div class="flex items-center gap-4 flex-wrap">
+        <div class="flex items-center gap-2"><span class="text-xs text-slate-400">Avancement global</span><span class="text-lg font-bold ${trClass}">${pct}%</span></div>
+        <div class="flex-1 min-w-[120px] h-2 rounded-full bg-white/5 overflow-hidden"><div class="h-full rounded-full ${pct === 100 ? 'bg-emerald-500' : 'bg-blue-500'}" style="width:${pct}%"></div></div>
+        <div class="flex gap-3 text-xs text-slate-500">
+          <span><span class="text-emerald-400 font-semibold">${done}</span> Fait</span>
+          <span><span class="text-blue-400 font-semibold">${items.filter(r=>r.statut==='En cours').length}</span> En cours</span>
+          <span><span class="text-amber-400 font-semibold">${items.filter(r=>r.statut==='À faire').length}</span> À faire</span>
+          <span><span class="text-red-400 font-semibold">${blk}</span> Bloqué</span>
+        </div>
+        <button class="btn btn-primary btn-xs" onclick="addJalon()"><i class="fas fa-plus"></i> Jalon</button>
+      </div>
+    </div>
+    <div class="roadmap-grid">${sortedQuarters.map(q => `
+      <div class="glass-card">
+        <h4 class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2 border-b border-white/5 pb-1">${esc(q)}</h4>
+        ${quarters[q].length === 0 ? '<p class="text-xs text-slate-600">Aucun jalon.</p>' : quarters[q].map(r => {
+          const cls = r.statut === 'Fait' ? 'bg-emerald-500' : r.statut === 'En cours' ? 'bg-blue-500' : r.statut === 'Bloqué' ? 'bg-red-500' : 'bg-slate-500';
+          return `<div class="flex items-start gap-2 py-1.5 border-b border-white/5 last:border-0">
+            <span class="w-2 h-2 rounded-full flex-shrink-0 mt-1 ${cls}"></span>
+            <div style="min-width:0;flex:1">
+              <div class="flex items-center justify-between gap-1">
+                <span class="text-xs font-medium text-slate-200 truncate">${esc(r.titre)}</span>
+                <span class="text-[0.55rem] px-1 rounded text-slate-600" style="background:${CAT_COLORS_ROADMAP[r.categorie]||'#64748b'}22;color:${CAT_COLORS_ROADMAP[r.categorie]||'#64748b'}">${esc(r.categorie||'')}</span>
+              </div>
+              <div class="flex items-center gap-2 mt-0.5">
+                <div class="flex-1 h-1 rounded-full bg-white/5 overflow-hidden"><div class="h-full rounded-full ${r.avancement===100?'bg-emerald-500':'bg-blue-500'}" style="width:${r.avancement||0}%"></div></div>
+                <span class="text-[0.55rem] font-mono text-slate-500">${r.avancement||0}%</span>
+              </div>
+              ${r.responsable ? `<span class="text-[0.55rem] text-slate-600"><i class="fas fa-user mr-0.5"></i>${esc(r.responsable)}</span>` : ''}
+            </div>
+            <button class="text-xs text-slate-600 hover:text-slate-300 transition-colors flex-shrink-0" onclick="editJalon(${items.indexOf(r)})" title="Modifier"><i class="fas fa-pencil-alt"></i></button>
+            <button class="text-xs text-slate-600 hover:text-red-400 transition-colors flex-shrink-0" onclick="deleteJalon(${items.indexOf(r)})" title="Supprimer"><i class="fas fa-times"></i></button>
+          </div>`;
+        }).join('')}
+      </div>
+    `).join('')}</div>`;
+};
+
+function addJalon() {
+  showGouvModal({ title:'Nouveau jalon', saveLabel:'Ajouter',
+    fields:[
+      { key:'titre', label:'Titre *' },
+      { key:'description', label:'Description' },
+      { key:'trimestre', label:'Trimestre', type:'select', options:['2025-T2','2025-T3','2025-T4','2026-T1','2026-T2','2026-T3','2026-T4'], value:'2025-T3' },
+      { key:'categorie', label:'Catégorie', type:'select', options:CATEGORIES_ROADMAP, value:'Sécurité technique' },
+      { key:'avancement', label:'Avancement (0-100)', value:'0' },
+      { key:'statut', label:'Statut', type:'select', options:STATUTS_ROADMAP, value:'À faire' },
+      { key:'priorite', label:'Priorité', type:'select', options:['Haute','Moyenne','Basse'], value:'Moyenne' },
+      { key:'responsable', label:'Responsable' }
+    ],
+    validate: d => d.titre ? null : 'Le titre est obligatoire.',
+    onSave: d => {
+      d.avancement = Math.min(100, Math.max(0, parseInt(d.avancement)||0));
+      d.id = 'fr_' + Date.now();
+      vault.feuille_route.push(d); setDirty(); renderView('roadmap'); notify('Jalon ajouté.','success');
+    }
+  });
+}
+function editJalon(i) {
+  const r = vault.feuille_route[i]; if (!r) return;
+  showGouvModal({ title:'Modifier le jalon', saveLabel:'Enregistrer',
+    fields:[
+      { key:'titre', label:'Titre *', value:r.titre },
+      { key:'description', label:'Description', value:r.description||'' },
+      { key:'trimestre', label:'Trimestre', type:'select', options:['2025-T2','2025-T3','2025-T4','2026-T1','2026-T2','2026-T3','2026-T4'], value:r.trimestre||'2025-T3' },
+      { key:'categorie', label:'Catégorie', type:'select', options:CATEGORIES_ROADMAP, value:CATEGORIES_ROADMAP.includes(r.categorie) ? r.categorie : 'Sécurité technique' },
+      { key:'avancement', label:'Avancement (0-100)', value:String(r.avancement||0) },
+      { key:'statut', label:'Statut', type:'select', options:STATUTS_ROADMAP, value:STATUTS_ROADMAP.includes(r.statut) ? r.statut : 'À faire' },
+      { key:'priorite', label:'Priorité', type:'select', options:['Haute','Moyenne','Basse'], value:r.priorite||'Moyenne' },
+      { key:'responsable', label:'Responsable', value:r.responsable||'' }
+    ],
+    validate: d => d.titre ? null : 'Le titre est obligatoire.',
+    onSave: d => {
+      d.avancement = Math.min(100, Math.max(0, parseInt(d.avancement)||0));
+      vault.feuille_route[i] = d; setDirty(); renderView('roadmap'); notify('Jalon mis à jour.','success');
+    }
+  });
+}
+function deleteJalon(i) {
+  const r = vault.feuille_route[i]; if (!r) return;
+  if (!confirm('Supprimer le jalon « ' + r.titre + ' » ?')) return;
+  vault.feuille_route.splice(i,1); setDirty(); renderView('roadmap'); notify('Jalon supprimé.','success');
+}
 
 /* ============================================================
    MODAL SYSTEM
@@ -2006,7 +2361,7 @@ function showSaveLockModal() {
 /* Help modal */
 function showHelpModal() {
   const titles = { dashboard:'Dashboard', 'outils-tech':'Outils Techniques', 'outils-fonctionnels':'Outils Fonctionnels',
-    'threat-intel':'Threat Intelligence', frameworks:'Frameworks & Conformité', gouvernance:'Gouvernance', memos:'Mémos & Playbooks' };
+    'threat-intel':'Threat Intelligence', frameworks:'Frameworks & Conformité', gouvernance:'Gouvernance', memos:'Mémos & Playbooks', roadmap:'Feuille de route' };
   const overlay = document.getElementById('modalOverlay');
   document.getElementById('modalTitle').textContent = 'Aide — ' + (titles[currentView] || currentView);
   document.getElementById('modalBody').innerHTML = '<div class="help-content">' + (HELP_TEXT[currentView] || '<p>Aucune aide disponible pour cette rubrique.</p>') + '</div>';
@@ -2160,6 +2515,9 @@ function bindViewEvents(name) {
         document.getElementById('contactEditModal').classList.add('visible');
       };
     });
+  }
+
+  if (name === 'roadmap') {
   }
 
   /* Gouvernance sub-tab switching */
@@ -2439,6 +2797,127 @@ async function _downloadFallback(content) {
   URL.revokeObjectURL(a.href);
   dirty = false;
   notify('Coffre chiffré téléchargé.', 'success');
+}
+
+/* Rapport exécutif PDF */
+function genererRapportExecutif() {
+  if (!vault) { notify('Aucune donnée à exporter.','error'); return; }
+  const p = vault.pssi || {};
+  const sections = p.sections || [];
+  const items = vault.feuille_route || [];
+  const now = new Date().toLocaleDateString('fr-FR', { day:'numeric', month:'long', year:'numeric' });
+  const escHtml = s => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const pctBar = (pct, cls) => `<div style="background:rgba(255,255,255,0.1);border-radius:4px;height:8px;overflow:hidden"><div style="width:${Math.min(100,pct)}%;background:${cls};height:100%;border-radius:4px"></div></div>`;
+  const style = `
+    body{font-family:system-ui,sans-serif;color:#1e293b;background:#fff;margin:0;padding:2rem;font-size:10pt;line-height:1.5}
+    h1{font-size:16pt;margin:0 0 0.25rem;color:#1e3a5f}
+    h2{font-size:12pt;margin:1.5rem 0 0.5rem;border-bottom:2px solid #e2e8f0;padding-bottom:0.25rem;color:#2563eb}
+    h3{font-size:10pt;margin:0.75rem 0 0.25rem;color:#334155}
+    table{width:100%;border-collapse:collapse;margin:0.5rem 0}
+    th,td{text-align:left;padding:4px 8px;border-bottom:1px solid #e2e8f0;font-size:9pt}
+    th{background:#f1f5f9;font-weight:600;color:#475569}
+    .stat{display:inline-block;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:8px 12px;margin:4px;text-align:center;min-width:80px}
+    .stat-val{font-size:16pt;font-weight:700;color:#2563eb}
+    .stat-lbl{font-size:7pt;color:#64748b;text-transform:uppercase}
+    .badge{display:inline-block;padding:1px 6px;border-radius:3px;font-size:8pt;font-weight:600}
+    .badge-green{background:#dcfce7;color:#166534}
+    .badge-blue{background:#dbeafe;color:#1e40af}
+    .badge-amber{background:#fef3c7;color:#92400e}
+    .badge-red{background:#fee2e2;color:#991b1b}
+    .badge-slate{background:#f1f5f9;color:#475569}
+    .footer{font-size:8pt;color:#94a3b8;text-align:center;margin-top:2rem;border-top:1px solid #e2e8f0;padding-top:0.5rem}
+    @media print{body{padding:0.5in}h2{break-before:avoid}table{break-inside:avoid}}
+  `;
+
+  let html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>Rapport exécutif RSSI</title><style>${style}</style></head><body>`;
+  html += `<h1>Rapport exécutif — Direction</h1><p style="color:#64748b;font-size:9pt">Généré le ${escHtml(now)} ${p.organisation ? '— ' + escHtml(p.organisation) : ''}</p>`;
+
+  /* Synthèse */
+  const nTech = vault.outils_techniques.length;
+  const nFonc = vault.outils_fonctionnels.length;
+  const nActifs = (vault.actifs||[]).length;
+  const nRisques = (vault.risques||[]).length;
+  const nIncidents = (vault.incidents||[]).length;
+  const nPlan = (vault.plan_actions||[]).length;
+  const nPlaybooks = vault.playbooks.length;
+  html += `<h2>Synthèse chiffrée</h2><div>`;
+  html += `<span class="stat"><div class="stat-val">${nTech+nFonc}</div><div class="stat-lbl">Outils</div></span>`;
+  html += `<span class="stat"><div class="stat-val">${nActifs}</div><div class="stat-lbl">Actifs</div></span>`;
+  html += `<span class="stat"><div class="stat-val">${nRisques}</div><div class="stat-lbl">Risques</div></span>`;
+  html += `<span class="stat"><div class="stat-val">${nIncidents}</div><div class="stat-lbl">Incidents</div></span>`;
+  html += `<span class="stat"><div class="stat-val">${nPlaybooks}</div><div class="stat-lbl">Playbooks</div></span>`;
+  html += `<span class="stat"><div class="stat-val">${nPlan}</div><div class="stat-lbl">Actions</div></span>`;
+  html += `</div>`;
+
+  /* KPIs */
+  const kpis = vault.indicateurs || [];
+  if (kpis.length) {
+    html += `<h2>KPIs personnalisés</h2><table><thead><tr><th>Indicateur</th><th>Valeur</th><th>Cible</th><th>Progression</th></tr></thead><tbody>`;
+    kpis.forEach(k => {
+      const pct = Math.min(100, Math.round((k.valeur / (k.cible||1)) * 100));
+      html += `<tr><td>${escHtml(k.nom)}</td><td>${k.valeur}${escHtml(k.unite||'')}</td><td>${k.cible}${escHtml(k.unite||'')}</td><td>${pctBar(pct, '#3b82f6')} <span style="font-size:8pt">${pct}%</span></td></tr>`;
+    });
+    html += `</tbody></table>`;
+  }
+
+  /* Plan d'actions */
+  const pas = vault.plan_actions || [];
+  const enCours = pas.filter(a => a.statut === 'En cours');
+  const aFaire = pas.filter(a => a.statut === 'À faire');
+  if (enCours.length || aFaire.length) {
+    html += `<h2>Plan d'actions — En cours</h2><table><thead><tr><th>Action</th><th>Priorité</th><th>Responsable</th></tr></thead><tbody>`;
+    enCours.concat(aFaire).forEach(a => {
+      const cls = a.priorite === 'Haute' ? 'badge-red' : a.priorite === 'Moyenne' ? 'badge-amber' : 'badge-slate';
+      html += `<tr><td>${escHtml(a.action)}</td><td><span class="badge ${cls}">${escHtml(a.priorite)}</span></td><td>${escHtml(a.responsable||'—')}</td></tr>`;
+    });
+    html += `</tbody></table>`;
+  }
+
+  /* Risques */
+  const risques = vault.risques || [];
+  const critiques = risques.filter(r => (r.vraisemblance||3)*(r.gravite||3) > 10);
+  if (critiques.length) {
+    html += `<h2>Risques critiques (niveau &gt; 10/25)</h2><table><thead><tr><th>Menace</th><th>Actif</th><th>Niveau</th><th>Traitement</th></tr></thead><tbody>`;
+    critiques.forEach(r => {
+      html += `<tr><td>${escHtml(r.menace)}</td><td>${escHtml(r.actif_concerne||'—')}</td><td>${(r.vraisemblance||3)*(r.gravite||3)}/25</td><td>${escHtml(r.traitement||'—')}</td></tr>`;
+    });
+    html += `</tbody></table>`;
+  }
+
+  /* PSSI */
+  if (sections.length) {
+    html += `<h2>Politique de sécurité (PSSI)</h2><table><thead><tr><th>Section</th><th>Statut</th></tr></thead><tbody>`;
+    sections.forEach(s => {
+      const cls = s.statut === 'Publié' ? 'badge-green' : s.statut === 'Validé' ? 'badge-blue' : s.statut === 'En révision' ? 'badge-amber' : 'badge-slate';
+      html += `<tr><td>${escHtml(s.titre)}</td><td><span class="badge ${cls}">${escHtml(s.statut)}</span></td></tr>`;
+    });
+    html += `</tbody></table>`;
+  }
+
+  /* Roadmap */
+  if (items.length) {
+    const done = items.filter(r => r.statut === 'Fait').length;
+    const enCoursR = items.filter(r => r.statut === 'En cours').length;
+    const aFaireR = items.filter(r => r.statut === 'À faire').length;
+    html += `<h2>Feuille de route</h2><p style="font-size:9pt">${done} fait · ${enCoursR} en cours · ${aFaireR} à faire · ${items.filter(r=>r.statut==='Bloqué').length} bloqué(s)</p>`;
+    html += `<table><thead><tr><th>Jalon</th><th>Trimestre</th><th>Catégorie</th><th>Avancement</th><th>Statut</th></tr></thead><tbody>`;
+    items.forEach(r => {
+      const cls = r.statut === 'Fait' ? 'badge-green' : r.statut === 'En cours' ? 'badge-blue' : r.statut === 'Bloqué' ? 'badge-red' : 'badge-slate';
+      html += `<tr><td>${escHtml(r.titre)}</td><td>${escHtml(r.trimestre||'')}</td><td>${escHtml(r.categorie||'')}</td><td>${pctBar(r.avancement||0, r.avancement===100?'#10b981':'#3b82f6')} <span style="font-size:8pt">${r.avancement||0}%</span></td><td><span class="badge ${cls}">${escHtml(r.statut)}</span></td></tr>`;
+    });
+    html += `</tbody></table>`;
+  }
+
+  html += `<div class="footer">Document généré par RSSI Secure Command Deck</div>`;
+  html += `</body></html>`;
+
+  const win = window.open('', '_blank');
+  if (!win) { notify('Autorisez les popups pour générer le rapport.','error'); return; }
+  win.document.write(html);
+  win.document.close();
+  win.focus();
+  setTimeout(() => win.print(), 300);
+  notify('Rapport généré. Utilisez "Enregistrer en PDF" dans la boîte de dialogue d\'impression.','info');
 }
 
 function askPassword(msg) {
@@ -2955,6 +3434,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   /* Help & Credits */
   document.getElementById('helpBtn').addEventListener('click', showHelpModal);
   document.getElementById('creditBtn').addEventListener('click', showCreditsModal);
+  document.getElementById('reportBtn').addEventListener('click', genererRapportExecutif);
 
   /* Search */
   let searchTimer;
