@@ -747,7 +747,12 @@ const DEFAULT_VAULT = {
       { id:'s12', titre:"Gestion des sauvegardes et restaurations",statut:'Rédaction', contenu:'' },
       { id:'s13', titre:"Sécurité du développement et des projets",statut:'Rédaction', contenu:'' },
       { id:'s14', titre:"Gestion des vulnérabilités et correctifs",statut:'Rédaction', contenu:'' },
-      { id:'s15', titre:"Télétravail et usage nomade",            statut:'Rédaction', contenu:'' }
+      { id:'s15', titre:"Télétravail et usage nomade",            statut:'Rédaction', contenu:'' },
+      { id:'s16', titre:"Classification et gestion des données",  statut:'Rédaction', contenu:'' },
+      { id:'s17', titre:"Gestion des logs et de la surveillance", statut:'Rédaction', contenu:'' },
+      { id:'s18', titre:"Chiffrement et gestion cryptographique", statut:'Rédaction', contenu:'' },
+      { id:'s19', titre:"Sécurité des ressources humaines",        statut:'Rédaction', contenu:'' },
+      { id:'s20', titre:"Gestion des actifs informatiques",        statut:'Rédaction', contenu:'' }
     ]
   },
   feuille_route: [
@@ -831,6 +836,12 @@ function migrateVault(v) {
     if (v.pssi && v.pssi.approuve_par === undefined) v.pssi.approuve_par = '';
     if (!v.feuille_route) v.feuille_route = DEFAULT_VAULT.feuille_route;
     if (!v.raci) v.raci = JSON.parse(JSON.stringify(DEFAULT_VAULT.raci));
+    if (v.pssi && v.pssi.sections) {
+      const existingIds = new Set(v.pssi.sections.map(function(s){return s.id;}));
+      DEFAULT_VAULT.pssi.sections.forEach(function(def) {
+        if (!existingIds.has(def.id)) v.pssi.sections.push(JSON.parse(JSON.stringify(def)));
+      });
+    }
   }
   return v;
 }
@@ -895,7 +906,7 @@ const HELP_TEXT = {
   'outils-fonctionnels': '<p>La rubrique des outils fonctionnels regroupe les plateformes et services destinés à la gestion de la sécurité : gestion des crises, conformité (GRC), documentation, mots de passe, identité et accès (IAM), sauvegarde et ticketing.</p><p>Chaque fiche présente la description, le lien officiel, les cas d\'usage et les commandes clés. Le tri par favoris vous permet de mettre en avant les outils que vous utilisez le plus fréquemment.</p>',
   'threat-intel': '<p>Le module de renseignement sur les menaces compile les principales sources d\'information permettant de suivre l\'actualité de la cybersécurité. Chaque source est présentée avec sa catégorie (blogs, CERT, flux techniques, comptes de chercheurs), sa pertinence, un lien d\'accès direct et un indicateur de fraîcheur — ce dernier vous signale si une mise à jour est récente ou ancienne.</p><p>Vous pouvez ajouter, modifier ou supprimer des sources selon vos besoins. Une veille maintenue est essentielle pour anticiper les risques émergents.</p>',
   frameworks: '<p>La section des référentiels et cadres de conformité rassemble les principaux standards et réglementations applicables à la sécurité des systèmes d\'information.</p><p>Chaque fiche décrit le périmètre du référentiel, sa version, son niveau de maturité, son lien officiel et ses cas d\'usage. Les frameworks sont classés par domaine : gestion des risques, conformité réglementaire, sécurité technique et gouvernance.</p><p>Des calculateurs intégrés vous permettent d\'évaluer les objectifs de reprise (RPO) et de temps de restauration (RTO) en fonction de votre type d\'entreprise et de la nature de l\'impact.</p><p>Utilisez les étoiles pour suivre vos référentiels de prédilection.</p>',
-  gouvernance: '<p>L\'espace de gouvernance vous permet de piloter votre dispositif de sécurité au travers de trois registres :</p><ul class="list-disc list-inside space-y-1"><li><strong>Traitements RGPD</strong> — finalité, catégories de données, personnes concernées, destinataires et mesures de sécurité.</li><li><strong>Incidents de sécurité</strong> — périmètre, type de risque, impact, date et statut.</li><li><strong>Plan d\'actions</strong> — responsable, échéance et état d\'avancement.</li></ul>',
+  gouvernance: '<p>L\'espace de gouvernance centralise l\'ensemble des registres et documents essentiels au pilotage RSSI :</p><ul class="list-disc list-inside space-y-1"><li><strong>Traitements RGPD</strong> — registre des traitements avec finalité, base légale, catégories de données et destinataires.</li><li><strong>Plan d\'actions</strong> — suivi des actions correctives avec responsable, échéance et priorité.</li><li><strong>Incidents de sécurité</strong> — registre des incidents avec périmètre, type de risque, impact et statut.</li><li><strong>Registre des actifs</strong> — inventaire des actifs informatiques avec criticité et statut.</li><li><strong>Registre des risques</strong> — analyse des risques avec niveau calculé (vraisemblance × gravité) et plan de traitement.</li><li><strong>Politique (PSSI)</strong> — éditeur structuré en 20 sections (ANSSI / ISO 27002) avec clauses préremplies et générateur de document complet.</li><li><strong>Matrice RACI</strong> — grille de responsabilités par activité sécurité avec badges cyclables (R, A, C, I) pour clarifier qui fait quoi.</li></ul><p>Chaque registre permet d\'ajouter, modifier ou supprimer des entrées, avec une traçabilité complète des modifications.</p>',
   memos: '<p>La rubrique des mémos et des playbooks constitue votre carnet de bord opérationnel.</p><p>Les <strong>mémos</strong> vous permettent de rédiger des notes libres au format Markdown avec prévisualisation en direct. Les <strong>playbooks</strong> décrivent les procédures de réponse à incident pas à pas, avec une checklist interactive et un historique permettant de tracer chaque exercice ou déclenchement réel. L\'historique enregistre l\'état des cases cochées au moment de la saisie pour une traçabilité complète.</p><p>Vous trouverez également les contacts d\'urgence essentiels.</p>',
   roadmap: '<p>La feuille de route stratégique vous permet de planifier et suivre l\'avancement de vos initiatives de sécurité sur plusieurs trimestres. Chaque jalon est rattaché à une catégorie (sécurité technique, conformité, organisation, gouvernance, sensibilisation) et dispose d\'un statut et d\'un indicateur d\'avancement.</p><p>La vue trimestrielle offre une vision claire des priorités et des échéances. Utilisez-la pour présenter votre plan d\'action au comité de direction.</p>'
 };
@@ -1773,7 +1784,8 @@ const CLAUSES_PSSI = {
     "Tout incident de sécurité doit être signalé au RSSI dans un délai maximum de 1 heure suivant sa détection.",
     "Une procédure d'escalade est définie selon la criticité : niveau 1 (faible) à niveau 4 (critique).",
     "Les incidents confirmés sont tracés dans le registre des incidents avec analyse des causes et actions correctives.",
-    "L'obligation de notification CNIL sous 72 heures s'applique pour toute violation de données personnelles."
+    "L'obligation de notification CNIL sous 72 heures s'applique pour toute violation de données personnelles.",
+    "Un registre des leçons apprises (REX) est établi après chaque incident majeur et partagé en comité de sécurité."
   ],
   s8: [
     "Le PCA définit les procédures permettant d'assurer la continuité des activités essentielles en cas de sinistre.",
@@ -1790,7 +1802,8 @@ const CLAUSES_PSSI = {
   s10: [
     "L'organisation se conforme au Règlement Général sur la Protection des Données (RGPD) et au registre des traitements associé.",
     "Les droits des personnes (accès, rectification, effacement, portabilité) sont garantis sous un délai maximum de 30 jours.",
-    "Une analyse d'impact (AIPD / DPIA) est réalisée pour tout traitement de données à haut risque."
+    "Une analyse d'impact (AIPD / DPIA) est réalisée pour tout traitement de données à haut risque.",
+    "Les obligations NIS 2 et DORA sont intégrées dans le cadre de conformité pour les entités concernées."
   ],
   s11: [
     "L'accès aux locaux hébergeant les infrastructures critiques est contrôlé par badge ou dispositif biométrique.",
@@ -1818,7 +1831,38 @@ const CLAUSES_PSSI = {
   s15: [
     "Le télétravail est autorisé sous réserve de l'utilisation d'un VPN d'entreprise et d'un poste sécurisé.",
     "Les équipements personnels (BYOD) ne sont pas autorisés à accéder aux ressources internes sans conteneur de gestion (MDM).",
-    "Les informations confidentielles ne doivent pas être consultées ou partagées sur des réseaux WiFi publics non sécurisés."
+    "Les informations confidentielles ne doivent pas être consultées ou partagées sur des réseaux WiFi publics non sécurisés.",
+    "En télétravail, l'utilisation d'un filtre de confidentialité d'écran est recommandée dans les espaces partagés."
+  ],
+  s16: [
+    "Les données sont classées selon 3 niveaux : Public, Interne, Confidentiel (ou équivalent organisationnel).",
+    "Chaque niveau de classification définit les règles de stockage, transmission et destruction applicables.",
+    "L'étiquetage des documents et courriels est obligatoire pour le niveau Confidentiel.",
+    "Les données à caractère personnel font l'objet d'une protection renforcée conformément au RGPD."
+  ],
+  s17: [
+    "Les événements de sécurité sont centralisés dans un SIEM avec une conservation minimale de 12 mois.",
+    "Les horloges des systèmes sont synchronisées sur une source NTP unique et fiable.",
+    "Les accès aux journaux sont restreints aux seules personnes autorisées et font l'objet d'une traçabilité.",
+    "Toute modification ou suppression anormale des logs déclenche une alerte de sécurité."
+  ],
+  s18: [
+    "Le chiffrement est obligatoire pour toutes les données sensibles au repos et en transit.",
+    "Les certificats TLS/SSL font l'objet d'un suivi d'échéance et d'un renouvellement avant expiration.",
+    "La gestion des clés respecte le principe de séparation des tâches et est documentée.",
+    "Les algorithmes autorisés sont conformes aux recommandations de l'ANSSI (liste des mécanismes cryptographiques approuvés)."
+  ],
+  s19: [
+    "Avant recrutement sur un poste sensible, une vérification des antécédents est réalisée conformément à la réglementation.",
+    "Tout collaborateur signe un engagement de confidentialité lors de son arrivée.",
+    "Lors d'un départ, l'ensemble des accès est révoqué sous 24 heures et le matériel restitué.",
+    "Une sensibilisation à la sécurité est dispensée au moins une fois par an à l'ensemble du personnel."
+  ],
+  s20: [
+    "Un inventaire exhaustif des actifs informatiques (matériels, logiciels, données) est maintenu et audité annuellement.",
+    "Chaque actif possède un propriétaire identifié, responsable de sa sécurité et de son cycle de vie.",
+    "Les actifs en fin de vie sont décommissionnés selon une procédure incluant la destruction sécurisée des données.",
+    "Tout nouvel actif fait l'objet d'une qualification de sécurité avant sa mise en production."
   ]
 };
 
