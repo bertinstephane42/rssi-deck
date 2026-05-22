@@ -728,6 +728,7 @@ const DEFAULT_VAULT = {
   indicateurs: [],
   pssi: {
     organisation: '',
+    approuve_par: '',
     version: '1.0',
     date_validation: '',
     date_prochaine_revue: '',
@@ -741,7 +742,12 @@ const DEFAULT_VAULT = {
       { id:'s7', titre:"Gestion des incidents de sécurité",       statut:'Rédaction', contenu:'' },
       { id:'s8', titre:"Continuité d'activité (PCA/PRA)",         statut:'Rédaction', contenu:'' },
       { id:'s9', titre:"Gestion des tiers et prestataires",       statut:'Rédaction', contenu:'' },
-      { id:'s10', titre:"Conformité RGPD et réglementaire",       statut:'Rédaction', contenu:'' }
+      { id:'s10', titre:"Conformité RGPD et réglementaire",       statut:'Rédaction', contenu:'' },
+      { id:'s11', titre:"Sécurité physique et des locaux",        statut:'Rédaction', contenu:'' },
+      { id:'s12', titre:"Gestion des sauvegardes et restaurations",statut:'Rédaction', contenu:'' },
+      { id:'s13', titre:"Sécurité du développement et des projets",statut:'Rédaction', contenu:'' },
+      { id:'s14', titre:"Gestion des vulnérabilités et correctifs",statut:'Rédaction', contenu:'' },
+      { id:'s15', titre:"Télétravail et usage nomade",            statut:'Rédaction', contenu:'' }
     ]
   },
   feuille_route: [
@@ -754,8 +760,43 @@ const DEFAULT_VAULT = {
     { id:'fr7', titre:"Mise en place d'un SOC interne", description:"Équipe et outils de surveillance 24/7", trimestre:'2026-T1', statut:'À faire', avancement:0, priorite:'Moyenne', categorie:'Organisation', responsable:'RSSI' },
     { id:'fr8', titre:"Exercice de crise annuel", description:"Simulation grandeur nature avec cellule de crise", trimestre:'2025-T4', statut:'En cours', avancement:10, priorite:'Moyenne', categorie:'Organisation', responsable:'RSSI' },
     { id:'fr9', titre:"Renforcement backup PCA/PRA", description:"Sauvegardes immuables et tests de restauration", trimestre:'2025-T3', statut:'À faire', avancement:0, priorite:'Haute', categorie:'Sécurité technique', responsable:'DSI' },
-    { id:'fr10', titre:"Gouvernance des identités (IAM)", description:"SSO, RBAC et revue des accès trimestrielle", trimestre:'2026-T1', statut:'À faire', avancement:0, priorite:'Moyenne', categorie:'Gouvernance', responsable:'DSI' }
-  ]
+      { id:'fr10', titre:"Gouvernance des identités (IAM)", description:"SSO, RBAC et revue des accès trimestrielle", trimestre:'2026-T1', statut:'À faire', avancement:0, priorite:'Moyenne', categorie:'Gouvernance', responsable:'DSI' }
+    ],
+  raci: {
+    roles: ['RSSI','DSI','DPO','COMEX','Équipe technique','Juridique / RH','Chef de projet'],
+    activites: [
+      { id:'ra1', activite:"Validation et revue de la PSSI",
+        assign:{'RSSI':'A','DSI':'R','DPO':'C','COMEX':'A','Juridique / RH':'C'} },
+      { id:'ra2', activite:"Gestion des incidents de sécurité",
+        assign:{'RSSI':'A','DSI':'R','Équipe technique':'R','COMEX':'I','DPO':'C'} },
+      { id:'ra3', activite:"Notification des violations (RGPD)",
+        assign:{'RSSI':'R','DPO':'A','Juridique / RH':'C','COMEX':'I','DSI':'C'} },
+      { id:'ra4', activite:"Analyse de risques et plan d'actions",
+        assign:{'RSSI':'R','DSI':'C','DPO':'C','COMEX':'A'} },
+      { id:'ra5', activite:"Gestion des accès et habilitations",
+        assign:{'DSI':'R','RSSI':'A','Chef de projet':'C','Équipe technique':'R'} },
+      { id:'ra6', activite:"Déploiement des correctifs de sécurité",
+        assign:{'Équipe technique':'R','DSI':'A','RSSI':'C','Chef de projet':'I'} },
+      { id:'ra7', activite:"Sauvegardes et tests de restauration",
+        assign:{'Équipe technique':'R','DSI':'A','RSSI':'C'} },
+      { id:'ra8', activite:"Campagne de sensibilisation",
+        assign:{'RSSI':'R','DSI':'C','Juridique / RH':'R','COMEX':'A'} },
+      { id:'ra9', activite:"Audit de conformité RGPD",
+        assign:{'DPO':'R','RSSI':'C','Juridique / RH':'C','COMEX':'A'} },
+      { id:'ra10', activite:"Gestion des prestataires et sous-traitants",
+        assign:{'DSI':'R','RSSI':'A','DPO':'C','Juridique / RH':'C'} },
+      { id:'ra11', activite:"Gestion des vulnérabilités techniques",
+        assign:{'Équipe technique':'R','DSI':'A','RSSI':'A','Chef de projet':'I'} },
+      { id:'ra12', activite:"Conformité NIS 2 / DORA",
+        assign:{'RSSI':'R','DPO':'C','Juridique / RH':'C','COMEX':'A'} },
+      { id:'ra13', activite:"Continuité d'activité (PCA/PRA)",
+        assign:{'DSI':'R','RSSI':'A','COMEX':'A','Équipe technique':'R'} },
+      { id:'ra14', activite:"Revue trimestrielle des accès",
+        assign:{'DSI':'R','RSSI':'A','Chef de projet':'I','Équipe technique':'R'} },
+      { id:'ra15', activite:"Reporting sécurité au COMEX",
+        assign:{'RSSI':'R','DPO':'C','DSI':'C','COMEX':'A'} }
+    ]
+  }
 };
 
 /* ============================================================
@@ -787,7 +828,9 @@ function migrateVault(v) {
     if (!v.indicateurs) v.indicateurs = [];
     if (!v.pssi) v.pssi = DEFAULT_VAULT.pssi;
     if (v.pssi && !v.pssi.sections) v.pssi.sections = DEFAULT_VAULT.pssi.sections;
+    if (v.pssi && v.pssi.approuve_par === undefined) v.pssi.approuve_par = '';
     if (!v.feuille_route) v.feuille_route = DEFAULT_VAULT.feuille_route;
+    if (!v.raci) v.raci = JSON.parse(JSON.stringify(DEFAULT_VAULT.raci));
   }
   return v;
 }
@@ -1128,8 +1171,8 @@ renderFn.frameworks = function() {
 renderFn.gouvernance = function() {
   const activeSubtab = document.querySelector('.sub-tab.active');
   const tab = activeSubtab ? activeSubtab.dataset.subtab : 'traitements';
-  const labels = { 'traitements':'Registre des traitements', 'plan-actions':'Plan d\'actions', 'incidents':'Registre des incidents', 'actifs':'Registre des actifs', 'risques':'Registre des risques', 'pssi':'Politique (PSSI)' };
-  const secIds = { 'traitements':'gouvTraitements', 'plan-actions':'gouvPlanActions', 'incidents':'gouvIncidents', 'actifs':'gouvActifs', 'risques':'gouvRisques', 'pssi':'gouvPssi' };
+  const labels = { 'traitements':'Registre des traitements', 'plan-actions':'Plan d\'actions', 'incidents':'Registre des incidents', 'actifs':'Registre des actifs', 'risques':'Registre des risques', 'pssi':'Politique (PSSI)', 'raci':'Matrice RACI' };
+  const secIds = { 'traitements':'gouvTraitements', 'plan-actions':'gouvPlanActions', 'incidents':'gouvIncidents', 'actifs':'gouvActifs', 'risques':'gouvRisques', 'pssi':'gouvPssi', 'raci':'gouvRaci' };
   const subTabs = Object.keys(labels).map(t =>
     `<button class="sub-tab${t===tab?' active':''}" data-subtab="${t}">${labels[t]}</button>`
   ).join('');
@@ -1145,6 +1188,7 @@ function renderGouvContent(tab) {
   if (tab === 'incidents') return renderIncidents();
   if (tab === 'actifs') return renderActifs();
   if (tab === 'risques') return renderRisques();
+  if (tab === 'raci') return renderRaci();
   return renderPssi();
 }
 
@@ -1691,13 +1735,15 @@ const STATUTS_PSSI = ['Rédaction','Validé','En révision','Publié'];
 const CLAUSES_PSSI = {
   s1: [
     "La direction s'engage à allouer les ressources nécessaires à la sécurité des systèmes d'information.",
-    "La présente PSSI s'applique à l'ensemble des collaborateurs, prestataires et partenaires ayant accès aux ressources informatiques.",
-    "Tout manquement à la présente politique pourra entraîner des sanctions disciplinaires conformément au règlement intérieur."
+    "La direction valide la présente politique et s'engage à la faire appliquer à tous les niveaux de l'organisation.",
+    "Un bilan annuel de la sécurité est présenté au comité de direction avec les indicateurs clés et les axes d'amélioration.",
+    "La direction promeut une culture de sécurité auprès de l'ensemble des collaborateurs par des actions de sensibilisation régulières."
   ],
   s2: [
     "Le périmètre de la PSSI couvre l'ensemble des systèmes d'information, infrastructures, applications et données de l'organisation.",
     "Sont inclus les équipements mobiles, terminaux nomades et accès distants utilisés à des fins professionnelles.",
-    "Les prestataires et sous-traitants traitant des données pour le compte de l'organisation sont également concernés."
+    "Les prestataires et sous-traitants traitant des données pour le compte de l'organisation sont également concernés.",
+    "La présente PSSI s'applique à l'ensemble des collaborateurs, prestataires et partenaires ayant accès aux ressources informatiques."
   ],
   s3: [
     "Le RSSI est le garant de la politique de sécurité et pilote le dispositif SSI.",
@@ -1719,7 +1765,9 @@ const CLAUSES_PSSI = {
   s6: [
     "Les ressources informatiques mises à disposition sont exclusivement réservées à un usage professionnel.",
     "L'installation de logiciels non autorisés est interdite. Toute demande doit passer par le service informatique.",
-    "Les supports amovibles (clés USB, disques externes) sont interdits sur les postes de travail sans autorisation expresse du RSSI."
+    "Les supports amovibles (clés USB, disques externes) sont interdits sur les postes de travail sans autorisation expresse du RSSI.",
+    "Tout manquement à la présente politique pourra entraîner des sanctions disciplinaires conformément au règlement intérieur.",
+    "L'utilisation d'Internet et des messageries doit rester professionnelle. Les accès à des sites frauduleux ou illicites sont bloqués."
   ],
   s7: [
     "Tout incident de sécurité doit être signalé au RSSI dans un délai maximum de 1 heure suivant sa détection.",
@@ -1736,17 +1784,46 @@ const CLAUSES_PSSI = {
   s9: [
     "Tout prestataire accédant aux systèmes d'information doit signer une clause de confidentialité et de sécurité.",
     "Les sous-traitants traitant des données personnelles doivent être référencés dans le registre des traitements RGPD.",
-    "Un audit de sécurité peut être réalisé chez tout prestataire jugé critique, à sa charge."
+    "Un audit de sécurité peut être réalisé chez tout prestataire jugé critique, à sa charge.",
+    "Les contrats incluent une clause de réversibilité précisant les modalités de restitution des données et de transfert."
   ],
   s10: [
     "L'organisation se conforme au Règlement Général sur la Protection des Données (RGPD) et au registre des traitements associé.",
     "Les droits des personnes (accès, rectification, effacement, portabilité) sont garantis sous un délai maximum de 30 jours.",
     "Une analyse d'impact (AIPD / DPIA) est réalisée pour tout traitement de données à haut risque."
+  ],
+  s11: [
+    "L'accès aux locaux hébergeant les infrastructures critiques est contrôlé par badge ou dispositif biométrique.",
+    "Les salles serveurs et locaux techniques sont maintenus à température contrôlée avec détection incendie et extinction automatique.",
+    "Un registre des visiteurs est tenu à jour. Tout accès doit être accompagné par un membre habilité."
+  ],
+  s12: [
+    "Les données critiques font l'objet d'une sauvegarde quotidienne avec conservation sur 3 générations minimum.",
+    "Les sauvegardes sont chiffrées au repos et en transit, et stockées sur un site géographiquement distinct.",
+    "Un test de restauration complet est réalisé au minimum une fois par semestre et donne lieu à un rapport.",
+    "La politique de rétention des sauvegardes est définie conformément aux obligations légales et métiers."
+  ],
+  s13: [
+    "Tout développement intègre les exigences de sécurité dès la phase de conception (Security by Design).",
+    "Les environnements de développement, de test et de production sont strictement séparés.",
+    "Les revues de code et tests de sécurité sont obligatoires avant toute mise en production.",
+    "Les dépendances et bibliothèques tierces font l'objet d'une veille de vulnérabilités continue."
+  ],
+  s14: [
+    "Un scan de vulnérabilités est réalisé mensuellement sur l'ensemble du périmètre exposé.",
+    "Les correctifs de sécurité critiques sont déployés sous 48 heures, les correctifs importants sous 15 jours ouvrés.",
+    "Une veille CVE est maintenue par l'équipe sécurité. Les alertes sont qualifiées et priorisées.",
+    "Les équipements en fin de vie ou non patchés sont isolés ou décommissionnés."
+  ],
+  s15: [
+    "Le télétravail est autorisé sous réserve de l'utilisation d'un VPN d'entreprise et d'un poste sécurisé.",
+    "Les équipements personnels (BYOD) ne sont pas autorisés à accéder aux ressources internes sans conteneur de gestion (MDM).",
+    "Les informations confidentielles ne doivent pas être consultées ou partagées sur des réseaux WiFi publics non sécurisés."
   ]
 };
 
 function renderPssi() {
-  const p = (vault.pssi || { organisation:'', version:'1.0', date_validation:'', date_prochaine_revue:'', sections:[] });
+  const p = (vault.pssi || { organisation:'', approuve_par:'', version:'1.0', date_validation:'', date_prochaine_revue:'', sections:[] });
   const sections = p.sections || [];
   const completed = sections.filter(s => s.statut === 'Publié').length;
   const prct = sections.length ? Math.round(completed/sections.length*100) : 0;
@@ -1758,6 +1835,7 @@ function renderPssi() {
         <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-400">
           <span>Organisation : <strong class="text-slate-300">${esc(p.organisation||'Non renseignée')}</strong></span>
           <span>Version : <strong class="text-slate-300">${esc(p.version||'1.0')}</strong></span>
+          <span>Approuvé par : <strong class="text-slate-300">${esc(p.approuve_par||'—')}</strong></span>
           <span>Validé le : <strong class="text-slate-300">${p.date_validation ? new Date(p.date_validation).toLocaleDateString('fr-FR') : '—'}</strong></span>
           <span>Prochaine revue : <strong class="text-slate-300">${p.date_prochaine_revue ? new Date(p.date_prochaine_revue).toLocaleDateString('fr-FR') : '—'}</strong></span>
         </div>
@@ -1810,6 +1888,7 @@ function editPssiMeta() {
   showGouvModal({ title:'Paramètres de la PSSI', saveLabel:'Enregistrer',
     fields:[
       { key:'organisation', label:'Organisation', value:p.organisation||'' },
+      { key:'approuve_par', label:'Approuvé par', value:p.approuve_par||'' },
       { key:'version', label:'Version', value:p.version||'1.0' },
       { key:'date_validation', label:'Date de validation', type:'date', value:p.date_validation||'' },
       { key:'date_prochaine_revue', label:'Prochaine revue', type:'date', value:p.date_prochaine_revue||'' }
@@ -1898,9 +1977,122 @@ function deletePssiSection(i) {
 
 function renderGouvSubtab(tab) {
   document.querySelectorAll('.gouv-section').forEach(s => s.style.display = 'none');
-  const map = { 'traitements':'gouvTraitements', 'plan-actions':'gouvPlanActions', 'incidents':'gouvIncidents', 'actifs':'gouvActifs', 'risques':'gouvRisques', 'pssi':'gouvPssi' };
+  const map = { 'traitements':'gouvTraitements', 'plan-actions':'gouvPlanActions', 'incidents':'gouvIncidents', 'actifs':'gouvActifs', 'risques':'gouvRisques', 'pssi':'gouvPssi', 'raci':'gouvRaci' };
   document.getElementById(map[tab]).style.display = 'block';
   document.getElementById(map[tab]).innerHTML = renderGouvContent(tab);
+}
+
+/* ---------- RACI MATRIX ---------- */
+function raciBadge(val) {
+  const map = {
+    'R':'<span class="cursor-pointer select-none inline-block px-2 py-0.5 rounded text-[0.7rem] font-bold" style="background:rgba(16,185,129,0.25);color:#34d399">R</span>',
+    'A':'<span class="cursor-pointer select-none inline-block px-2 py-0.5 rounded text-[0.7rem] font-bold" style="background:rgba(59,130,246,0.25);color:#60a5fa">A</span>',
+    'C':'<span class="cursor-pointer select-none inline-block px-2 py-0.5 rounded text-[0.7rem] font-bold" style="background:rgba(245,158,11,0.25);color:#fbbf24">C</span>',
+    'I':'<span class="cursor-pointer select-none inline-block px-2 py-0.5 rounded text-[0.7rem]" style="background:rgba(100,116,139,0.25);color:#94a3b8">I</span>'
+  };
+  return map[val] || '<span class="cursor-pointer select-none inline-block px-2 py-0.5 rounded text-[0.7rem]" style="background:rgba(255,255,255,0.04);color:#475569">—</span>';
+}
+const RACI_CYCLE = { 'R':'A', 'A':'C', 'C':'I', 'I':'—', '—':'R' };
+
+function renderRaci() {
+  const r = vault.raci || { roles:[], activites:[] };
+  const roles = r.roles || [];
+  const activites = r.activites || [];
+  if (!roles.length) return `
+    <div class="flex items-center gap-2 mb-3"><button class="btn btn-primary btn-sm" onclick="addRaciRole()"><i class="fas fa-plus"></i> Ajouter un rôle</button></div>
+    <div class="empty-state" style="padding:1.5rem"><i class="fa-regular fa-table-cells"></i><p>Matrice RACI vide. Ajoutez d'abord des rôles (intervenants), puis des activités.</p></div>`;
+  return `
+    <div class="flex items-center gap-2 mb-3 flex-wrap">
+      <button class="btn btn-primary btn-sm" onclick="addRaciActivite()"><i class="fas fa-plus"></i> Activité</button>
+      <button class="btn btn-primary btn-sm" onclick="addRaciRole()"><i class="fas fa-user-plus"></i> Rôle</button>
+      <button class="btn btn-secondary btn-sm" onclick="resetRaci()"><i class="fas fa-rotate-left"></i> Réinitialiser</button>
+    </div>
+    ${activites.length === 0 ? '<div class="empty-state" style="padding:1.5rem"><i class="fa-regular fa-table-cells"></i><p>Aucune activité. Ajoutez-en une.</p></div>' : `
+    <div style="overflow-x:auto"><table class="gouv-table">
+      <thead><tr><th style="min-width:14rem">Activité</th>${roles.map((r, ri) => `<th style="text-align:center;min-width:3rem;position:relative">${esc(r)}<button onclick="event.stopPropagation();deleteRaciRole(${ri})" title="Supprimer le rôle" style="position:absolute;top:0;right:0;background:none;border:none;color:#ef4444;cursor:pointer;font-size:0.55rem;line-height:1;padding:1px 3px;border-radius:2px;opacity:0.4" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.4">&times;</button></th>`).join('')}<th class="gouv-actions" style="min-width:3.5rem"></th></tr></thead>
+      <tbody>${activites.map((a,i) => `
+        <tr>
+          <td><strong>${esc(a.activite)}</strong></td>
+          ${roles.map((role, ri) => {
+            const val = a.assign[role] || '—';
+            return `<td style="text-align:center" onclick="cycleRaci(${i},${ri})">${raciBadge(val)}</td>`;
+          }).join('')}
+          <td class="gouv-actions">
+            <button onclick="editRaciActivite(${i})" title="Renommer"><i class="fas fa-pencil-alt"></i></button>
+            <button onclick="deleteRaciActivite(${i})" title="Supprimer"><i class="fas fa-trash"></i></button>
+          </td>
+        </tr>`).join('')}</tbody>
+    </table></div>`}
+    <div class="flex items-center gap-3 mt-2 text-[0.65rem] text-slate-600 flex-wrap">
+      <span>${activites.length} activité(s), ${roles.length} rôle(s)</span>
+      <span class="flex items-center gap-2"><span style="display:inline-block;width:0.6rem;height:0.6rem;border-radius:2px;background:rgba(16,185,129,0.4)"></span> R = Responsable</span>
+      <span class="flex items-center gap-2"><span style="display:inline-block;width:0.6rem;height:0.6rem;border-radius:2px;background:rgba(59,130,246,0.4)"></span> A = Accountable</span>
+      <span class="flex items-center gap-2"><span style="display:inline-block;width:0.6rem;height:0.6rem;border-radius:2px;background:rgba(245,158,11,0.4)"></span> C = Consulté</span>
+      <span class="flex items-center gap-2"><span style="display:inline-block;width:0.6rem;height:0.6rem;border-radius:2px;background:rgba(100,116,139,0.4)"></span> I = Informé</span>
+      <span class="text-slate-700">Cliquez sur une cellule pour cycler R→A→C→I→—</span>
+    </div>`;
+}
+
+function cycleRaci(actIdx, roleIdx) {
+  const r = vault.raci;
+  if (!r || !r.activites[actIdx] || !r.roles[roleIdx]) return;
+  const role = r.roles[roleIdx];
+  const cur = r.activites[actIdx].assign[role] || '—';
+  r.activites[actIdx].assign[role] = RACI_CYCLE[cur] || 'R';
+  setDirty();
+  renderGouvSubtab('raci');
+}
+
+function addRaciActivite() {
+  showGouvModal({ title:'Nouvelle activité RACI', saveLabel:'Ajouter',
+    fields:[{ key:'activite', label:'Nom de l\'activité *', value:'' }],
+    validate: d => d.activite ? null : 'Le nom est obligatoire.',
+    onSave: d => {
+      vault.raci.activites.push({ id:'ra_' + Date.now(), activite:d.activite, assign:{} });
+      setDirty(); renderGouvSubtab('raci'); notify('Activité ajoutée.','success');
+    }
+  });
+}
+
+function editRaciActivite(i) {
+  const a = vault.raci.activites[i]; if (!a) return;
+  showGouvModal({ title:'Renommer l\'activité', saveLabel:'Enregistrer',
+    fields:[{ key:'activite', label:'Nom de l\'activité *', value:a.activite }],
+    validate: d => d.activite ? null : 'Le nom est obligatoire.',
+    onSave: d => { vault.raci.activites[i].activite = d.activite; setDirty(); renderGouvSubtab('raci'); notify('Activité renommée.','success'); }
+  });
+}
+
+function deleteRaciActivite(i) {
+  if (!confirm('Supprimer cette activité RACI ?')) return;
+  vault.raci.activites.splice(i,1); setDirty(); renderGouvSubtab('raci'); notify('Activité supprimée.','success');
+}
+
+function addRaciRole() {
+  showGouvModal({ title:'Nouveau rôle RACI', saveLabel:'Ajouter',
+    fields:[{ key:'role', label:'Nom du rôle *', value:'' }],
+    validate: d => d.role ? null : 'Le nom est obligatoire.',
+    onSave: d => {
+      vault.raci.roles.push(d.role);
+      setDirty(); renderGouvSubtab('raci'); notify('Rôle ajouté.','success');
+    }
+  });
+}
+
+function deleteRaciRole(roleIdx) {
+  const role = vault.raci.roles[roleIdx]; if (!role) return;
+  if (!confirm('Supprimer le rôle "' + role + '" ? Les assignations RACI de ce rôle seront effacées.')) return;
+  vault.raci.roles.splice(roleIdx, 1);
+  vault.raci.activites.forEach(a => { delete a.assign[role]; });
+  setDirty(); renderGouvSubtab('raci'); notify('Rôle supprimé.','success');
+}
+
+function resetRaci() {
+  showConfirm('Réinitialiser la matrice RACI ? Toutes les modifications personnelles seront perdues.','Réinitialiser','Annuler')
+    .then(ok => { if (ok) {
+      vault.raci = JSON.parse(JSON.stringify(DEFAULT_VAULT.raci));
+      setDirty(); renderGouvSubtab('raci'); notify('Matrice RACI réinitialisée.','success');
+    }});
 }
 
 /* ---------- MEMOS & PLAYBOOKS ---------- */
@@ -2027,12 +2219,25 @@ renderFn.roadmap = function() {
     `).join('')}</div>`;
 };
 
+function genererOptionsTrimestres(passe, futur) {
+  passe = passe || 0; futur = futur || 12;
+  const now = new Date();
+  const q0 = Math.floor(now.getMonth() / 3);
+  const total = now.getFullYear() * 4 + q0;
+  const opts = [];
+  for (let i = -passe; i <= futur; i++) {
+    const t = total + i;
+    opts.push(Math.floor(t / 4) + '-T' + ((t % 4) + 1));
+  }
+  return opts;
+}
+
 function addJalon() {
   showGouvModal({ title:'Nouveau jalon', saveLabel:'Ajouter',
     fields:[
       { key:'titre', label:'Titre *' },
       { key:'description', label:'Description' },
-      { key:'trimestre', label:'Trimestre', type:'select', options:['2025-T2','2025-T3','2025-T4','2026-T1','2026-T2','2026-T3','2026-T4'], value:'2025-T3' },
+      { key:'trimestre', label:'Trimestre', type:'select', options:genererOptionsTrimestres(), value:genererOptionsTrimestres()[0] },
       { key:'categorie', label:'Catégorie', type:'select', options:CATEGORIES_ROADMAP, value:'Sécurité technique' },
       { key:'avancement', label:'Avancement (0-100)', value:'0' },
       { key:'statut', label:'Statut', type:'select', options:STATUTS_ROADMAP, value:'À faire' },
@@ -2053,7 +2258,7 @@ function editJalon(i) {
     fields:[
       { key:'titre', label:'Titre *', value:r.titre },
       { key:'description', label:'Description', value:r.description||'' },
-      { key:'trimestre', label:'Trimestre', type:'select', options:['2025-T2','2025-T3','2025-T4','2026-T1','2026-T2','2026-T3','2026-T4'], value:r.trimestre||'2025-T3' },
+      { key:'trimestre', label:'Trimestre', type:'select', options:(function(){const t=genererOptionsTrimestres();if(!t.includes(r.trimestre))t.unshift(r.trimestre);return t;})(), value:r.trimestre },
       { key:'categorie', label:'Catégorie', type:'select', options:CATEGORIES_ROADMAP, value:CATEGORIES_ROADMAP.includes(r.categorie) ? r.categorie : 'Sécurité technique' },
       { key:'avancement', label:'Avancement (0-100)', value:String(r.avancement||0) },
       { key:'statut', label:'Statut', type:'select', options:STATUTS_ROADMAP, value:STATUTS_ROADMAP.includes(r.statut) ? r.statut : 'À faire' },
