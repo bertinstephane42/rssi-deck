@@ -55,6 +55,20 @@ body{font-family:system-ui,-apple-system,'Inter','Segoe UI',sans-serif;backgroun
 .btn-sm{padding:0.4rem 0.8rem;font-size:0.78rem}
 .btn-xs{padding:0.25rem 0.5rem;font-size:0.68rem;border-radius:6px}
 .help-content{font-size:0.85rem;line-height:1.7;color:#cbd5e1}
+.lexicon-search{width:100%;padding:0.6rem 1rem;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:8px;color:#e2e8f0;font-size:0.85rem;outline:none;margin-bottom:1rem;box-sizing:border-box}
+.lexicon-search:focus{border-color:rgba(59,130,246,0.4)}
+.lexicon-search::placeholder{color:#64748b}
+.lexicon-cat{margin-bottom:1rem}
+.lexicon-cat-title{font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#60a5fa;margin-bottom:0.4rem;padding-bottom:0.2rem;border-bottom:1px solid rgba(96,165,250,0.15)}
+.lexicon-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.3rem 1.5rem}
+.lexicon-entry{font-size:0.78rem;line-height:1.5;color:#cbd5e1;padding:0.15rem 0}
+.lexicon-entry strong{color:#f1f5f9;font-weight:600}
+.lexicon-entry .lex-desc{color:#94a3b8;font-size:0.72rem}
+.lexicon-empty{text-align:center;padding:2rem;color:#64748b;font-size:0.85rem}
+#modal.lexicon-mode{max-width:720px}
+@media(max-width:780px){#modal.lexicon-mode{max-width:100%}}
+@media(max-width:560px){.lexicon-grid{grid-template-columns:1fr}}
+
 .help-content p{margin-bottom:0.75rem}
 .help-content strong{color:#f1f5f9}
 .help-content ul{color:#94a3b8}
@@ -256,6 +270,7 @@ body{font-family:system-ui,-apple-system,'Inter','Segoe UI',sans-serif;backgroun
       <span id="fsPathDisplay" class="fs-path" style="display:none"><i class="fas fa-folder"></i> <span id="fsPathText"></span></span>
       <button class="btn btn-secondary btn-sm" id="refreshBtn"><i class="fas fa-rotate"></i> Rafraîchir</button>
       <button class="btn btn-secondary btn-sm" id="helpBtn" title="Aide"><i class="fas fa-question-circle"></i></button>
+      <button class="btn btn-secondary btn-sm" id="lexiconBtn" title="Lexique"><i class="fas fa-book-open"></i></button>
       <button class="btn btn-secondary btn-sm" id="creditBtn" title="Crédits"><span style="font-weight:700;font-size:0.82rem">C</span></button>
       <button class="btn btn-secondary btn-sm" id="reportBtn" title="Rapport exécutif PDF"><i class="fas fa-file-pdf"></i> Rapport</button>
     </div>
@@ -2785,6 +2800,7 @@ function refreshHistorique(pid) {
 function hideModal() {
   document.getElementById('modalOverlay').classList.remove('visible');
   document.body.style.overflow = '';
+  document.getElementById('modal').classList.remove('lexicon-mode');
 }
 
 /* ============================================================
@@ -2865,6 +2881,183 @@ function showSaveLockModal() {
     lock.onclick = () => { cleanup(); resolve('lock'); };
     cancel.onclick = () => { cleanup(); resolve(null); };
   });
+}
+
+/* ============================================================
+   LEXICON
+   ============================================================ */
+const LEXICON_CATEGORIES = [
+  {
+    id:'reglementaire', label:'Réglementaire & Conformité',
+    entries:[
+      {acro:'RGPD', def:'Règlement Général sur la Protection des Données — règlement européen encadrant le traitement des données personnelles (2016/679).'},
+      {acro:'CNIL', def:'Commission Nationale de l\'Informatique et des Libertés — autorité administrative française de protection des données.'},
+      {acro:'AIPD / DPIA', def:'Analyse d\'Impact relative à la Protection des Données (Data Protection Impact Assessment) — étude préalable obligatoire pour les traitements risqués.'},
+      {acro:'DPO', def:'Délégué à la Protection des Données (Data Protection Officer) — personne désignée pour veiller à la conformité RGPD.'},
+      {acro:'NIS 2', def:'Network and Information Security 2 — directive européenne renforçant la cybersécurité des infrastructures critiques (2022/2555).'},
+      {acro:'DORA', def:'Digital Operational Resilience Act — règlement européen sur la résilience opérationnelle numérique du secteur financier.'},
+      {acro:'ISO 27001', def:'Norme internationale pour le Système de Management de la Sécurité de l\'Information (SMSI) — référentiel de certification.'},
+      {acro:'ISO 27002', def:'Code de bonnes pratiques pour les mesures de sécurité de l\'information — guide d\'application des contrôles ISO 27001.'},
+      {acro:'ISO 27005', def:'Norme dédiée à la gestion des risques de sécurité de l\'information.'},
+      {acro:'PCI-DSS', def:'Payment Card Industry Data Security Standard — standard de sécurité pour les données bancaires.'},
+      {acro:'SOX', def:'Sarbanes-Oxley Act — loi américaine sur la gouvernance financière et les contrôles internes.'},
+      {acro:'ITIL', def:'Information Technology Infrastructure Library — référentiel de bonnes pratiques pour la gestion des services IT.'},
+      {acro:'COBIT', def:'Control Objectives for Information and Related Technologies — framework de gouvernance SI.'},
+    ]
+  },
+  {
+    id:'technique', label:'Sécurité Technique',
+    entries:[
+      {acro:'SIEM', def:'Security Information and Event Management — solution de corrélation et d\'analyse des événements de sécurité en temps réel.'},
+      {acro:'SOAR', def:'Security Orchestration, Automation and Response — plateforme d\'orchestration et d\'automatisation des réponses aux incidents.'},
+      {acro:'EDR', def:'Endpoint Detection and Response — solution de détection et réponse sur les terminaux (postes, serveurs).'},
+      {acro:'XDR', def:'Extended Detection and Response — évolution de l\'EDR couvrant terminaux, réseau, cloud et emails.'},
+      {acro:'IDS', def:'Intrusion Detection System — système de détection d\'intrusions réseau (passif).'},
+      {acro:'IPS', def:'Intrusion Prevention System — système de prévention d\'intrusions (actif, blocage).'},
+      {acro:'NAC', def:'Network Access Control — contrôle d\'accès au réseau basé sur l\'identité et la conformité des équipements.'},
+      {acro:'DLP', def:'Data Loss Prevention — solution de prévention contre la fuite de données sensibles.'},
+      {acro:'VPN', def:'Virtual Private Network — tunnel chiffré pour les communications réseau à distance.'},
+      {acro:'PAM', def:'Privileged Access Management — gestion des accès à privilèges (mots de passe administrateurs, sessions).'},
+      {acro:'IAM', def:'Identity and Access Management — gestion des identités et des droits d\'accès.'},
+      {acro:'MFA / 2FA', def:'Multi-Factor Authentication / Two-Factor Authentication — authentification à plusieurs facteurs.'},
+      {acro:'SSO', def:'Single Sign-On — authentification unique permettant d\'accéder à plusieurs applications.'},
+      {acro:'PKI', def:'Public Key Infrastructure — infrastructure de gestion des certificats et clés publiques.'},
+      {acro:'SOC', def:'Security Operations Center — centre opérationnel de supervision et de réponse aux incidents.'},
+      {acro:'WAF', def:'Web Application Firewall — pare-feu applicatif web filtrant les requêtes HTTP/HTTPS.'},
+      {acro:'HIDS', def:'Host-based Intrusion Detection System — détection d\'intrusion au niveau du système hôte.'},
+      {acro:'NIDS', def:'Network-based Intrusion Detection System — détection d\'intrusion au niveau réseau.'},
+      {acro:'UEBA', def:'User and Entity Behavior Analytics — analyse comportementale des utilisateurs et entités.'},
+      {acro:'CASB', def:'Cloud Access Security Broker — point de contrôle entre les utilisateurs et les services cloud.'},
+      {acro:'SASE', def:'Secure Access Service Edge — architecture convergente réseau + sécurité pour le cloud.'},
+      {acro:'ZTNA', def:'Zero Trust Network Access — accès réseau basé sur le principe Zero Trust (jamais confiance, toujours vérifier).'},
+    ]
+  },
+  {
+    id:'reseau', label:'Réseau & Infrastructure',
+    entries:[
+      {acro:'LAN', def:'Local Area Network — réseau local d\'entreprise.'},
+      {acro:'WAN', def:'Wide Area Network — réseau étendu interconnectant plusieurs sites.'},
+      {acro:'VLAN', def:'Virtual LAN — segmentation logique d\'un réseau physique en plusieurs réseaux virtuels.'},
+      {acro:'DNS', def:'Domain Name System — service de résolution des noms de domaine en adresses IP.'},
+      {acro:'DHCP', def:'Dynamic Host Configuration Protocol — protocole d\'attribution automatique d\'adresses IP.'},
+      {acro:'NAT', def:'Network Address Translation — traduction d\'adresses IP entre réseaux privé et public.'},
+      {acro:'TCP/IP', def:'Transmission Control Protocol / Internet Protocol — protocole de base des communications Internet.'},
+      {acro:'UDP', def:'User Datagram Protocol — protocole de transport rapide sans connexion (streaming, DNS).'},
+      {acro:'TLS', def:'Transport Layer Security — protocole de chiffrement des communications (successeur de SSL).'},
+      {acro:'SSH', def:'Secure Shell — protocole d\'administration sécurisée à distance.'},
+      {acro:'SFTP', def:'SSH File Transfer Protocol — transfert de fichiers sécurisé via SSH.'},
+      {acro:'LDAP', def:'Lightweight Directory Access Protocol — protocole d\'accès aux annuaires (Active Directory, OpenLDAP).'},
+      {acro:'RADIUS', def:'Remote Authentication Dial-In User Service — protocole d\'authentification centralisée pour les accès réseau.'},
+      {acro:'SNMP', def:'Simple Network Management Protocol — protocole de gestion et supervision des équipements réseau.'},
+      {acro:'DMZ', def:'Zone Démilitarisée — réseau isolé exposant les services publics (web, mail) avec accès limité au réseau interne.'},
+      {acro:'SLA', def:'Service Level Agreement — contrat définissant les niveaux de service attendus (disponibilité, temps de réponse).'},
+    ]
+  },
+  {
+    id:'risques', label:'Gestion des Risques & Continuité',
+    entries:[
+      {acro:'EBIOS', def:'Expression des Besoins et Identification des Objectifs de Sécurité — méthode française d\'analyse de risques (ANSSI).'},
+      {acro:'EBIOS RM', def:'EBIOS Risk Manager — version moderne de la méthode EBIOS alignée sur ISO 31000 et NIST.'},
+      {acro:'PRA', def:'Plan de Reprise d\'Activité — procédures de restauration des SI critiques après sinistre.'},
+      {acro:'PCA', def:'Plan de Continuité d\'Activité — procédures pour maintenir ou rétablir les activités essentielles en cas de crise.'},
+      {acro:'PSI', def:'Politique de Sécurité de l\'Information — document cadre définissant la stratégie et les règles de SSI.'},
+      {acro:'MAJ', def:'Mise À Jour — correctif de sécurité ou évolution logicielle.'},
+      {acro:'BIA', def:'Business Impact Analysis — analyse d\'impact métier pour identifier les processus critiques et leurs tolérances d\'arrêt.'},
+      {acro:'BCP', def:'Business Continuity Plan — plan de continuité d\'activité (équivalent anglo-saxon du PCA).'},
+      {acro:'ACR', def:'Analyse de Criticité des Risques — évaluation de la criticité des risques selon leur vraisemblance et leur gravité.'},
+      {acro:'RPO', def:'Recovery Point Objective — perte de données maximale acceptable (exprimée en temps).'},
+      {acro:'RTO', def:'Recovery Time Objective — temps de rétablissement maximal acceptable après sinistre.'},
+      {acro:'KRI', def:'Key Risk Indicator — indicateur clé de risque, mesure l\'exposition aux risques.'},
+    ]
+  },
+  {
+    id:'frameworks', label:'Frameworks & Référentiels',
+    entries:[
+      {acro:'NIST CSF', def:'Cybersecurity Framework — framework de cybersécurité du NIST en 5 fonctions : Identifier, Protéger, Détecter, Répondre, Rétablir.'},
+      {acro:'CIS Controls', def:'Center for Internet Security Controls — 20 contrôles de sécurité prioritaires pour le hardening et la gouvernance SSI.'},
+      {acro:'MITRE ATT&CK', def:'Matrice de tactiques, techniques et procédures (TTP) adverses — langage commun de la cyberdéfense.'},
+      {acro:'MITRE D3FEND', def:'Contre-mesures défensives cartographiées en regard des techniques ATT&CK.'},
+      {acro:'Kill Chain', def:'Cyber Kill Chain (Lockheed Martin) — décomposition d\'une cyberattaque en 7 phases séquentielles.'},
+      {acro:'Diamond Model', def:'Modèle d\'analyse des incidents selon 4 axes : Adversaire, Capacité, Infrastructure, Victime.'},
+      {acro:'OSINT', def:'Open Source Intelligence — renseignement issu de sources publiques et ouvertes.'},
+      {acro:'SCAP', def:'Security Content Automation Protocol — protocole standardisé d\'évaluation de la conformité (NIST).'},
+      {acro:'OWASP', def:'Open Web Application Security Project — communauté de référence pour la sécurité des applications web.'},
+      {acro:'ISO 31000', def:'Norme internationale pour le management du risque — processus d\'identification, analyse et traitement.'},
+    ]
+  },
+  {
+    id:'metier', label:'Métier & Organisation',
+    entries:[
+      {acro:'RSSI', def:'Responsable de la Sécurité des Systèmes d\'Information — métier pilote de la stratégie cybersécurité.'},
+      {acro:'DSI', def:'Directeur des Systèmes d\'Information — responsable de l\'infrastructure IT et des services numériques.'},
+      {acro:'OIV', def:'Opérateur d\'Importance Vitale — entité critique dont l\'activité est indispensable à la nation.'},
+      {acro:'OSE', def:'Opérateur de Services Essentiels — entité soumise à la directive NIS pour ses services essentiels.'},
+      {acro:'KPI', def:'Key Performance Indicator — indicateur clé de performance pour mesurer l\'efficacité d\'un processus.'},
+      {acro:'RACI', def:'Responsible, Accountable, Consulted, Informed — matrice d\'attribution des responsabilités.'},
+      {acro:'PSSI', def:'Politique de Sécurité des Systèmes d\'Information — document stratégique déclinant la PSI au niveau SI.'},
+      {acro:'SMSI', def:'Système de Management de la Sécurité de l\'Information — approche systémique de la SSI (ISO 27001).'},
+    ]
+  },
+  {
+    id:'physique', label:'Sécurité Physique & Environnement',
+    entries:[
+      {acro:'BSEC', def:'Bureau de la Sécurité — entité organisationnelle en charge de la sécurité globale (physique et logique).'},
+      {acro:'SSI', def:'Sécurité des Systèmes d\'Information — domaine couvrant la protection des actifs informationnels.'},
+      {acro:'RGPD', def:'Voir entrée « Réglementaire & Conformité ».'},
+    ]
+  }
+];
+
+function showLexiconModal() {
+  const overlay = document.getElementById('modalOverlay');
+  const modal = document.getElementById('modal');
+  document.getElementById('modalTitle').textContent = 'Lexique — Acronymes & Définitions';
+
+  let allHtml = '<input type="text" id="lexiconSearch" class="lexicon-search" placeholder="Filtrer par acronyme ou mot-clé…" autofocus>';
+  allHtml += '<div id="lexiconBody">';
+
+  LEXICON_CATEGORIES.forEach(cat => {
+    const sorted = cat.entries.slice().sort((a,b) => a.acro.localeCompare(b.acro));
+    allHtml += `<div class="lexicon-cat" data-cat="${cat.id}">`;
+    allHtml += `<div class="lexicon-cat-title">${cat.label}</div>`;
+    allHtml += '<div class="lexicon-grid">';
+    sorted.forEach(e => {
+      allHtml += `<div class="lexicon-entry" data-search="${(e.acro+' '+e.def).toLowerCase()}"><strong>${e.acro}</strong> <span class="lex-desc">${e.def}</span></div>`;
+    });
+    allHtml += '</div></div>';
+  });
+
+  allHtml += '<div class="lexicon-empty" id="lexiconEmpty" style="display:none">Aucun résultat.</div>';
+  allHtml += '</div>';
+
+  document.getElementById('modalBody').innerHTML = allHtml;
+  modal.classList.add('lexicon-mode');
+  overlay.classList.add('visible');
+  document.body.style.overflow = 'hidden';
+  overlay.scrollTop = 0;
+  bindModalEvents();
+
+  setTimeout(() => { const inp = document.getElementById('lexiconSearch'); if (inp) inp.focus(); }, 150);
+
+  /* Auto-filter */
+  const input = document.getElementById('lexiconSearch');
+  if (input) {
+    input.addEventListener('input', function() {
+      const q = this.value.toLowerCase().trim();
+      let visibleCount = 0;
+      document.querySelectorAll('.lexicon-cat').forEach(cat => {
+        let catVisible = 0;
+        cat.querySelectorAll('.lexicon-entry').forEach(entry => {
+          const match = !q || entry.dataset.search.includes(q);
+          entry.style.display = match ? '' : 'none';
+          if (match) catVisible++;
+        });
+        cat.style.display = catVisible > 0 ? '' : 'none';
+        visibleCount += catVisible;
+      });
+      document.getElementById('lexiconEmpty').style.display = visibleCount === 0 ? '' : 'none';
+    });
+  }
 }
 
 /* Help modal */
@@ -3982,6 +4175,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
   /* Help & Credits */
   document.getElementById('helpBtn').addEventListener('click', showHelpModal);
+  document.getElementById('lexiconBtn').addEventListener('click', showLexiconModal);
   document.getElementById('creditBtn').addEventListener('click', showCreditsModal);
   document.getElementById('reportBtn').addEventListener('click', genererRapportExecutif);
 
