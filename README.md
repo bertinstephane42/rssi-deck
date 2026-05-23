@@ -17,7 +17,7 @@ Application web chiffrée destinée aux RSSI et professionnels de la cybersécur
   - **Registre des actifs** — Inventaire, propriétaire, classification, localisation, statut
   - **Registre des risques** — Analyse, cotation, traitement, responsable, statut
   - **Politique PSSI** — 20 sections pré-définies, ~80 clauses suggérées, cycle de validation (Brouillon→Rédaction→Validé→En révision→Publié), fréquence de révision (Annuelle/Semestrielle/Trimestrielle), vue Document complet avec rendu Markdown et impression
-  - **Matrice RACI** — 15 activités, 7 rôles, cycle R→A→C→I au clic, double-clic pour effacer, export CSV presse-papier
+  - **Matrice RACI** — 15 activités, 7 rôles, cycle R→A→C→I au clic, double-clic pour effacer une cellule, export CSV presse-papier
   - **AIPD / DPIA** — Analyse d'impact complète, gravité, statut
   - **Auto-évaluation NIST CSF 2.0** — 6 domaines, sous-domaines détaillés, échelle CMMI 1→5, score pondéré, radar chart, date d'évaluation
   - **Registre des prestataires** — Criticité, conformité, planification d'audit
