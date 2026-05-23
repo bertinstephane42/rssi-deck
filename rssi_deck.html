@@ -201,6 +201,7 @@ body{font-family:system-ui,-apple-system,'Inter','Segoe UI',sans-serif;backgroun
 .gravite-moyen{background:rgba(245,158,11,0.12);color:#fcd34d}
 .gravite-élevé{background:rgba(239,68,68,0.12);color:#fca5a5}
 .gravite-critique{background:rgba(220,38,38,0.2);color:#fca5a5;border:1px solid rgba(239,68,68,0.3)}
+@media print{body{background:#fff!important;color:#000!important}#sidebar,#topbar,.nav-item,.btn,.sub-tabs{display:none!important}.gouv-section{display:block!important}#pssiDocView{display:block!important}#pssiListView{display:none!important}}
 </style>
 </head>
 <body>
@@ -759,12 +760,12 @@ const DEFAULT_VAULT = {
   indicateurs: [],
   aipd: [],
   maturite: [
-    { domaine:'Gouvernance (GV)', niveau_actuel:1, niveau_cible:3, observations:'' },
-    { domaine:'Identification (ID)', niveau_actuel:1, niveau_cible:3, observations:'' },
-    { domaine:'Protection (PR)', niveau_actuel:1, niveau_cible:3, observations:'' },
-    { domaine:'Détection (DE)', niveau_actuel:1, niveau_cible:3, observations:'' },
-    { domaine:'Réponse (RS)', niveau_actuel:1, niveau_cible:3, observations:'' },
-    { domaine:'Rétablissement (RC)', niveau_actuel:1, niveau_cible:3, observations:'' }
+    { domaine:'Gouvernance (GV)', niveau_actuel:1, niveau_cible:3, poids:1, date_evaluation:'', observations:'' },
+    { domaine:'Identification (ID)', niveau_actuel:1, niveau_cible:3, poids:1, date_evaluation:'', observations:'' },
+    { domaine:'Protection (PR)', niveau_actuel:1, niveau_cible:3, poids:1, date_evaluation:'', observations:'' },
+    { domaine:'Détection (DE)', niveau_actuel:1, niveau_cible:3, poids:1, date_evaluation:'', observations:'' },
+    { domaine:'Réponse (RS)', niveau_actuel:1, niveau_cible:3, poids:1, date_evaluation:'', observations:'' },
+    { domaine:'Rétablissement (RC)', niveau_actuel:1, niveau_cible:3, poids:1, date_evaluation:'', observations:'' }
   ],
   prestataires: [],
   pssi: {
@@ -772,6 +773,7 @@ const DEFAULT_VAULT = {
     approuve_par: '',
     version: '1.0',
     date_validation: '',
+    frequence_revision: 'Annuelle',
     date_prochaine_revue: '',
     sections: [
       { id:'s1', titre:"Engagement de la direction",              statut:'Rédaction', contenu:'' },
@@ -856,6 +858,7 @@ let _sessionSalt = null;   // salt paired with _sessionKey
 let dirty = false;
 let currentView = 'dashboard';
 let chartInstance = null;
+let radarChartInstance = null;
 let searchQuery = '';
 let sortOutilsTech = 'default';
 let sortOutilsFonc = 'default';
@@ -876,10 +879,12 @@ function migrateVault(v) {
     if (!v.pssi) v.pssi = DEFAULT_VAULT.pssi;
     if (v.pssi && !v.pssi.sections) v.pssi.sections = DEFAULT_VAULT.pssi.sections;
     if (v.pssi && v.pssi.approuve_par === undefined) v.pssi.approuve_par = '';
+    if (v.pssi && v.pssi.frequence_revision === undefined) v.pssi.frequence_revision = 'Annuelle';
     if (!v.feuille_route) v.feuille_route = DEFAULT_VAULT.feuille_route;
     if (!v.raci) v.raci = JSON.parse(JSON.stringify(DEFAULT_VAULT.raci));
     if (!v.aipd) v.aipd = [];
     if (!v.maturite) v.maturite = [];
+    if (v.maturite) v.maturite.forEach(function(m) { if (!m.date_evaluation) m.date_evaluation = ''; if (!m.poids) m.poids = 1; });
     if (!v.prestataires) v.prestataires = [];
     if (!v.outils_techniques) v.outils_techniques = [];
     if (!v.outils_fonctionnels) v.outils_fonctionnels = [];
@@ -1818,7 +1823,7 @@ async function deleteKpi(i) {
 }
 
 /* PSSI */
-const STATUTS_PSSI = ['Rédaction','Validé','En révision','Publié'];
+const STATUTS_PSSI = ['Brouillon','Rédaction','Validé','En révision','Publié'];
 const CLAUSES_PSSI = {
   s1: [
     "La direction s'engage à allouer les ressources nécessaires à la sécurité des systèmes d'information.",
@@ -1958,6 +1963,7 @@ function renderPssi() {
           <span>Approuvé par : <strong class="text-slate-300">${filterText(esc(p.approuve_par||'—'))}</strong></span>
           <span>Validé le : <strong class="text-slate-300">${p.date_validation ? new Date(p.date_validation).toLocaleDateString('fr-FR') : '—'}</strong></span>
           <span>Prochaine revue : <strong class="text-slate-300">${p.date_prochaine_revue ? new Date(p.date_prochaine_revue).toLocaleDateString('fr-FR') : '—'}</strong></span>
+          <span>Fréquence de révision : <strong class="text-slate-300">${esc(p.frequence_revision||'Annuelle')}</strong></span>
         </div>
         <div class="mt-2 flex items-center gap-3">
           <div class="flex-1 h-1.5 rounded-full bg-white/5 overflow-hidden"><div class="h-full rounded-full ${globalCls}" style="width:${prct}%"></div></div>
@@ -1968,6 +1974,7 @@ function renderPssi() {
         <button class="btn btn-secondary btn-xs" onclick="editPssiMeta()"><i class="fas fa-gear"></i></button>
         <button class="btn btn-primary btn-xs" onclick="addPssiSection()"><i class="fas fa-plus"></i> Section</button>
         <button class="btn btn-secondary btn-xs" onclick="togglePssiDocument()" id="pssiDocBtn"><i class="fas fa-file-lines"></i> Document complet</button>
+        <button class="btn btn-secondary btn-xs" onclick="window.print()"><i class="fas fa-print"></i> Imprimer</button>
       </div>
     </div>
     <div id="pssiListView">
@@ -2012,7 +2019,8 @@ function editPssiMeta() {
       { key:'approuve_par', label:'Approuvé par', value:p.approuve_par||'' },
       { key:'version', label:'Version', value:p.version||'1.0' },
       { key:'date_validation', label:'Date de validation', type:'date', value:p.date_validation||'' },
-      { key:'date_prochaine_revue', label:'Prochaine revue', type:'date', value:p.date_prochaine_revue||'' }
+      { key:'date_prochaine_revue', label:'Prochaine revue', type:'date', value:p.date_prochaine_revue||'' },
+      { key:'frequence_revision', label:'Fréquence de révision', type:'select', options:['Annuelle','Semestrielle','Trimestrielle','Personnalisée'], value:p.frequence_revision||'Annuelle' }
     ],
     onSave: d => {
       if (!vault.pssi) vault.pssi = { sections:[] };
@@ -2101,6 +2109,7 @@ function renderGouvSubtab(tab) {
   const map = { 'traitements':'gouvTraitements', 'plan-actions':'gouvPlanActions', 'incidents':'gouvIncidents', 'actifs':'gouvActifs', 'risques':'gouvRisques', 'pssi':'gouvPssi', 'raci':'gouvRaci', 'aipd':'gouvAipd', 'maturite':'gouvMaturite', 'prestataires':'gouvPrestataires' };
   document.getElementById(map[tab]).style.display = 'block';
   document.getElementById(map[tab]).innerHTML = renderGouvContent(tab);
+  if (tab === 'maturite') setTimeout(initMaturiteChart, 50);
   setTimeout(updateSearchCount, 50);
 }
 
@@ -2130,6 +2139,7 @@ function renderRaci() {
       <button class="btn btn-primary btn-sm" onclick="addRaciActivite()"><i class="fas fa-plus"></i> Activité</button>
       <button class="btn btn-primary btn-sm" onclick="addRaciRole()"><i class="fas fa-user-plus"></i> Rôle</button>
       <button class="btn btn-secondary btn-sm" onclick="resetRaci()"><i class="fas fa-rotate-left"></i> Réinitialiser</button>
+      <button class="btn btn-secondary btn-sm" onclick="copyRaciCsv()"><i class="fas fa-copy"></i> Copier le tableau</button>
     </div>
     ${!activites.length ? (searchQuery ? '<div class="empty-state" style="padding:1.5rem"><i class="fa-regular fa-table-cells"></i><p>Aucune activité trouvée.</p></div>' : '<div class="empty-state" style="padding:1.5rem"><i class="fa-regular fa-table-cells"></i><p>Aucune activité. Ajoutez-en une.</p></div>') : `
     <div style="overflow-x:auto"><table class="gouv-table">
@@ -2144,7 +2154,7 @@ function renderRaci() {
           <td><strong>${filterText(esc(a.activite))}</strong></td>
           ${roles.map((role, ri) => {
             const val = a.assign[role] || '—';
-            return `<td style="text-align:center" onclick="cycleRaci(${idx},${ri})">${raciBadge(val)}</td>`;
+            return `<td style="text-align:center" onclick="cycleRaci(${idx},${ri})" ondblclick="clearRaciCell(${idx},${ri})">${raciBadge(val)}</td>`;
           }).join('')}
           <td class="gouv-actions">
             <button onclick="editRaciActivite(${idx})" title="Renommer"><i class="fas fa-pencil-alt"></i></button>
@@ -2159,7 +2169,7 @@ function renderRaci() {
       <span class="flex items-center gap-2"><span style="display:inline-block;width:0.6rem;height:0.6rem;border-radius:2px;background:rgba(59,130,246,0.4)"></span> A = Approbateur (Accountable)</span>
       <span class="flex items-center gap-2"><span style="display:inline-block;width:0.6rem;height:0.6rem;border-radius:2px;background:rgba(245,158,11,0.4)"></span> C = Consulté</span>
       <span class="flex items-center gap-2"><span style="display:inline-block;width:0.6rem;height:0.6rem;border-radius:2px;background:rgba(100,116,139,0.4)"></span> I = Informé</span>
-      <span class="text-slate-700">Cliquez sur une cellule pour cycler R→A→C→I→—</span>
+      <span class="text-slate-700">Cliquez pour cycler R→A→C→I→—, double-clic pour effacer</span>
     </div>`;
 }
 
@@ -2169,6 +2179,13 @@ function cycleRaci(actIdx, roleIdx) {
   const role = r.roles[roleIdx];
   const cur = r.activites[actIdx].assign[role] || '—';
   r.activites[actIdx].assign[role] = RACI_CYCLE[cur] || 'R';
+  setDirty();
+  renderGouvSubtab('raci');
+}
+function clearRaciCell(actIdx, roleIdx) {
+  const r = vault.raci;
+  if (!r || !r.activites[actIdx] || !r.roles[roleIdx]) return;
+  r.activites[actIdx].assign[r.roles[roleIdx]] = '—';
   setDirty();
   renderGouvSubtab('raci');
 }
@@ -2240,6 +2257,16 @@ function resetRaci() {
       vault.raci = JSON.parse(JSON.stringify(DEFAULT_VAULT.raci));
       setDirty(); renderGouvSubtab('raci'); notify('Matrice RACI réinitialisée.','success');
     }});
+}
+function copyRaciCsv() {
+  const r = vault.raci;
+  if (!r || !r.roles || !r.activites) return;
+  const header = ['Activité', ...r.roles];
+  const rows = r.activites.map(function(a) {
+    return [a.activite, ...r.roles.map(function(role) { return a.assign[role] || '—'; })];
+  });
+  const csv = [header, ...rows].map(function(row) { return row.map(function(cell) { return '"' + String(cell).replace(/"/g,'""') + '"'; }).join(','); }).join('\n');
+  navigator.clipboard.writeText(csv).then(function() { notify('Matrice RACI copiée dans le presse-papier.','success'); }).catch(function() { notify('Erreur lors de la copie.','error'); });
 }
 
 /* ---------- AIPD / DPIA ---------- */
@@ -2340,12 +2367,24 @@ function populateSousDomaine() {
 function renderMaturite() {
   const allItems = vault.maturite || [];
   const items = searchFilter(allItems, ['domaine','sous_domaine','observations']);
-  const globalPct = allItems.length ? Math.round(allItems.reduce(function(s,m){return s+((m.niveau_actuel||1)/(m.niveau_cible||3));},0)/allItems.length*100) : 0;
+  var sumPond = 0, totalPond = 0;
+  DOMAINES_MATURITE.forEach(function(dom) {
+    var itemsInDom = allItems.filter(function(m) { return m.domaine === dom; });
+    if (itemsInDom.length) {
+      var moyNiveau = itemsInDom.reduce(function(s,m) { return s + (m.niveau_actuel||1); }, 0) / itemsInDom.length;
+      var moyCible = itemsInDom.reduce(function(s,m) { return s + (m.niveau_cible||3); }, 0) / itemsInDom.length;
+      var poids = itemsInDom.reduce(function(s,m) { return s + (m.poids||1); }, 0) / itemsInDom.length;
+      sumPond += (moyNiveau / moyCible) * poids;
+      totalPond += poids;
+    }
+  });
+  const globalPct = totalPond ? Math.round((sumPond / totalPond) * 100) : 0;
   return `
     <div class="flex items-center gap-2 mb-3 flex-wrap">
       <button class="btn btn-primary btn-sm" onclick="addMaturiteDomaine()"><i class="fas fa-plus"></i> Domaine</button>
       ${allItems.length > 0 ? '<span class="text-xs text-slate-500 flex items-center gap-2"><span class="text-slate-400">Maturit\u00e9 globale</span><span class="text-lg font-bold '+(globalPct>=80?'text-emerald-400':globalPct>=50?'text-amber-400':'text-blue-400')+'">'+globalPct+'%</span></span>' : ''}
     </div>
+    ${allItems.length > 0 ? '<div style="max-width:500px;margin:0 auto 1.5rem"><canvas id="maturiteRadar"></canvas></div>' : ''}
     <div class="mb-2 flex gap-4 flex-wrap text-[0.65rem] text-slate-600">
       <span>\ud83d\udd35 1 = Initial</span>
       <span>\ud83d\udfe1 2 = G\u00e9r\u00e9</span>
@@ -2355,12 +2394,13 @@ function renderMaturite() {
     </div>
     ${!items.length ? (searchQuery ? '<div class="empty-state" style="padding:1.5rem"><i class="fa-regular fa-chart-line"></i><p>Aucun domaine trouvé.</p></div>' : '<div class="empty-state" style="padding:1.5rem"><i class="fa-regular fa-chart-line"></i><p>Aucun domaine \u00e9valu\u00e9. Ajoutez un domaine NIST CSF ou un domaine personnalis\u00e9.</p></div>') : `
     <div style="overflow-x:auto"><table class="gouv-table">
-      <thead><tr><th>Domaine</th><th>Sous-domaine</th><th>Niveau actuel</th><th>Niveau cible</th><th>Progression</th><th>Observations</th><th class="gouv-actions"></th></tr></thead>
+      <thead><tr><th>Domaine</th><th>Sous-domaine</th><th>Niveau actuel</th><th>Niveau cible</th><th>Pond.</th><th>Progression</th><th>Date \u00e9val.</th><th>Observations</th><th class="gouv-actions"></th></tr></thead>
       <tbody>${items.map(function(m) {
         const idx = allItems.indexOf(m);
         const pct = Math.min(100, Math.round(((m.niveau_actuel||1) / (m.niveau_cible||3)) * 100));
         const color = pct >= 80 ? '#10b981' : pct >= 50 ? '#f59e0b' : '#3b82f6';
-        return '<tr><td><strong>'+filterText(esc(m.domaine||''))+'</strong></td><td class="text-slate-400">'+(filterText(esc(m.sous_domaine||''))||'\u2014')+'</td><td>'+(m.niveau_actuel||1)+'/5</td><td>'+(m.niveau_cible||3)+'/5</td><td style="min-width:120px"><div class="h-1.5 rounded-full bg-white/5 overflow-hidden"><div class="h-full rounded-full" style="width:'+pct+'%;background:'+color+'"></div></div> <span class="text-[0.6rem] text-slate-500">'+pct+'%</span></td><td>'+(filterText(esc(m.observations||'')).length > 40 ? filterText(esc(m.observations)).slice(0,40)+'\u2026' : filterText(esc(m.observations||'')))+'</td><td class="gouv-actions"><button onclick="editMaturiteDomaine('+idx+')" title="Modifier"><i class="fas fa-pencil-alt"></i></button><button onclick="deleteMaturiteDomaine('+idx+')" title="Supprimer"><i class="fas fa-trash"></i></button></td></tr>';
+        const dateEval = m.date_evaluation ? new Date(m.date_evaluation).toLocaleDateString('fr-FR') : '\u2014';
+        return '<tr><td><strong>'+filterText(esc(m.domaine||''))+'</strong></td><td class="text-slate-400">'+(filterText(esc(m.sous_domaine||''))||'\u2014')+'</td><td>'+(m.niveau_actuel||1)+'/5</td><td>'+(m.niveau_cible||3)+'/5</td><td class="text-slate-500 text-xs">'+(m.poids||1)+'x</td><td style="min-width:120px"><div class="h-1.5 rounded-full bg-white/5 overflow-hidden"><div class="h-full rounded-full" style="width:'+pct+'%;background:'+color+'"></div></div> <span class="text-[0.6rem] text-slate-500">'+pct+'%</span></td><td class="text-xs text-slate-500">'+dateEval+'</td><td>'+(filterText(esc(m.observations||'')).length > 40 ? filterText(esc(m.observations)).slice(0,40)+'\u2026' : filterText(esc(m.observations||'')))+'</td><td class="gouv-actions"><button onclick="editMaturiteDomaine('+idx+')" title="Modifier"><i class="fas fa-pencil-alt"></i></button><button onclick="deleteMaturiteDomaine('+idx+')" title="Supprimer"><i class="fas fa-trash"></i></button></td></tr>';
       }).join('')}</tbody>
     </table></div>`}
     <div class="text-[0.65rem] text-slate-600 mt-2">${items.length} domaine(s) affiché(s)</div>`;
@@ -2373,10 +2413,12 @@ function addMaturiteDomaine() {
       { key:'sous_domaine', label:'Sous-domaine NIST CSF', type:'select', options:defaultSd, value:defaultSd[0]||'' },
       { key:'niveau_actuel', label:'Niveau actuel (1-5)', type:'select', options:NIVEAUX_MATURITE, value:'1' },
       { key:'niveau_cible', label:'Niveau cible (1-5)', type:'select', options:NIVEAUX_MATURITE, value:'3' },
+      { key:'poids', label:'Pond\u00e9ration', type:'select', options:['0.5','1','1.2','1.5','2','3'], value:'1' },
+      { key:'date_evaluation', label:'Date d\'évaluation', type:'date' },
       { key:'observations', label:'Observations' }
     ],
     validate: function(d) { return d.domaine ? null : 'Le domaine est obligatoire.'; },
-    onSave: function(d) { d.niveau_actuel = parseInt(d.niveau_actuel)||1; d.niveau_cible = parseInt(d.niveau_cible)||3; vault.maturite.push(d); setDirty(); renderGouvSubtab('maturite'); notify('Domaine ajout\u00e9.','success'); }
+    onSave: function(d) { d.niveau_actuel = parseInt(d.niveau_actuel)||1; d.niveau_cible = parseInt(d.niveau_cible)||3; d.poids = parseFloat(d.poids)||1; vault.maturite.push(d); setDirty(); renderGouvSubtab('maturite'); notify('Domaine ajout\u00e9.','success'); }
   });
   document.getElementById('gouvField_domaine').addEventListener('change', populateSousDomaine, { once: true });
 }
@@ -2392,16 +2434,53 @@ function editMaturiteDomaine(i) {
       { key:'sous_domaine', label:'Sous-domaine NIST CSF', type:'select', options:['', ...sdOptions], value:sdVal },
       { key:'niveau_actuel', label:'Niveau actuel (1-5)', type:'select', options:NIVEAUX_MATURITE, value:String(m.niveau_actuel||1) },
       { key:'niveau_cible', label:'Niveau cible (1-5)', type:'select', options:NIVEAUX_MATURITE, value:String(m.niveau_cible||3) },
+      { key:'poids', label:'Pond\u00e9ration', type:'select', options:['0.5','1','1.2','1.5','2','3'], value:String(m.poids||1) },
+      { key:'date_evaluation', label:'Date d\'évaluation', type:'date', value:m.date_evaluation||'' },
       { key:'observations', label:'Observations', value:m.observations||'' }
     ],
     validate: function(d) { return d.domaine ? null : 'Le domaine est obligatoire.'; },
-    onSave: function(d) { d.niveau_actuel = parseInt(d.niveau_actuel)||1; d.niveau_cible = parseInt(d.niveau_cible)||3; if (!d.sous_domaine) delete d.sous_domaine; vault.maturite[i] = d; setDirty(); renderGouvSubtab('maturite'); notify('Domaine mis \u00e0 jour.','success'); }
+    onSave: function(d) { d.niveau_actuel = parseInt(d.niveau_actuel)||1; d.niveau_cible = parseInt(d.niveau_cible)||3; d.poids = parseFloat(d.poids)||1; if (!d.sous_domaine) delete d.sous_domaine; vault.maturite[i] = d; setDirty(); renderGouvSubtab('maturite'); notify('Domaine mis \u00e0 jour.','success'); }
   });
   document.getElementById('gouvField_domaine').addEventListener('change', populateSousDomaine, { once: true });
 }
 async function deleteMaturiteDomaine(i) {
   if (!await showConfirm('Supprimer ce domaine ?')) return;
   vault.maturite.splice(i,1); setDirty(); renderGouvSubtab('maturite'); notify('Domaine supprim\u00e9.','success');
+}
+function initMaturiteChart() {
+  var canvas = document.getElementById('maturiteRadar');
+  if (!canvas) return;
+  if (radarChartInstance) radarChartInstance.destroy();
+  var domaines = DOMAINES_MATURITE;
+  var actuelParDom = {}, cibleParDom = {};
+  domaines.forEach(function(d) { actuelParDom[d] = []; cibleParDom[d] = []; });
+  (vault.maturite||[]).forEach(function(m) {
+    if (actuelParDom[m.domaine]) { actuelParDom[m.domaine].push(m.niveau_actuel||1); cibleParDom[m.domaine].push(m.niveau_cible||3); }
+  });
+  var dataActuel = domaines.map(function(d) {
+    var arr = actuelParDom[d];
+    return arr.length ? (arr.reduce(function(s,v){return s+v;},0)/arr.length) : 0;
+  });
+  var dataCible = domaines.map(function(d) {
+    var arr = cibleParDom[d];
+    return arr.length ? (arr.reduce(function(s,v){return s+v;},0)/arr.length) : 0;
+  });
+  var ctx = canvas.getContext('2d');
+  radarChartInstance = new Chart(ctx, {
+    type:'radar',
+    data:{
+      labels: domaines,
+      datasets:[
+        { label:'Niveau actuel', data:dataActuel, backgroundColor:'rgba(59,130,246,0.15)', borderColor:'#3b82f6', pointBackgroundColor:'#3b82f6', pointRadius:4 },
+        { label:'Niveau cible', data:dataCible, backgroundColor:'rgba(16,185,129,0.12)', borderColor:'#10b981', pointBackgroundColor:'#10b981', pointRadius:4, borderDash:[5,5] }
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:true,
+      scales:{ r:{ beginAtZero:true, max:5, ticks:{ stepSize:1, color:'#94a3b8', backdropColor:'transparent' }, grid:{ color:'rgba(148,163,184,0.15)' } } },
+      plugins:{ legend:{ labels:{ color:'#94a3b8', font:{size:10} } } }
+    }
+  });
 }
 
 /* ---------- PRESTATAIRES ---------- */
@@ -3165,6 +3244,10 @@ function showCreditsModal() {
    ============================================================ */
 function bindViewEvents(name) {
   if (name === 'dashboard') setTimeout(initDashboardChart, 50);
+  if (name === 'gouvernance') setTimeout(function() {
+    const activeTab = document.querySelector('.sub-tab.active');
+    if (activeTab && activeTab.dataset.subtab === 'maturite') initMaturiteChart();
+  }, 50);
 
   if (name === 'threat-intel') {
     const input = document.getElementById('cveSearch');
