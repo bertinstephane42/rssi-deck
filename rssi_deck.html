@@ -35,6 +35,9 @@ body{font-family:system-ui,-apple-system,'Inter','Segoe UI',sans-serif;backgroun
 .threat-edit-btn{position:absolute;top:0.5rem;right:0.5rem;width:28px;height:28px;border-radius:6px;border:none;background:rgba(255,255,255,0.06);color:#64748b;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0.7rem;transition:all 0.2s;opacity:0;z-index:2}
 .threat-card:hover .threat-edit-btn{opacity:1}
 .threat-edit-btn:hover{background:rgba(59,130,246,0.2);color:#60a5fa}
+.threat-del-btn{position:absolute;top:0.5rem;left:0.5rem;width:28px;height:28px;border-radius:6px;border:none;background:rgba(255,255,255,0.06);color:#64748b;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0.85rem;transition:all 0.2s;opacity:0;z-index:2}
+.threat-card:hover .threat-del-btn{opacity:1}
+.threat-del-btn:hover{background:rgba(239,68,68,0.2);color:#fca5a5}
 .sort-bar{display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem;flex-wrap:wrap}
 .sort-label{font-size:0.75rem;color:#64748b;text-transform:uppercase;letter-spacing:0.05em}
 .sort-btn{font-size:0.75rem;padding:0.3rem 0.7rem;border-radius:6px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:#94a3b8;cursor:pointer;transition:all 0.15s}
@@ -316,11 +319,18 @@ body{font-family:system-ui,-apple-system,'Inter','Segoe UI',sans-serif;backgroun
 
 <div id="urlEditModal" class="pwd-modal">
   <div class="pwd-box glass-card">
-    <p class="text-slate-300 mb-3">Modifier le lien</p>
+    <p id="urlEditTitle" class="text-slate-300 mb-3">Modifier</p>
     <label class="text-xs text-slate-400 block mb-1">Nom</label>
     <input type="text" id="urlEditName" class="lock-input mb-2">
     <label class="text-xs text-slate-400 block mb-1">URL</label>
-    <input type="url" id="urlEditLink" class="lock-input mb-3">
+    <input type="url" id="urlEditLink" class="lock-input mb-2">
+    <label class="text-xs text-slate-400 block mb-1">Description</label>
+    <textarea id="urlEditDesc" class="lock-input mb-2" rows="2" style="resize:vertical;font-family:inherit"></textarea>
+    <label class="text-xs text-slate-400 block mb-1">Icône Font Awesome <span class="text-slate-600">(ex: fa-shield)</span></label>
+    <div class="flex gap-2 items-center mb-3">
+      <input type="text" id="urlEditIcon" class="lock-input flex-1" placeholder="fa-dragon">
+      <span id="urlEditIconPreview" class="text-blue-400 text-lg" style="width:28px;text-align:center"><i class="fas fa-icons"></i></span>
+    </div>
     <p id="urlEditError" class="text-xs text-red-400 mb-2 text-center" style="display:none"></p>
     <div class="flex gap-2">
       <button id="urlEditCancel" class="btn btn-secondary flex-1 justify-center">Annuler</button>
@@ -1123,18 +1133,23 @@ renderFn['threat-intel'] = function() {
       <p class="text-xs text-slate-500 mt-2">${filterText(esc(ti.cve.nom))} — Recherche directe dans la base NIST.</p>
     </div>
     <div class="category-label"><i class="fas fa-book-skull mr-1"></i> Frameworks de Menaces</div>
-    <div class="grid-bento mb-4">${frameworks.length ? frameworks.map(f => threatCard(f, 'threat_intel.frameworks.' + ti.frameworks.indexOf(f))).join('') : '<div class="empty-state" style="padding:1rem"><i class="fa-regular fa-book-skull"></i><p>Aucun framework trouvé.</p></div>'}</div>
+    <div class="grid-bento mb-2">${frameworks.length ? frameworks.map(f => threatCard(f, 'threat_intel.frameworks.' + ti.frameworks.indexOf(f))).join('') : '<div class="empty-state" style="padding:1rem"><i class="fa-regular fa-book-skull"></i><p>Aucun framework trouvé.</p></div>'}</div>
+    <div class="flex justify-end mb-4"><button class="btn btn-secondary btn-xs" onclick="addThreatItem('threat_intel.frameworks')"><i class="fas fa-plus"></i> Ajouter une appli</button></div>
     <div class="category-label"><i class="fas fa-puzzle-piece mr-1"></i> Modèles Conceptuels</div>
-    <div class="grid-bento mb-4">${modeles.length ? modeles.map(f => threatCard(f, 'threat_intel.modeles.' + ti.modeles.indexOf(f))).join('') : '<div class="empty-state" style="padding:1rem"><i class="fa-regular fa-puzzle-piece"></i><p>Aucun modèle trouvé.</p></div>'}</div>
+    <div class="grid-bento mb-2">${modeles.length ? modeles.map(f => threatCard(f, 'threat_intel.modeles.' + ti.modeles.indexOf(f))).join('') : '<div class="empty-state" style="padding:1rem"><i class="fa-regular fa-puzzle-piece"></i><p>Aucun modèle trouvé.</p></div>'}</div>
+    <div class="flex justify-end mb-4"><button class="btn btn-secondary btn-xs" onclick="addThreatItem('threat_intel.modeles')"><i class="fas fa-plus"></i> Ajouter une appli</button></div>
     <div class="category-label"><i class="fas fa-rss mr-1"></i> Sources & Veille</div>
-    <div class="grid-bento mb-4">${sources.length ? sources.map(f => threatCard(f, 'threat_intel.sources.' + ti.sources.indexOf(f))).join('') : '<div class="empty-state" style="padding:1rem"><i class="fa-regular fa-rss"></i><p>Aucune source trouvée.</p></div>'}</div>
+    <div class="grid-bento mb-2">${sources.length ? sources.map(f => threatCard(f, 'threat_intel.sources.' + ti.sources.indexOf(f))).join('') : '<div class="empty-state" style="padding:1rem"><i class="fa-regular fa-rss"></i><p>Aucune source trouvée.</p></div>'}</div>
+    <div class="flex justify-end mb-4"><button class="btn btn-secondary btn-xs" onclick="addThreatItem('threat_intel.sources')"><i class="fas fa-plus"></i> Ajouter une appli</button></div>
     <div class="category-label"><i class="fas fa-eye mr-1"></i> OSINT</div>
-    <div class="grid-bento">${osint.length ? osint.map(f => threatCard(f, 'threat_intel.osint.' + ti.osint.indexOf(f))).join('') : '<div class="empty-state" style="padding:1rem"><i class="fa-regular fa-eye"></i><p>Aucun outil OSINT trouvé.</p></div>'}</div>`;
+    <div class="grid-bento mb-2">${osint.length ? osint.map(f => threatCard(f, 'threat_intel.osint.' + ti.osint.indexOf(f))).join('') : '<div class="empty-state" style="padding:1rem"><i class="fa-regular fa-eye"></i><p>Aucun outil OSINT trouvé.</p></div>'}</div>
+    <div class="flex justify-end"><button class="btn btn-secondary btn-xs" onclick="addThreatItem('threat_intel.osint')"><i class="fas fa-plus"></i> Ajouter une appli</button></div>`;
 };
 
 function threatCard(item, path) {
   return `<a href="${esc(item.url)}" target="_blank" class="glass-card block no-underline relative threat-card">
-    <button class="threat-edit-btn" data-ti-path="${esc(path)}" onclick="event.preventDefault();editThreatUrl(this.dataset.tiPath)" title="Modifier l'URL"><i class="fas fa-pencil-alt"></i></button>
+    <button class="threat-del-btn" data-ti-path="${esc(path)}" onclick="event.preventDefault();deleteThreatItem(this.dataset.tiPath)" title="Supprimer"><i class="fas fa-times"></i></button>
+    <button class="threat-edit-btn" data-ti-path="${esc(path)}" onclick="event.preventDefault();editThreatUrl(this.dataset.tiPath)" title="Modifier"><i class="fas fa-pencil-alt"></i></button>
     <div class="flex items-start gap-3">
       <div class="card-icon bg-blue-500/10"><i class="fas ${esc(item.icone || 'fa-link')} text-blue-400"></i></div>
       <div>
@@ -1143,6 +1158,17 @@ function threatCard(item, path) {
       </div>
     </div>
   </a>`;
+}
+
+function fillThreatModal(target, modal, nameEl, linkEl, descEl, iconEl, previewEl, errEl) {
+  nameEl.value = target.nom || '';
+  linkEl.value = target.url || '';
+  descEl.value = target.description || '';
+  iconEl.value = target.icone || '';
+  previewEl.innerHTML = target.icone ? '<i class="fas ' + esc(target.icone) + '"></i>' : '<i class="fas fa-icons"></i>';
+  errEl.style.display = 'none';
+  modal.style.display = 'flex';
+  setTimeout(() => linkEl.focus(), 100);
 }
 
 function editThreatUrl(path) {
@@ -1160,12 +1186,12 @@ function editThreatUrl(path) {
   const modal = document.getElementById('urlEditModal');
   const nameEl = document.getElementById('urlEditName');
   const linkEl = document.getElementById('urlEditLink');
+  const descEl = document.getElementById('urlEditDesc');
+  const iconEl = document.getElementById('urlEditIcon');
+  const previewEl = document.getElementById('urlEditIconPreview');
   const errEl = document.getElementById('urlEditError');
-  nameEl.value = target.nom;
-  linkEl.value = target.url;
-  errEl.style.display = 'none';
-  modal.style.display = 'flex';
-  setTimeout(() => linkEl.focus(), 100);
+  document.getElementById('urlEditTitle').textContent = 'Modifier';
+  fillThreatModal(target, modal, nameEl, linkEl, descEl, iconEl, previewEl, errEl);
   const saveBtn = document.getElementById('urlEditSave');
   const cancelBtn = document.getElementById('urlEditCancel');
   const onSave = () => {
@@ -1177,10 +1203,84 @@ function editThreatUrl(path) {
     }
     target.nom = nameEl.value.trim() || target.nom;
     target.url = u;
+    target.description = descEl.value.trim();
+    target.icone = iconEl.value.trim();
     modal.style.display = 'none';
     setDirty();
     renderView(currentView);
     notify('Lien mis à jour.', 'success');
+  };
+  const onCancel = () => { modal.style.display = 'none'; };
+  const onKey = e => {
+    if (e.key === 'Enter') onSave();
+    if (e.key === 'Escape') onCancel();
+  };
+  saveBtn.onclick = onSave;
+  cancelBtn.onclick = onCancel;
+  linkEl.onkeydown = onKey;
+  nameEl.onkeydown = onKey;
+}
+
+function deleteThreatItem(path) {
+  if (!path) return;
+  const keys = path.split('.');
+  let obj = vault;
+  for (let i = 0; i < keys.length; i++) {
+    if (obj == null) return;
+    if (i === keys.length - 1) break;
+    obj = obj[keys[i]];
+  }
+  const idx = keys[keys.length - 1];
+  const target = obj[idx];
+  if (!target) return;
+  const nom = target.nom || 'cet élément';
+  showConfirm('Supprimer « ' + nom + ' » ?').then(confirmed => {
+    if (!confirmed) return;
+    obj.splice(idx, 1);
+    setDirty();
+    renderView(currentView);
+    notify('« ' + nom + ' » supprimé.', 'info');
+  });
+}
+
+function addThreatItem(basePath) {
+  if (!basePath) return;
+  const keys = basePath.split('.');
+  let arr = vault;
+  for (let i = 0; i < keys.length; i++) {
+    if (arr == null) return;
+    arr = arr[keys[i]];
+  }
+  if (!Array.isArray(arr)) return;
+  const modal = document.getElementById('urlEditModal');
+  const nameEl = document.getElementById('urlEditName');
+  const linkEl = document.getElementById('urlEditLink');
+  const descEl = document.getElementById('urlEditDesc');
+  const iconEl = document.getElementById('urlEditIcon');
+  const previewEl = document.getElementById('urlEditIconPreview');
+  const errEl = document.getElementById('urlEditError');
+  document.getElementById('urlEditTitle').textContent = 'Ajouter une appli';
+  fillThreatModal({ nom: '', url: '', description: '', icone: '' }, modal, nameEl, linkEl, descEl, iconEl, previewEl, errEl);
+  const saveBtn = document.getElementById('urlEditSave');
+  const cancelBtn = document.getElementById('urlEditCancel');
+  const onSave = () => {
+    const u = linkEl.value.trim();
+    if (!/^https?:\/\/.+/.test(u)) {
+      errEl.textContent = "L'URL doit commencer par http:// ou https://";
+      errEl.style.display = 'block';
+      return;
+    }
+    const nom = nameEl.value.trim();
+    if (!nom) {
+      errEl.textContent = 'Le nom est obligatoire.';
+      errEl.style.display = 'block';
+      return;
+    }
+    arr.push({ nom: nom, url: u, description: descEl.value.trim(), icone: iconEl.value.trim() });
+    modal.style.display = 'none';
+    setDirty();
+    renderView(currentView);
+    notify('« ' + nom + ' » ajouté.', 'success');
   };
   const onCancel = () => { modal.style.display = 'none'; };
   const onKey = e => {
@@ -1198,10 +1298,11 @@ renderFn.frameworks = function() {
   const norms = searchFilter(vault.cadre_legal.normes, ['nom','description']);
   return `
     <div class="category-label"><i class="fas fa-scale-balanced mr-1"></i> Normes & Référentiels</div>
-    <div class="grid-bento mb-6">${!norms.length && searchQuery ? '<div class="empty-state" style="padding:1rem"><i class="fa-regular fa-scale-balanced"></i><p>Aucune norme trouvée.</p></div>' : norms.map(n => {
+    <div class="grid-bento mb-2">${!norms.length && searchQuery ? '<div class="empty-state" style="padding:1rem"><i class="fa-regular fa-scale-balanced"></i><p>Aucune norme trouvée.</p></div>' : norms.map(n => {
       const idx = vault.cadre_legal.normes.indexOf(n);
       return `<a href="${esc(n.url)}" target="_blank" class="glass-card block no-underline relative threat-card">
-        <button class="threat-edit-btn" data-ti-path="cadre_legal.normes.${idx}" onclick="event.preventDefault();editThreatUrl(this.dataset.tiPath)" title="Modifier l'URL"><i class="fas fa-pencil-alt"></i></button>
+        <button class="threat-del-btn" data-ti-path="cadre_legal.normes.${idx}" onclick="event.preventDefault();deleteThreatItem(this.dataset.tiPath)" title="Supprimer"><i class="fas fa-times"></i></button>
+        <button class="threat-edit-btn" data-ti-path="cadre_legal.normes.${idx}" onclick="event.preventDefault();editThreatUrl(this.dataset.tiPath)" title="Modifier"><i class="fas fa-pencil-alt"></i></button>
         <div class="flex items-start gap-3">
           <div class="card-icon bg-blue-500/10"><i class="fas ${n.icone || 'fa-book'} text-blue-400"></i></div>
           <div>
@@ -1211,6 +1312,7 @@ renderFn.frameworks = function() {
         </div>
       </a>`;
     }).join('')}</div>
+    <div class="flex justify-end mb-6"><button class="btn btn-secondary btn-xs" onclick="addThreatItem('cadre_legal.normes')"><i class="fas fa-plus"></i> Ajouter une appli</button></div>
     <div class="grid-bento-wide gap-4">
       <div class="glass-card">
         <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3"><i class="fas fa-calculator mr-1"></i> Estimation Amende RGPD</h3>
@@ -4514,6 +4616,10 @@ document.addEventListener('DOMContentLoaded', async function() {
   document.getElementById('contactEditClose').onclick = function() {
     document.getElementById('contactEditModal').classList.remove('visible');
   };
+  /* Icon preview in threat edit modal */
+  document.getElementById('urlEditIcon').addEventListener('input', function() {
+    document.getElementById('urlEditIconPreview').innerHTML = this.value.trim() ? '<i class="fas ' + esc(this.value.trim()) + '"></i>' : '<i class="fas fa-icons"></i>';
+  });
 });
 </script>
 </body>
