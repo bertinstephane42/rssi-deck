@@ -1633,7 +1633,11 @@ function renderIncidents() {
 function showGouvModal(config) {
   const fields = config.fields.map(f => {
     if (f.type === 'select') {
-      const opts = f.options.map(o => `<option value="${esc(o)}"${f.value === o ? ' selected' : ''}>${esc(o)}</option>`).join('');
+      const opts = f.options.map(o => {
+        var v = typeof o === 'object' ? o.value : o;
+        var l = typeof o === 'object' ? o.label : o;
+        return `<option value="${esc(v)}"${f.value === v ? ' selected' : ''}>${esc(l)}</option>`;
+      }).join('');
       return `<div class="calc-group"><label>${esc(f.label)}</label><select class="lock-input" id="gouvField_${f.key}">${opts}</select></div>`;
     }
     if (f.type === 'color') {
@@ -2959,7 +2963,7 @@ renderFn.roadmap = function() {
 };
 
 function genererOptionsTrimestres(passe, futur) {
-  passe = passe || 0; futur = (futur === undefined) ? 12 : futur;
+  passe = passe || 0; futur = (futur === undefined) ? 20 : futur;
   const now = new Date();
   const q0 = Math.floor(now.getMonth() / 3);
   const total = now.getFullYear() * 4 + q0;
@@ -2976,7 +2980,7 @@ function addJalon() {
     fields:[
       { key:'titre', label:'Titre *' },
       { key:'description', label:'Description' },
-      { key:'trimestre', label:'Trimestre', type:'select', options:genererOptionsTrimestres(), value:genererOptionsTrimestres()[0] },
+      { key:'trimestre', label:'Trimestre', type:'select', options:genererOptionsTrimestres().concat({value:'__autre__', label:'Autre (saisie libre)'}), value:genererOptionsTrimestres()[0] },
       { key:'categorie', label:'Catégorie', type:'select', options:CATEGORIES_ROADMAP, value:'Sécurité technique' },
       { key:'avancement', label:'Avancement (0-100)', value:'0' },
       { key:'statut', label:'Statut', type:'select', options:STATUTS_ROADMAP, value:'À faire' },
@@ -2986,6 +2990,26 @@ function addJalon() {
     validate: d => d.titre ? null : 'Le titre est obligatoire.',
     onSave: d => {
       d.avancement = Math.min(100, Math.max(0, parseInt(d.avancement)||0));
+      if (d.trimestre === '__autre__') {
+        var _d = d;
+        setTimeout(function() {
+          showGouvModal({ title:'Trimestre personnalisé', saveLabel:'Valider',
+            fields:[
+              { key:'trimestre', label:'Trimestre (format: AAAA-TN)' }
+            ],
+            validate: function(d2) {
+              if (!/^\d{4}-T[1-4]$/.test(d2.trimestre)) return 'Format invalide. Utilisez AAAA-TN avec N = 1, 2, 3 ou 4 (ex: 2035-T3).';
+              return null;
+            },
+            onSave: function(d2) {
+              _d.trimestre = d2.trimestre;
+              _d.id = 'fr_' + Date.now();
+              vault.feuille_route.push(_d); setDirty(); renderView('roadmap'); notify('Jalon ajouté.','success');
+            }
+          });
+        }, 0);
+        return;
+      }
       d.id = 'fr_' + Date.now();
       vault.feuille_route.push(d); setDirty(); renderView('roadmap'); notify('Jalon ajouté.','success');
     }
