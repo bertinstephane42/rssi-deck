@@ -22,6 +22,7 @@ body{font-family:system-ui,-apple-system,'Inter','Segoe UI',sans-serif;backgroun
 .lock-tabs{display:flex;gap:0;margin-bottom:1.5rem;background:rgba(255,255,255,0.04);border-radius:10px;padding:3px}
 .lock-tab{flex:1;text-align:center;padding:0.6rem 1rem;border-radius:8px;cursor:pointer;font-size:0.82rem;font-weight:500;color:#94a3b8;transition:all 0.2s;border:none;background:none}
 .lock-tab.active{background:rgba(59,130,246,0.2);color:#60a5fa}
+.lock-tab.disabled{opacity:0.35;cursor:not-allowed;pointer-events:none}
 .lock-input{width:100%;padding:0.75rem 1rem;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:#e2e8f0;font-size:0.9rem;outline:none;transition:border-color 0.2s}
 .lock-input:focus{border-color:rgba(59,130,246,0.5)}
 .lock-input::placeholder{color:#475569}
@@ -213,20 +214,21 @@ body{font-family:system-ui,-apple-system,'Inter','Segoe UI',sans-serif;backgroun
       <p class="text-xs text-slate-500 mt-1">Chiffrement AES-GCM 256 bits • PBKDF2 100k itérations</p>
     </div>
     <div class="lock-tabs">
-      <button class="lock-tab active" data-tab="create">Créer un coffre</button>
       <button class="lock-tab" data-tab="load"><i class="fas fa-rotate-left mr-1" style="font-size:0.7rem"></i> Charger</button>
+      <button class="lock-tab active" data-tab="create">Créer un coffre</button>
       <button class="lock-tab" data-tab="import">Importer un fichier</button>
-    </div>
-    <div id="lockTabCreate">
-      <input type="password" class="lock-input mb-3" id="lockPwd" placeholder="Mot de passe maître">
-      <input type="password" class="lock-input mb-4" id="lockPwdConfirm" placeholder="Confirmer le mot de passe">
-      <button class="btn btn-primary w-full justify-center" id="lockCreateBtn"><i class="fas fa-lock"></i> Créer &amp; Déverrouiller</button>
+      <button class="lock-tab disabled" data-tab="purge">Purger</button>
     </div>
     <div id="lockTabLoad" style="display:none">
       <p class="text-xs text-slate-400 mb-3 text-center" id="loadTabHint">Charger le coffre depuis le dossier</p>
       <input type="password" class="lock-input mb-3" id="lockLoadPwd" placeholder="Mot de passe du coffre">
       <button class="btn btn-primary w-full justify-center mb-2" id="lockLoadBtn"><i class="fas fa-folder-open"></i> Charger &amp; Déverrouiller</button>
       <p id="loadError" class="text-xs text-red-400 text-center" style="display:none"></p>
+    </div>
+    <div id="lockTabCreate" style="display:block">
+      <input type="password" class="lock-input mb-3" id="lockPwd" placeholder="Mot de passe maître">
+      <input type="password" class="lock-input mb-4" id="lockPwdConfirm" placeholder="Confirmer le mot de passe">
+      <button class="btn btn-primary w-full justify-center" id="lockCreateBtn"><i class="fas fa-lock"></i> Créer &amp; Déverrouiller</button>
     </div>
     <div id="lockTabImport" style="display:none">
       <p class="text-xs text-slate-400 mb-3 text-center">Sélectionner un fichier .json chiffré</p>
@@ -236,6 +238,10 @@ body{font-family:system-ui,-apple-system,'Inter','Segoe UI',sans-serif;backgroun
       </div>
       <input type="password" class="lock-input mb-4" id="lockImportPwd" placeholder="Mot de passe du coffre">
       <button class="btn btn-primary w-full justify-center" id="lockImportBtn" disabled><i class="fas fa-unlock"></i> Déverrouiller</button>
+    </div>
+    <div id="lockTabPurge" style="display:none">
+      <p class="text-xs text-slate-400 mb-4 text-center">Purger les données de l'application afin d'empêcher toute récupération par un attaquant qui passerait après le RSSI.</p>
+      <button class="btn btn-danger w-full justify-center" id="lockPurgeBtn"><i class="fas fa-trash-can"></i> Purger les données</button>
     </div>
     <div id="lockFsUnsupported" class="lock-hint" style="display:none"><i class="fas fa-triangle-exclamation mr-1"></i> Stockage navigateur (IndexedDB) — exporter vers disque recommandé</div>
     <p id="lockError" class="text-xs text-red-400 mt-3 text-center" style="display:none"></p>
@@ -2747,12 +2753,14 @@ function bindModalEvents() {
       document.getElementById('pbHistoContenu').value = '';
     };
   }
-  document.getElementById('pbHistoCancel').onclick = function() {
+  const histoCancel = document.getElementById('pbHistoCancel');
+  if (histoCancel) histoCancel.onclick = function() {
     document.getElementById('pbHistoForm').style.display = 'none';
     document.getElementById('pbHistoAddBtn').style.display = '';
     _histoEditing = -1;
   };
-  document.getElementById('pbHistoSave').onclick = function() {
+  const histoSave = document.getElementById('pbHistoSave');
+  if (histoSave) histoSave.onclick = function() {
     const pid = this.dataset.pbId;
     const pb = vault.playbooks.find(p => p.id === pid);
     if (!pb) return;
@@ -3974,6 +3982,7 @@ async function importVault(file, pwd) {
     dirty = false;
     // Auto-save encrypted content to IDB
     await FS.writeVault(text);
+    reactivateLoadTab();
     unlockApp();
     updateFsPath();
     notify('Coffre déchiffré et chargé avec succès.', 'success');
@@ -3998,6 +4007,7 @@ async function decryptFromHandle(pwd) {
     _sessionKey = await Crypto.deriveKey(pwd, _s);
     _sessionSalt = _s;
     dirty = false;
+    reactivateLoadTab();
     unlockApp();
     notify('Coffre déchiffré et chargé avec succès.', 'success');
   } catch(e) {
@@ -4005,6 +4015,61 @@ async function decryptFromHandle(pwd) {
     document.getElementById('loadError').style.display = 'block';
     throw e;
   }
+}
+
+/* ============================================================
+   LOCK TAB HELPERS
+   ============================================================ */
+function switchLockTab(tabName) {
+  document.querySelectorAll('.lock-tab').forEach(function(t) { t.classList.remove('active'); });
+  const tab = document.querySelector('.lock-tab[data-tab="' + tabName + '"]');
+  if (tab && !tab.classList.contains('disabled')) tab.classList.add('active');
+  document.getElementById('lockTabCreate').style.display = tabName === 'create' ? 'block' : 'none';
+  document.getElementById('lockTabLoad').style.display = tabName === 'load' ? 'block' : 'none';
+  document.getElementById('lockTabImport').style.display = tabName === 'import' ? 'block' : 'none';
+  document.getElementById('lockTabPurge').style.display = tabName === 'purge' ? 'block' : 'none';
+  document.getElementById('lockError').style.display = 'none';
+  document.getElementById('loadError').style.display = 'none';
+}
+
+function reactivateLoadTab() {
+  const loadTab = document.querySelector('.lock-tab[data-tab="load"]');
+  if (loadTab) loadTab.classList.remove('disabled');
+  var purgeTab = document.querySelector('.lock-tab[data-tab="purge"]');
+  if (purgeTab) purgeTab.classList.remove('disabled');
+  document.getElementById('lockLoadPwd').disabled = false;
+  document.getElementById('lockLoadBtn').disabled = false;
+  const hint = document.getElementById('loadTabHint');
+  hint.textContent = FS.isFileProtocol()
+    ? 'Charger le coffre depuis le stockage navigateur (IndexedDB)'
+    : 'Charger le coffre depuis le dossier';
+}
+
+async function purgeVault() {
+  const ok = await showConfirm(
+    'Êtes-vous sûr de vouloir purger toutes les données stockées dans l\'application ? ' +
+    'Cette action est irréversible. Après la purge, vous devrez créer un nouveau coffre ou importer un fichier.'
+  );
+  if (!ok) return;
+  try { await FS.clearIdb(); } catch(e) { /* best effort */ }
+  try { await FS.clearDirHandle(); } catch(e) { /* best effort */ }
+  _hadVaultBeforeLock = false;
+  vault = null;
+  vaultKey = null;
+  _sessionKey = null;
+  _sessionSalt = null;
+  dirty = false;
+  _pendingImportFile = null;
+  var loadTab = document.querySelector('.lock-tab[data-tab="load"]');
+  if (loadTab) loadTab.classList.add('disabled');
+  var purgeTab = document.querySelector('.lock-tab[data-tab="purge"]');
+  if (purgeTab) purgeTab.classList.add('disabled');
+  document.getElementById('lockLoadPwd').disabled = true;
+  document.getElementById('lockLoadBtn').disabled = true;
+  document.getElementById('loadTabHint').textContent = 'Aucune donnée — Créez un coffre ou importez un fichier.';
+  document.getElementById('loadError').style.display = 'none';
+  switchLockTab('create');
+  notify('Données purgées avec succès.', 'success');
 }
 
 /* ============================================================
@@ -4083,11 +4148,13 @@ document.addEventListener('DOMContentLoaded', async function() {
   /* Lock tabs */
   document.querySelectorAll('.lock-tab').forEach(tab => {
     tab.addEventListener('click', function() {
+      if (this.classList.contains('disabled')) return;
       document.querySelectorAll('.lock-tab').forEach(t => t.classList.remove('active'));
       this.classList.add('active');
       document.getElementById('lockTabCreate').style.display = this.dataset.tab === 'create' ? 'block' : 'none';
       document.getElementById('lockTabLoad').style.display = this.dataset.tab === 'load' ? 'block' : 'none';
       document.getElementById('lockTabImport').style.display = this.dataset.tab === 'import' ? 'block' : 'none';
+      document.getElementById('lockTabPurge').style.display = this.dataset.tab === 'purge' ? 'block' : 'none';
       document.getElementById('lockError').style.display = 'none';
       document.getElementById('loadError').style.display = 'none';
     });
@@ -4146,6 +4213,7 @@ document.addEventListener('DOMContentLoaded', async function() {
       return;
     }
 
+    reactivateLoadTab();
     unlockApp();
     updateFsPath();
     if (dirHandle) {
@@ -4179,6 +4247,9 @@ document.addEventListener('DOMContentLoaded', async function() {
   document.getElementById('lockLoadPwd').addEventListener('keydown', function(e) {
     if (e.key === 'Enter') doLoadFromDir();
   });
+
+  /* Lock: Purge */
+  document.getElementById('lockPurgeBtn').addEventListener('click', purgeVault);
 
   /* Lock: Import (file picker — any location) */
   document.getElementById('lockPickFileBtn').addEventListener('click', async function() {
@@ -4275,19 +4346,23 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
   });
 
-  /* Auto-check for existing vault — show badge on "Charger" tab */
-  const loadTab = document.querySelector('.lock-tab[data-tab="load"]');
+  /* Auto-check for existing vault — show badge and switch to "Charger" tab */
+  var loadTab = document.querySelector('.lock-tab[data-tab="load"]');
   if (FS.supportsApi()) {
-    const existingDir = await FS.loadDirHandle();
+    var existingDir = await FS.loadDirHandle();
     if (existingDir && loadTab) {
-      loadTab.innerHTML = '<i class="fas fa-rotate-left mr-1" style="font-size:0.7rem"></i> Charger <span style="font-size:0.6rem;background:rgba(59,130,246,0.2);color:#93c5fd;padding:0.1rem 0.4rem;border-radius:3px;margin-left:0.3rem">✓ .rssi_deck</span>';
+      loadTab.innerHTML = '<i class="fas fa-rotate-left mr-1" style="font-size:0.7rem"></i> Charger <span style="font-size:0.6rem;background:rgba(59,130,246,0.2);color:#93c5fd;padding:0.1rem 0.4rem;border-radius:3px;margin-left:0.3rem">\u2713 .rssi_deck</span>';
+      document.querySelector('.lock-tab[data-tab="purge"]').classList.remove('disabled');
+      switchLockTab('load');
     }
   } else {
     // file:// or no FSA — check IDB for existing content
     try {
-      const text = await FS.readIdb();
+      var text = await FS.readIdb();
       if (text !== null && loadTab) {
-        loadTab.innerHTML = '<i class="fas fa-rotate-left mr-1" style="font-size:0.7rem"></i> Charger <span style="font-size:0.6rem;background:rgba(59,130,246,0.2);color:#93c5fd;padding:0.1rem 0.4rem;border-radius:3px;margin-left:0.3rem">✓ Coffre</span>';
+        loadTab.innerHTML = '<i class="fas fa-rotate-left mr-1" style="font-size:0.7rem"></i> Charger <span style="font-size:0.6rem;background:rgba(59,130,246,0.2);color:#93c5fd;padding:0.1rem 0.4rem;border-radius:3px;margin-left:0.3rem">\u2713 Coffre</span>';
+        document.querySelector('.lock-tab[data-tab="purge"]').classList.remove('disabled');
+        switchLockTab('load');
       }
     } catch(e) { /* no vault in IDB */ }
   }
