@@ -1094,7 +1094,7 @@ renderFn.dashboard = function() {
           const favItems = vault.favorites.map(id => findItem(id)).filter(Boolean);
           const filtered = searchFilter(favItems, ['nom','categorie']);
           if (!filtered.length && searchQuery) return '<div class="empty-state" style="padding:1.5rem"><i class="fa-regular fa-star" style="font-size:1.5rem"></i><p>Aucun favori ne correspond à la recherche.</p></div>';
-          return filtered.map(item => `<div class="flex items-center gap-3 py-2 border-b border-white/5 last:border-0"><i class="fas ${item.icone || 'fa-cube'} text-blue-400 w-5 text-center"></i><span class="text-sm">${filterText(item.nom))}</span><span class="text-xs text-slate-500 ml-auto">${filterText(item.categorie || ''))}</span></div>`).join('');
+          return filtered.map(item => `<div class="flex items-center gap-3 py-2 border-b border-white/5 last:border-0"><i class="fas ${item.icone || 'fa-cube'} text-blue-400 w-5 text-center"></i><span class="text-sm">${filterText(item.nom)}</span><span class="text-xs text-slate-500 ml-auto">${filterText(item.categorie || '')}</span></div>`).join('');
         })()}</div>
       </div>
     </div>
@@ -1108,7 +1108,7 @@ renderFn.dashboard = function() {
         const pct = Math.min(100, Math.round((k.valeur / (k.cible || 1)) * 100));
         return `<div class="flex items-center gap-3 py-1.5 border-b border-white/5 last:border-0">
           <div style="min-width:0;flex:1">
-            <div class="flex justify-between text-xs"><span class="text-slate-300">${filterText(k.nom||'Indicateur'))}</span><span class="text-slate-400">${k.valeur}${k.unite||''} / ${k.cible}${k.unite||''}</span></div>
+            <div class="flex justify-between text-xs"><span class="text-slate-300">${filterText(k.nom||'Indicateur')}</span><span class="text-slate-400">${k.valeur}${k.unite||''} / ${k.cible}${k.unite||''}</span></div>
             <div class="h-1.5 rounded-full bg-white/5 mt-1 overflow-hidden"><div class="h-full rounded-full transition-all" style="width:${pct}%;background:${k.couleur||'#3b82f6'}"></div></div>
           </div>
           <button class="text-xs text-slate-600 hover:text-slate-300 transition-colors" onclick="editKpi(${idx})" title="Modifier"><i class="fas fa-pencil-alt"></i></button>
@@ -1175,8 +1175,8 @@ function catColor(c) {
 
 function toolCard(t, ns) {
   const isFav = vault.favorites.includes(t.id);
-  const ttl = filterText(t.nom));
-  const desc = filterText(t.description));
+  const ttl = filterText(t.nom);
+  const desc = filterText(t.description);
   const prio = t.priorite === 1 ? '<span class="prio-badge prio-1">Essentiel</span>' : t.priorite === 2 ? '<span class="prio-badge prio-2">Important</span>' : '<span class="prio-badge prio-3">Complémentaire</span>';
   return `<div class="glass-card cursor-pointer" data-id="${t.id}" data-ns="${ns}" data-modal="${t.id}">
     <div class="flex items-start gap-3 mb-2">
@@ -1190,7 +1190,7 @@ function toolCard(t, ns) {
       </div>
     </div>
     <div class="flex gap-1 flex-wrap mt-2">
-      ${(t.commandes || []).slice(0,2).map(c => `<span class="tool-chip"><i class="fas fa-terminal mr-1" style="font-size:0.6rem"></i>${filterText(c))}</span>`).join('')}
+      ${(t.commandes || []).slice(0,2).map(c => `<span class="tool-chip"><i class="fas fa-terminal mr-1" style="font-size:0.6rem"></i>${filterText(c)}</span>`).join('')}
     </div>
   </div>`;
 }
@@ -1209,7 +1209,7 @@ renderFn['threat-intel'] = function() {
         <input type="text" class="lock-input flex-1" id="cveSearch" placeholder="CVE-2026-XXXXX ou mot-clé…" style="font-size:0.85rem">
         <a href="https://nvd.nist.gov/" target="_blank" class="btn btn-primary btn-sm self-start" id="cveSearchBtn"><i class="fas fa-arrow-up-right-from-square"></i> NVD</a>
       </div>
-      <p class="text-xs text-slate-500 mt-2">${filterText(ti.cve.nom))} — Recherche directe dans la base NIST.</p>
+      <p class="text-xs text-slate-500 mt-2">${filterText(ti.cve.nom)} — Recherche directe dans la base NIST.</p>
     </div>
     <div class="category-label"><i class="fas fa-book-skull mr-1"></i> Frameworks de Menaces</div>
     <div class="grid-bento mb-2">${frameworks.length ? frameworks.map(f => threatCard(f, 'threat_intel.frameworks.' + ti.frameworks.indexOf(f))).join('') : '<div class="empty-state" style="padding:1rem"><i class="fa-regular fa-book-skull"></i><p>Aucun framework trouvé.</p></div>'}</div>
@@ -1232,8 +1232,8 @@ function threatCard(item, path) {
     <div class="flex items-start gap-3">
       <div class="card-icon bg-blue-500/10"><i class="fas ${esc(item.icone || 'fa-link')} text-blue-400"></i></div>
       <div>
-        <div class="text-sm font-semibold text-slate-100 mb-1">${filterText(item.nom))}</div>
-        <p class="text-xs text-slate-400 leading-relaxed">${filterText(item.description))}</p>
+        <div class="text-sm font-semibold text-slate-100 mb-1">${filterText(item.nom)}</div>
+        <p class="text-xs text-slate-400 leading-relaxed">${filterText(item.description)}</p>
       </div>
     </div>
   </a>`;
@@ -1385,8 +1385,8 @@ renderFn.frameworks = function() {
         <div class="flex items-start gap-3">
           <div class="card-icon bg-blue-500/10"><i class="fas ${n.icone || 'fa-book'} text-blue-400"></i></div>
           <div>
-            <div class="text-sm font-semibold text-slate-100 mb-1">${filterText(n.nom))}</div>
-            <p class="text-xs text-slate-400 leading-relaxed">${filterText(n.description))}</p>
+            <div class="text-sm font-semibold text-slate-100 mb-1">${filterText(n.nom)}</div>
+            <p class="text-xs text-slate-400 leading-relaxed">${filterText(n.description)}</p>
           </div>
         </div>
       </a>`;
@@ -1480,9 +1480,9 @@ function renderTraitements() {
       <tbody>${items.map(t => {
         const idx = vault.traitements.indexOf(t);
         return `<tr>
-          <td><strong>${filterText(t.finalite||''))}</strong></td>
-          <td>${filterText(t.base_legale||''))}</td>
-          <td>${filterText(t.responsable||''))}</td>
+          <td><strong>${filterText(t.finalite||'')}</strong></td>
+          <td>${filterText(t.base_legale||'')}</td>
+          <td>${filterText(t.responsable||'')}</td>
           <td>${statutBadge(t.statut||'Actif')}</td>
           <td class="gouv-actions">
             <button onclick="editTraitement(${idx})" title="Modifier"><i class="fas fa-pencil-alt"></i></button>
@@ -1505,9 +1505,9 @@ function renderPlanActions() {
         const idx = vault.plan_actions.indexOf(a);
         const prioCls = 'gouv-prio-' + (a.priorite||'moyenne').toLowerCase();
         return `<tr>
-          <td><strong>${filterText(a.action||''))}</strong></td>
-          <td><span class="${prioCls}">${filterText(a.priorite||'Moyenne'))}</span></td>
-          <td>${filterText(a.responsable||''))}</td>
+          <td><strong>${filterText(a.action||'')}</strong></td>
+          <td><span class="${prioCls}">${filterText(a.priorite||'Moyenne')}</span></td>
+          <td>${filterText(a.responsable||'')}</td>
           <td>${escDate(a.echeance)}</td>
           <td>${statutBadge(a.statut||'À faire')}</td>
           <td class="gouv-actions">
@@ -1529,14 +1529,14 @@ function renderIncidents() {
       <thead><tr><th>Date</th><th>Type</th><th>Description</th><th>Impact</th><th>Périmètre</th><th>Risque</th><th>Statut</th><th class="gouv-actions"></th></tr></thead>
       <tbody>${items.map(inc => {
         const idx = vault.incidents.indexOf(inc);
-        const desc = filterText(inc.description||''));
+        const desc = filterText(inc.description||'');
         return `<tr>
           <td class="whitespace-nowrap">${escDate(inc.date)}</td>
-          <td>${filterText(inc.type||''))}</td>
+          <td>${filterText(inc.type||'')}</td>
           <td>${desc.length > 60 ? desc.slice(0,60)+'…' : desc}</td>
-          <td>${filterText(inc.impact||''))}</td>
-          <td>${filterText(inc.perimetre||''))}</td>
-          <td>${filterText(inc.risque_type||''))}</td>
+          <td>${filterText(inc.impact||'')}</td>
+          <td>${filterText(inc.perimetre||'')}</td>
+          <td>${filterText(inc.risque_type||'')}</td>
           <td>${statutBadge(inc.statut||'Ouvert')}</td>
           <td class="gouv-actions">
             <button onclick="editIncident(${idx})" title="Modifier"><i class="fas fa-pencil-alt"></i></button>
@@ -1866,11 +1866,11 @@ function renderActifs() {
         const idx = vault.actifs.indexOf(a);
         const critCls = 'gouv-prio-' + (a.criticite||'moyenne').toLowerCase();
         return `<tr>
-          <td><strong>${filterText(a.nom||''))}</strong></td>
-          <td>${filterText(a.type||''))}</td>
-          <td>${filterText(a.proprietaire||''))}</td>
-          <td><span class="${critCls}">${filterText(a.criticite||'Moyenne'))}</span></td>
-          <td>${filterText(a.localisation||''))}</td>
+          <td><strong>${filterText(a.nom||'')}</strong></td>
+          <td>${filterText(a.type||'')}</td>
+          <td>${filterText(a.proprietaire||'')}</td>
+          <td><span class="${critCls}">${filterText(a.criticite||'Moyenne')}</span></td>
+          <td>${filterText(a.localisation||'')}</td>
           <td>${statutBadge(a.statut||'Actif')}</td>
           <td class="gouv-actions">
             <button onclick="editActif(${idx})" title="Modifier"><i class="fas fa-pencil-alt"></i></button>
@@ -1930,13 +1930,13 @@ function renderRisques() {
         const lvl = (r.vraisemblance||3) * (r.gravite||3);
         const cls = lvl <= 4 ? 'gouv-prio-basse' : lvl <= 9 ? 'gouv-prio-moyenne' : lvl <= 15 ? 'gouv-prio-haute' : 'gouv-prio-critique';
         return `<tr>
-          <td><strong>${filterText(r.menace||''))}</strong></td>
-          <td>${filterText(r.actif_concerne||''))}</td>
+          <td><strong>${filterText(r.menace||'')}</strong></td>
+          <td>${filterText(r.actif_concerne||'')}</td>
           <td>${r.vraisemblance||3}/5</td>
           <td>${r.gravite||3}/5</td>
           <td><span class="${cls}">${lvl}/25</span></td>
           <td>${statutBadge(r.traitement||'Accepté')}</td>
-          <td>${filterText(r.responsable||''))}</td>
+          <td>${filterText(r.responsable||'')}</td>
           <td class="gouv-actions">
             <button onclick="editRisque(${idx})" title="Modifier"><i class="fas fa-pencil-alt"></i></button>
             <button onclick="deleteRisque(${idx})" title="Supprimer"><i class="fas fa-trash"></i></button>
@@ -2149,9 +2149,9 @@ function renderPssi() {
       <div class="flex-1 min-w-0">
         <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2"><i class="fas fa-file-shield mr-1"></i> Politique de Sécurité des Systèmes d'Information</h3>
         <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-400">
-          <span>Organisation : <strong class="text-slate-300">${filterText(p.organisation||'Non renseignée'))}</strong></span>
+          <span>Organisation : <strong class="text-slate-300">${filterText(p.organisation||'Non renseignée')}</strong></span>
           <span>Version : <strong class="text-slate-300">${esc(p.version||'1.0')}</strong></span>
-          <span>Approuvé par : <strong class="text-slate-300">${filterText(p.approuve_par||'—'))}</strong></span>
+          <span>Approuvé par : <strong class="text-slate-300">${filterText(p.approuve_par||'—')}</strong></span>
           <span>Validé le : <strong class="text-slate-300">${p.date_validation ? new Date(p.date_validation).toLocaleDateString('fr-FR') : '—'}</strong></span>
           <span>Prochaine revue : <strong class="text-slate-300">${p.date_prochaine_revue ? new Date(p.date_prochaine_revue).toLocaleDateString('fr-FR') : '—'}</strong></span>
           <span>Fréquence de révision : <strong class="text-slate-300">${esc(p.frequence_revision||'Annuelle')}</strong></span>
@@ -2174,8 +2174,8 @@ function renderPssi() {
       const dot = s.statut === 'Publié' ? 'bg-emerald-500' : s.statut === 'Validé' ? 'bg-blue-500' : s.statut === 'En révision' ? 'bg-amber-500' : 'bg-slate-500';
       return `<div class="flex items-center gap-3 py-2 border-b border-white/5 last:border-0">
         <span class="w-2 h-2 rounded-full flex-shrink-0 ${dot}"></span>
-        <span class="text-sm text-slate-300 flex-1 min-w-0 truncate">${filterText(s.titre || 'Section sans titre'))}</span>
-        <span class="text-xs text-slate-500">${filterText(s.statut||'Rédaction'))}</span>
+        <span class="text-sm text-slate-300 flex-1 min-w-0 truncate">${filterText(s.titre || 'Section sans titre')}</span>
+        <span class="text-xs text-slate-500">${filterText(s.statut||'Rédaction')}</span>
         <div class="flex gap-1">
           <button class="text-xs text-slate-600 hover:text-slate-300 transition-colors" onclick="editPssiSection(${idx})" title="Modifier"><i class="fas fa-pencil-alt"></i></button>
           <button class="text-xs text-slate-600 hover:text-red-400 transition-colors" onclick="deletePssiSection(${idx})" title="Supprimer"><i class="fas fa-times"></i></button>
@@ -2342,7 +2342,7 @@ function renderRaci() {
       <tbody>${activites.map(a => {
         const idx = allActivites.indexOf(a);
         return `<tr>
-          <td><strong>${filterText(a.activite))}</strong></td>
+          <td><strong>${filterText(a.activite)}</strong></td>
           ${roles.map((role, ri) => {
             const val = a.assign[role] || '—';
             return `<td style="text-align:center" onclick="cycleRaci(${idx},${ri})" ondblclick="clearRaciCell(${idx},${ri})">${raciBadge(val)}</td>`;
@@ -2474,13 +2474,13 @@ function renderAipd() {
       <thead><tr><th>Traitement</th><th>Type</th><th>Base juridique</th><th>Responsable</th><th>Gravité</th><th>Risques</th><th>Mesures</th><th>Statut</th><th>Évaluation</th><th>Révision</th><th class="gouv-actions"></th></tr></thead>
       <tbody>${items.map(a => {
         const idx = vault.aipd.indexOf(a);
-        const descR = filterText(a.description_risques||'')); const mesures = filterText(a.mesures||''));
+        const descR = filterText(a.description_risques||''); const mesures = filterText(a.mesures||'');
         return `<tr>
-          <td><strong>${filterText(a.traitement||''))}</strong></td>
-          <td class="text-slate-400">${filterText(a.type_traitement||'—'))}</td>
-          <td class="text-slate-400">${filterText(a.base_juridique||'—'))}</td>
-          <td>${filterText(a.responsable||''))}</td>
-          <td>${a.gravite_risque ? '<span class="gravite-badge gravite-'+esc(a.gravite_risque).toLowerCase()+'">'+filterText(a.gravite_risque))+'</span>' : '—'}</td>
+          <td><strong>${filterText(a.traitement||'')}</strong></td>
+          <td class="text-slate-400">${filterText(a.type_traitement||'—')}</td>
+          <td class="text-slate-400">${filterText(a.base_juridique||'—')}</td>
+          <td>${filterText(a.responsable||'')}</td>
+          <td>${a.gravite_risque ? '<span class="gravite-badge gravite-'+esc(a.gravite_risque).toLowerCase()+'">'+filterText(a.gravite_risque)+'</span>' : '—'}</td>
           <td>${(descR.length > 50 ? descR.slice(0,50)+'\u2026' : descR)}</td>
           <td>${(mesures.length > 50 ? mesures.slice(0,50)+'\u2026' : mesures)}</td>
           <td>${statutBadge(a.statut||'En cours')}</td>
@@ -2591,7 +2591,7 @@ function renderMaturite() {
         const pct = Math.min(100, Math.round(((m.niveau_actuel||1) / (m.niveau_cible||3)) * 100));
         const color = pct >= 80 ? '#10b981' : pct >= 50 ? '#f59e0b' : '#3b82f6';
         const dateEval = m.date_evaluation ? new Date(m.date_evaluation).toLocaleDateString('fr-FR') : '\u2014';
-        return '<tr><td><strong>'+filterText(m.domaine||''))+'</strong></td><td class="text-slate-400">'+(filterText(m.sous_domaine||''))||'\u2014')+'</td><td>'+(m.niveau_actuel||1)+'/5</td><td>'+(m.niveau_cible||3)+'/5</td><td class="text-slate-500 text-xs">'+(m.poids||1)+'x</td><td style="min-width:120px"><div class="h-1.5 rounded-full bg-white/5 overflow-hidden"><div class="h-full rounded-full" style="width:'+pct+'%;background:'+color+'"></div></div> <span class="text-[0.6rem] text-slate-500">'+pct+'%</span></td><td class="text-xs text-slate-500">'+dateEval+'</td><td>'+(filterText(m.observations||'')).length > 40 ? filterText(m.observations)).slice(0,40)+'\u2026' : filterText(m.observations||'')))+'</td><td class="gouv-actions"><button onclick="editMaturiteDomaine('+idx+')" title="Modifier"><i class="fas fa-pencil-alt"></i></button><button onclick="deleteMaturiteDomaine('+idx+')" title="Supprimer"><i class="fas fa-trash"></i></button></td></tr>';
+        return '<tr><td><strong>'+filterText(m.domaine||'')+'</strong></td><td class="text-slate-400">'+(filterText(m.sous_domaine||'')||'\u2014')+'</td><td>'+(m.niveau_actuel||1)+'/5</td><td>'+(m.niveau_cible||3)+'/5</td><td class="text-slate-500 text-xs">'+(m.poids||1)+'x</td><td style="min-width:120px"><div class="h-1.5 rounded-full bg-white/5 overflow-hidden"><div class="h-full rounded-full" style="width:'+pct+'%;background:'+color+'"></div></div> <span class="text-[0.6rem] text-slate-500">'+pct+'%</span></td><td class="text-xs text-slate-500">'+dateEval+'</td><td>'+(filterText(m.observations||'').length > 40 ? filterText(m.observations).slice(0,40)+'\u2026' : filterText(m.observations||''))+'</td><td class="gouv-actions"><button onclick="editMaturiteDomaine('+idx+')" title="Modifier"><i class="fas fa-pencil-alt"></i></button><button onclick="deleteMaturiteDomaine('+idx+')" title="Supprimer"><i class="fas fa-trash"></i></button></td></tr>';
       }).join('')}</tbody>
     </table></div>`}
     <div class="text-[0.65rem] text-slate-600 mt-2">${items.length} domaine(s) affiché(s)</div>`;
@@ -2687,7 +2687,7 @@ function renderPrestataires() {
       <tbody>${items.map(function(p) {
         const idx = vault.prestataires.indexOf(p);
         const critCls = 'gouv-prio-'+(p.criticite||'moyenne').toLowerCase();
-        return '<tr><td><strong>'+filterText(p.nom||''))+'</strong></td><td>'+filterText(p.contact||''))+'</td><td>'+filterText(p.service||''))+'</td><td><span class="'+critCls+'">'+filterText(p.criticite||'Moyenne'))+'</span></td><td>'+statutBadge(p.statut_conformite||"En cours d'\u00e9valuation")+'</td><td>'+escDate(p.date_audit)+'</td><td>'+escDate(p.date_prochain_audit)+'</td><td class="gouv-actions"><button onclick="editPrestataire('+idx+')" title="Modifier"><i class="fas fa-pencil-alt"></i></button><button onclick="deletePrestataire('+idx+')" title="Supprimer"><i class="fas fa-trash"></i></button></td></tr>';
+        return '<tr><td><strong>'+filterText(p.nom||'')+'</strong></td><td>'+filterText(p.contact||'')+'</td><td>'+filterText(p.service||'')+'</td><td><span class="'+critCls+'">'+filterText(p.criticite||'Moyenne')+'</span></td><td>'+statutBadge(p.statut_conformite||"En cours d'\u00e9valuation")+'</td><td>'+escDate(p.date_audit)+'</td><td>'+escDate(p.date_prochain_audit)+'</td><td class="gouv-actions"><button onclick="editPrestataire('+idx+')" title="Modifier"><i class="fas fa-pencil-alt"></i></button><button onclick="deletePrestataire('+idx+')" title="Supprimer"><i class="fas fa-trash"></i></button></td></tr>';
       }).join('')}</tbody>
     </table></div>`}
     <div class="text-[0.65rem] text-slate-600 mt-2">${items.length} prestataire(s) affiché(s)</div>`;
@@ -2743,10 +2743,10 @@ renderFn.memos = function() {
           <div class="card-icon ${p.severity === 'crit' ? 'bg-red-500/10' : 'bg-amber-500/10'}"><i class="fas fa-${p.severity === 'crit' ? 'skull' : 'triangle-exclamation'} ${p.severity === 'crit' ? 'text-red-400' : 'text-amber-400'}"></i></div>
           <div style="min-width:0">
             <div class="flex items-center gap-2 mb-1">
-              <span class="text-sm font-semibold text-slate-100">${filterText(p.titre))}</span>
+              <span class="text-sm font-semibold text-slate-100">${filterText(p.titre)}</span>
               <span class="${p.severity === 'crit' ? 'badge-crit' : 'badge-high'}">${p.severity === 'crit' ? 'CRITIQUE' : 'HAUTE'}</span>
             </div>
-            <p class="text-xs text-slate-400">${filterText(p.scenario))}</p>
+            <p class="text-xs text-slate-400">${filterText(p.scenario)}</p>
             <div class="flex items-center gap-2 mt-2">
               <div class="flex-1 h-1 rounded-full bg-white/5"><div class="h-full rounded-full ${done === total ? 'bg-emerald-500' : 'bg-blue-500'}" style="width:${total ? Math.round(done/total*100) : 0}%"></div></div>
               <span class="text-xs text-slate-500 font-mono">${done}/${total}</span>
@@ -2761,9 +2761,9 @@ renderFn.memos = function() {
       <div class="contact-card" style="position:relative">
         <button class="memo-btn text-amber-400" data-edit-contact="${k}" title="Modifier" style="position:absolute;top:0.5rem;right:0.5rem"><i class="fas fa-pencil"></i></button>
         <div class="c-name"><i class="fas fa-${k === 'assurance' ? 'umbrella' : k === 'avocat' ? 'gavel' : k === 'hebergeur' ? 'server' : 'user-tie'} mr-1"></i> ${k.charAt(0).toUpperCase()+k.slice(1)}</div>
-        <div class="c-detail"><i class="fas fa-user"></i>${filterText(v.nom || 'Non renseigné'))}</div>
-        <div class="c-detail"><i class="fas fa-phone"></i>${filterText(v.telephone || '—'))}</div>
-        <div class="c-detail"><i class="fas fa-envelope"></i>${filterText(v.email || '—'))}</div>
+        <div class="c-detail"><i class="fas fa-user"></i>${filterText(v.nom || 'Non renseigné')}</div>
+        <div class="c-detail"><i class="fas fa-phone"></i>${filterText(v.telephone || '—')}</div>
+        <div class="c-detail"><i class="fas fa-envelope"></i>${filterText(v.email || '—')}</div>
       </div>
     `).join('')}</div>
     <div class="grid-bento-wide gap-4">
@@ -2783,7 +2783,7 @@ renderFn.memos = function() {
           return `
           <div class="border-b border-white/5 py-2 last:border-0">
             <div class="flex items-center justify-between">
-              <span class="text-sm font-medium text-slate-200">${filterText(m.titre))}</span>
+              <span class="text-sm font-medium text-slate-200">${filterText(m.titre)}</span>
               <div class="flex gap-1">
                 <button class="memo-btn text-blue-400" data-view-memo="${idx}" title="Voir"><i class="fas fa-eye"></i></button>
                 <button class="memo-btn text-amber-400" data-edit-memo="${idx}" title="Modifier"><i class="fas fa-pencil"></i></button>
@@ -2834,7 +2834,7 @@ renderFn.roadmap = function() {
     </div>
     <div class="roadmap-grid">${sortedQuarters.map(q => `
       <div class="glass-card">
-        <h4 class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2 border-b border-white/5 pb-1">${filterText(q))}</h4>
+        <h4 class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2 border-b border-white/5 pb-1">${filterText(q)}</h4>
         ${!quarters[q].length ? '<p class="text-xs text-slate-600">Aucun jalon.</p>' : quarters[q].map(r => {
           const cls = r.statut === 'Fait' ? 'bg-emerald-500' : r.statut === 'En cours' ? 'bg-blue-500' : r.statut === 'Bloqué' ? 'bg-red-500' : 'bg-slate-500';
           const idx = allItems.indexOf(r);
@@ -2842,14 +2842,14 @@ renderFn.roadmap = function() {
             <span class="w-2 h-2 rounded-full flex-shrink-0 mt-1 ${cls}"></span>
             <div style="min-width:0;flex:1">
               <div class="flex items-center justify-between gap-1">
-                <span class="text-xs font-medium text-slate-200 truncate">${filterText(r.titre))}</span>
-                <span class="text-[0.55rem] px-1 rounded text-slate-600" style="background:${CAT_COLORS_ROADMAP[r.categorie]||'#64748b'}22;color:${CAT_COLORS_ROADMAP[r.categorie]||'#64748b'}">${filterText(r.categorie||''))}</span>
+                <span class="text-xs font-medium text-slate-200 truncate">${filterText(r.titre)}</span>
+                <span class="text-[0.55rem] px-1 rounded text-slate-600" style="background:${CAT_COLORS_ROADMAP[r.categorie]||'#64748b'}22;color:${CAT_COLORS_ROADMAP[r.categorie]||'#64748b'}">${filterText(r.categorie||'')}</span>
               </div>
               <div class="flex items-center gap-2 mt-0.5">
                 <div class="flex-1 h-1 rounded-full bg-white/5 overflow-hidden"><div class="h-full rounded-full ${r.avancement===100?'bg-emerald-500':'bg-blue-500'}" style="width:${r.avancement||0}%"></div></div>
                 <span class="text-[0.55rem] font-mono text-slate-500">${r.avancement||0}%</span>
               </div>
-              ${r.responsable ? `<span class="text-[0.55rem] text-slate-600"><i class="fas fa-user mr-0.5"></i>${filterText(r.responsable))}</span>` : ''}
+              ${r.responsable ? `<span class="text-[0.55rem] text-slate-600"><i class="fas fa-user mr-0.5"></i>${filterText(r.responsable)}</span>` : ''}
             </div>
             <button class="text-xs text-slate-600 hover:text-slate-300 transition-colors flex-shrink-0" onclick="editJalon(${idx})" title="Modifier"><i class="fas fa-pencil-alt"></i></button>
             <button class="text-xs text-slate-600 hover:text-red-400 transition-colors flex-shrink-0" onclick="deleteJalon(${idx})" title="Supprimer"><i class="fas fa-times"></i></button>
