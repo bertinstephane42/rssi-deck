@@ -884,7 +884,7 @@ function migrateVault(v) {
     if (!v.raci) v.raci = JSON.parse(JSON.stringify(DEFAULT_VAULT.raci));
     if (!v.aipd) v.aipd = [];
     if (!v.maturite) v.maturite = [];
-    if (v.maturite) v.maturite.forEach(function(m) { if (!m.date_evaluation) m.date_evaluation = ''; if (!m.poids) m.poids = 1; });
+    if (v.maturite) v.maturite.forEach(function(m) { if (m.date_evaluation === undefined) m.date_evaluation = ''; if (m.poids === undefined) m.poids = 1; });
     if (!v.prestataires) v.prestataires = [];
     if (!v.outils_techniques) v.outils_techniques = [];
     if (!v.outils_fonctionnels) v.outils_fonctionnels = [];
