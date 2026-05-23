@@ -29,12 +29,15 @@ Application web chiffrée destinée aux RSSI et professionnels de la cybersécur
 ## Sécurité
 
 - Chiffrement **AES-GCM 256 bits** via Web Crypto API
-- Dérivation de clé **PBKDF2** — 100 000 itérations avec sel aléatoire
+- Dérivation de clé **PBKDF2** — 600 000 itérations avec sel aléatoire
 - IV aléatoire de 12 octets pour chaque chiffrement
 - Aucune clé en clair conservée en mémoire persistante
 - Coffre déchiffré uniquement en mémoire vive, pendant la session
 - Mot de passe saisi via **modale DOM** (plus de `prompt()`)
 - Alerte de confirmation avant écrasement d'un coffre existant à la création
+- **Rate-limiting exponentiel** (1 s → 60 s) sur les tentatives de déchiffrement échouées
+- **SRI (Subresource Integrity)** sur toutes les ressources CDN (FontAwesome 6.5.1, Chart.js 4.4.7, Marked.js 15.0.4) avec `crossorigin="anonymous"`
+- **Anti-XSS** : `filterText()` blindé (`esc()` interne) sur toutes les données utilisateur affichées ; texte de secours `<span>` pour les icônes quand le CDN est indisponible
 
 ## Stockage
 
@@ -64,9 +67,9 @@ Deux couches de persistance :
 
 - **Vanilla JS** — Zéro framework, zéro dépendance build
 - **Tailwind CSS** (CDN) — Styles utilitaires
-- **FontAwesome 6** (CDN) — Icônes
-- **Chart.js** — Graphiques du dashboard et radar chart maturité NIST CSF
-- **Marked.js** — Rendu Markdown des mémos et playbooks
+- **FontAwesome 6.5.1** (CDN, version figée + SRI) — Icônes
+- **Chart.js 4.4.7** (CDN, version figée + SRI) — Graphiques du dashboard et radar chart maturité NIST CSF
+- **Marked.js 15.0.4** (CDN, version figée + SRI) — Rendu Markdown des mémos et playbooks
 - **Web Crypto API** — Chiffrement AES-GCM 256 + PBKDF2
 - **IndexedDB** — Persistance navigateur
 - **File System Access API** — Accès fichier disque (Chrome http://)
