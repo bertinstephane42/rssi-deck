@@ -326,9 +326,88 @@ body{font-family:system-ui,-apple-system,'Inter','Segoe UI',sans-serif;backgroun
     <input type="url" id="urlEditLink" class="lock-input mb-2">
     <label class="text-xs text-slate-400 block mb-1">Description</label>
     <textarea id="urlEditDesc" class="lock-input mb-2" rows="2" style="resize:vertical;font-family:inherit"></textarea>
-    <label class="text-xs text-slate-400 block mb-1">Icône Font Awesome <span class="text-slate-600">(ex: fa-shield)</span></label>
+    <label class="text-xs text-slate-400 block mb-1">Icône</label>
     <div class="flex gap-2 items-center mb-3">
-      <input type="text" id="urlEditIcon" class="lock-input flex-1" placeholder="fa-dragon">
+      <select id="urlEditIcon" class="lock-input flex-1">
+        <option value="">— Aucune —</option>
+        <optgroup label="Sécurité">
+          <option value="fa-shield">fa-shield</option>
+          <option value="fa-shield-halved">fa-shield-halved</option>
+          <option value="fa-lock">fa-lock</option>
+          <option value="fa-key">fa-key</option>
+          <option value="fa-user-shield">fa-user-shield</option>
+          <option value="fa-bug">fa-bug</option>
+          <option value="fa-virus">fa-virus</option>
+          <option value="fa-skull-crossbones">fa-skull-crossbones</option>
+          <option value="fa-dragon">fa-dragon</option>
+          <option value="fa-spider">fa-spider</option>
+          <option value="fa-triangle-exclamation">fa-triangle-exclamation</option>
+          <option value="fa-fire">fa-fire</option>
+          <option value="fa-bolt">fa-bolt</option>
+        </optgroup>
+        <optgroup label="Réseau &amp; Infrastructure">
+          <option value="fa-network-wired">fa-network-wired</option>
+          <option value="fa-server">fa-server</option>
+          <option value="fa-database">fa-database</option>
+          <option value="fa-cloud">fa-cloud</option>
+          <option value="fa-wifi">fa-wifi</option>
+          <option value="fa-router">fa-router</option>
+          <option value="fa-hard-drive">fa-hard-drive</option>
+        </optgroup>
+        <optgroup label="Documents &amp; Conformité">
+          <option value="fa-file">fa-file</option>
+          <option value="fa-file-lines">fa-file-lines</option>
+          <option value="fa-file-pdf">fa-file-pdf</option>
+          <option value="fa-book">fa-book</option>
+          <option value="fa-certificate">fa-certificate</option>
+          <option value="fa-scale-balanced">fa-scale-balanced</option>
+          <option value="fa-gavel">fa-gavel</option>
+          <option value="fa-landmark">fa-landmark</option>
+          <option value="fa-building-columns">fa-building-columns</option>
+          <option value="fa-clipboard-list">fa-clipboard-list</option>
+          <option value="fa-list-check">fa-list-check</option>
+          <option value="fa-pen-fancy">fa-pen-fancy</option>
+          <option value="fa-print">fa-print</option>
+        </optgroup>
+        <optgroup label="Communication &amp; Veille">
+          <option value="fa-newspaper">fa-newspaper</option>
+          <option value="fa-rss">fa-rss</option>
+          <option value="fa-envelope">fa-envelope</option>
+          <option value="fa-globe">fa-globe</option>
+          <option value="fa-flag-france">fa-flag-france</option>
+          <option value="fa-computer">fa-computer</option>
+          <option value="fa-phone">fa-phone</option>
+          <option value="fa-users">fa-users</option>
+        </optgroup>
+        <optgroup label="Outils &amp; Analyse">
+          <option value="fa-search">fa-search</option>
+          <option value="fa-eye">fa-eye</option>
+          <option value="fa-microscope">fa-microscope</option>
+          <option value="fa-magnifying-glass-chart">fa-magnifying-glass-chart</option>
+          <option value="fa-chart-line">fa-chart-line</option>
+          <option value="fa-chart-bar">fa-chart-bar</option>
+          <option value="fa-chart-pie">fa-chart-pie</option>
+          <option value="fa-chart-simple">fa-chart-simple</option>
+          <option value="fa-calculator">fa-calculator</option>
+        </optgroup>
+        <optgroup label="Divers">
+          <option value="fa-link">fa-link</option>
+          <option value="fa-chain">fa-chain</option>
+          <option value="fa-gem">fa-gem</option>
+          <option value="fa-puzzle-piece">fa-puzzle-piece</option>
+          <option value="fa-map">fa-map</option>
+          <option value="fa-compass">fa-compass</option>
+          <option value="fa-screwdriver-wrench">fa-screwdriver-wrench</option>
+          <option value="fa-box">fa-box</option>
+          <option value="fa-folder">fa-folder</option>
+          <option value="fa-star">fa-star</option>
+          <option value="fa-clock">fa-clock</option>
+          <option value="fa-bell">fa-bell</option>
+          <option value="fa-gear">fa-gear</option>
+          <option value="fa-sliders">fa-sliders</option>
+          <option value="fa-code">fa-code</option>
+        </optgroup>
+      </select>
       <span id="urlEditIconPreview" class="text-blue-400 text-lg" style="width:28px;text-align:center"><i class="fas fa-icons"></i></span>
     </div>
     <p id="urlEditError" class="text-xs text-red-400 mb-2 text-center" style="display:none"></p>
@@ -4617,8 +4696,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     document.getElementById('contactEditModal').classList.remove('visible');
   };
   /* Icon preview in threat edit modal */
-  document.getElementById('urlEditIcon').addEventListener('input', function() {
-    document.getElementById('urlEditIconPreview').innerHTML = this.value.trim() ? '<i class="fas ' + esc(this.value.trim()) + '"></i>' : '<i class="fas fa-icons"></i>';
+  document.getElementById('urlEditIcon').addEventListener('change', function() {
+    document.getElementById('urlEditIconPreview').innerHTML = this.value ? '<i class="fas ' + this.value + '"></i>' : '<i class="fas fa-icons"></i>';
   });
 });
 </script>
