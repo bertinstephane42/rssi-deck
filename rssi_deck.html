@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>RSSI Secure Command Deck</title>
 <script src="https://cdn.tailwindcss.com"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" integrity="sha384-b759edf0142860c2c5379a78dad440b6e00015068240e0de91455e28a66b127132a781f6474447173d0a5a99a3ee2f20">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" crossorigin="anonymous" integrity="sha384-becadf78b38e63a2ae218283966547e548819a021d075a047fba74d588161eeaa63877d9af7ef8fa8744bfdea7f6d342"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked@15.0.4/marked.min.js" crossorigin="anonymous" integrity="sha384-d8d9dd945025d2dc22da79aedf0f668b1a1d64588dd9f6f195a91c60917ce9b9f525e4b5541f3bfd7a80edcab29b34be"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 html{font-size:15px}
@@ -434,7 +434,7 @@ const Crypto = (() => {
   function unb64(s) { return new Uint8Array(atob(s).split('').map(c=>c.charCodeAt(0))); }
   async function deriveKey(pwd, salt) {
     const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(pwd), 'PBKDF2', false, ['deriveKey']);
-    return crypto.subtle.deriveKey({ name:'PBKDF2', salt, iterations:100000, hash:'SHA-256' }, key,
+    return crypto.subtle.deriveKey({ name:'PBKDF2', salt,       iterations:600000, hash:'SHA-256' }, key,
       { name:'AES-GCM', length:256 }, false, ['encrypt','decrypt']);
   }
   return {
@@ -859,6 +859,8 @@ let dirty = false;
 let currentView = 'dashboard';
 let chartInstance = null;
 let radarChartInstance = null;
+let _decryptAttempts = 0;
+let _lastDecryptAttempt = 0;
 let searchQuery = '';
 let sortOutilsTech = 'default';
 let sortOutilsFonc = 'default';
@@ -899,6 +901,14 @@ function migrateVault(v) {
 }
 
 function setDirty() { dirty = true; }
+function checkDecryptRateLimit() {
+  var now = Date.now();
+  var delay = Math.min(1000 * Math.pow(2, _decryptAttempts), 60000);
+  if (now - _lastDecryptAttempt < delay) return false;
+  _lastDecryptAttempt = now;
+  _decryptAttempts++;
+  return true;
+}
 
 /* ============================================================
    NOTIFICATION
@@ -1076,8 +1086,8 @@ function catColor(c) {
 
 function toolCard(t, ns) {
   const isFav = vault.favorites.includes(t.id);
-  const ttl = filterText(t.nom);
-  const desc = filterText(t.description);
+  const ttl = filterText(esc(t.nom));
+  const desc = filterText(esc(t.description));
   const prio = t.priorite === 1 ? '<span class="prio-badge prio-1">Essentiel</span>' : t.priorite === 2 ? '<span class="prio-badge prio-2">Important</span>' : '<span class="prio-badge prio-3">Complémentaire</span>';
   return `<div class="glass-card cursor-pointer" data-id="${t.id}" data-ns="${ns}" data-modal="${t.id}">
     <div class="flex items-start gap-3 mb-2">
@@ -1126,7 +1136,7 @@ function threatCard(item, path) {
   return `<a href="${esc(item.url)}" target="_blank" class="glass-card block no-underline relative threat-card">
     <button class="threat-edit-btn" data-ti-path="${esc(path)}" onclick="event.preventDefault();editThreatUrl(this.dataset.tiPath)" title="Modifier l'URL"><i class="fas fa-pencil-alt"></i></button>
     <div class="flex items-start gap-3">
-      <div class="card-icon bg-blue-500/10"><i class="fas ${item.icone || 'fa-link'} text-blue-400"></i></div>
+      <div class="card-icon bg-blue-500/10"><i class="fas ${esc(item.icone || 'fa-link')} text-blue-400"></i></div>
       <div>
         <div class="text-sm font-semibold text-slate-100 mb-1">${filterText(esc(item.nom))}</div>
         <p class="text-xs text-slate-400 leading-relaxed">${filterText(esc(item.description))}</p>
@@ -2006,7 +2016,7 @@ function togglePssiDocument() {
   btn.innerHTML = '<i class="fas fa-list"></i> Vue liste';
   const p = vault.pssi || { sections:[] };
   doc.innerHTML = (p.sections||[]).filter(s => s.contenu && s.contenu.trim()).map(s => {
-    const md = window.marked ? marked.parse(s.contenu) : esc(s.contenu);
+    const md = window.marked ? marked.parse(esc(s.contenu)) : esc(s.contenu);
     return `<div><h4 class="text-sm font-semibold text-slate-200 mb-1">${esc(s.titre)} <span class="text-xs font-normal text-slate-500">(${esc(s.statut||'')})</span></h4>${md}</div>`;
   }).join('') || '<p class="text-slate-500">Aucun contenu rédigé. Éditez les sections pour ajouter du contenu.</p>';
 }
@@ -2941,6 +2951,7 @@ function hideModal() {
    SEARCH
    ============================================================ */
 function filterText(s) {
+  s = esc(s);
   if (!s || !searchQuery) return s;
   const q = searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const re = new RegExp('(' + q + ')', 'gi');
@@ -3344,7 +3355,7 @@ function bindViewEvents(name) {
         if (!m) return;
         const overlay = document.getElementById('modalOverlay');
         document.getElementById('modalTitle').textContent = m.titre || 'Mémo';
-        document.getElementById('modalBody').innerHTML = window.marked ? marked.parse(m.contenu) : '<pre>' + esc(m.contenu) + '</pre>';
+        document.getElementById('modalBody').innerHTML = window.marked ? marked.parse(esc(m.contenu)) : '<pre>' + esc(m.contenu) + '</pre>';
         overlay.classList.add('visible');
         document.body.style.overflow = 'hidden';
         overlay.scrollTop = 0;
@@ -3936,11 +3947,13 @@ function askPasswordWithStrength(options) {
 
 async function verifyCurrentPwd(pwd) {
   if (!_sessionKey || !_sessionSalt) return false;
+  if (!checkDecryptRateLimit()) return false;
   try {
     const test = { nonce: 'RSSI_PWD_VERIFY_' + Date.now() };
     const enc = await Crypto.encryptWithKey(test, _sessionKey, _sessionSalt);
     const dec = await Crypto.decrypt(enc, pwd);
-    return dec && dec.nonce === test.nonce;
+    if (dec && dec.nonce === test.nonce) { _decryptAttempts = 0; return true; }
+    return false;
   } catch(e) {
     return false;
   }
@@ -4055,7 +4068,11 @@ async function importVault(file, pwd) {
     if (!encrypted.salt || !encrypted.iv || !encrypted.ciphertext) {
       throw new Error('Format de fichier invalide.');
     }
+    if (!checkDecryptRateLimit()) {
+      throw new Error('Trop de tentatives. Veuillez patienter.');
+    }
     const data = await Crypto.decrypt(encrypted, pwd);
+    _decryptAttempts = 0;
     vault = data;
     migrateVault(vault);
     vaultKey = true;
@@ -4071,7 +4088,7 @@ async function importVault(file, pwd) {
     notify('Coffre déchiffré et chargé avec succès.', 'success');
   } catch(e) {
     const el = document.querySelector('#lockTabLoad:not([style*="none"])') ? 'loadError' : 'lockError';
-    document.getElementById(el).textContent = 'Mot de passe incorrect ou fichier corrompu.';
+    document.getElementById(el).textContent = e.message === 'Trop de tentatives. Veuillez patienter.' ? e.message : 'Mot de passe incorrect ou fichier corrompu.';
     document.getElementById(el).style.display = 'block';
     throw e;
   }
@@ -4082,7 +4099,9 @@ async function decryptFromHandle(pwd) {
     const text = await FS.readVault();
     const encrypted = JSON.parse(text);
     if (!encrypted.salt || !encrypted.iv || !encrypted.ciphertext) throw new Error('Format invalide');
+    if (!checkDecryptRateLimit()) throw new Error('Trop de tentatives. Veuillez patienter.');
     const data = await Crypto.decrypt(encrypted, pwd);
+    _decryptAttempts = 0;
     vault = data;
     migrateVault(vault);
     vaultKey = true;
@@ -4094,7 +4113,7 @@ async function decryptFromHandle(pwd) {
     unlockApp();
     notify('Coffre déchiffré et chargé avec succès.', 'success');
   } catch(e) {
-    document.getElementById('loadError').textContent = 'Mot de passe incorrect ou fichier corrompu.';
+    document.getElementById('loadError').textContent = e.message === 'Trop de tentatives. Veuillez patienter.' ? e.message : 'Mot de passe incorrect ou fichier corrompu.';
     document.getElementById('loadError').style.display = 'block';
     throw e;
   }
