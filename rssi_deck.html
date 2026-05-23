@@ -4045,6 +4045,14 @@ function reactivateLoadTab() {
     : 'Charger le coffre depuis le dossier';
 }
 
+function disableLoadTab() {
+  var t = document.querySelector('.lock-tab[data-tab="load"]');
+  if (t) t.classList.add('disabled');
+  document.getElementById('lockLoadPwd').disabled = true;
+  document.getElementById('lockLoadBtn').disabled = true;
+  document.getElementById('loadTabHint').textContent = 'Aucune donnée — Créez un coffre ou importez un fichier.';
+}
+
 async function purgeVault() {
   const ok = await showConfirm(
     'Êtes-vous sûr de vouloir purger toutes les données stockées dans l\'application ? ' +
@@ -4060,13 +4068,9 @@ async function purgeVault() {
   _sessionSalt = null;
   dirty = false;
   _pendingImportFile = null;
-  var loadTab = document.querySelector('.lock-tab[data-tab="load"]');
-  if (loadTab) loadTab.classList.add('disabled');
+  disableLoadTab();
   var purgeTab = document.querySelector('.lock-tab[data-tab="purge"]');
   if (purgeTab) purgeTab.classList.add('disabled');
-  document.getElementById('lockLoadPwd').disabled = true;
-  document.getElementById('lockLoadBtn').disabled = true;
-  document.getElementById('loadTabHint').textContent = 'Aucune donnée — Créez un coffre ou importez un fichier.';
   document.getElementById('loadError').style.display = 'none';
   switchLockTab('create');
   notify('Données purgées avec succès.', 'success');
@@ -4354,6 +4358,8 @@ document.addEventListener('DOMContentLoaded', async function() {
       loadTab.innerHTML = '<i class="fas fa-rotate-left mr-1" style="font-size:0.7rem"></i> Charger <span style="font-size:0.6rem;background:rgba(59,130,246,0.2);color:#93c5fd;padding:0.1rem 0.4rem;border-radius:3px;margin-left:0.3rem">\u2713 .rssi_deck</span>';
       document.querySelector('.lock-tab[data-tab="purge"]').classList.remove('disabled');
       switchLockTab('load');
+    } else {
+      disableLoadTab();
     }
   } else {
     // file:// or no FSA — check IDB for existing content
@@ -4363,8 +4369,10 @@ document.addEventListener('DOMContentLoaded', async function() {
         loadTab.innerHTML = '<i class="fas fa-rotate-left mr-1" style="font-size:0.7rem"></i> Charger <span style="font-size:0.6rem;background:rgba(59,130,246,0.2);color:#93c5fd;padding:0.1rem 0.4rem;border-radius:3px;margin-left:0.3rem">\u2713 Coffre</span>';
         document.querySelector('.lock-tab[data-tab="purge"]').classList.remove('disabled');
         switchLockTab('load');
+      } else {
+        disableLoadTab();
       }
-    } catch(e) { /* no vault in IDB */ }
+    } catch(e) { disableLoadTab(); /* no vault in IDB */ }
   }
 
   /* Memo edit modal */
