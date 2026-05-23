@@ -7,8 +7,8 @@ Application web chiffrée destinée aux RSSI et professionnels de la cybersécur
 - **Dashboard** — Statistiques, favoris récents, jauges composites (couverture outillage, complétion playbooks, maturité prioritaire)
 - **Outils Techniques** — 33 fiches (Nmap, Wireshark, Nessus, Metasploit, Velociraptor, Wazuh, CrowdStrike, Keycloak, Veeam…)
 - **Outils Fonctionnels (GRC)** — 14 fiches (TheHive, MISP, Eramba, GLPI, Obsidian, Bitwarden…)
-- **Threat Intel** — Sources OSINT, flux CISA/ANSSI, modèles conceptuels (Kill Chain, Diamond Model)
-- **Frameworks & Normes** — 7 référentiels (RGPD, NIS 2, DORA, ISO 27001/27002, CIS Controls v8, NIST CSF 2.0)
+- **Threat Intel** — Sources OSINT, flux CISA/ANSSI, modèles conceptuels (Kill Chain, Diamond Model). Chaque fiche (nom, URL, description, icône) est modifiable, ajoutable et supprimable avec confirmation.
+- **Frameworks & Normes** — 7 référentiels (RGPD, NIS 2, DORA, ISO 27001/27002, CIS Controls v8, NIST CSF 2.0). Mêmes possibilités d'édition/ajout/suppression que Threat Intel.
 - **Calculateurs** — Amende RGPD (paramétrable de 0€ au plafond légal), grille de risque EBIOS, **RPO/RTO avec coût d'arrêt horaire**
 - **Gouvernance** — 10 sous-onglets :
   - **Registre des traitements RGPD** (Art. 30) — Finalité, base légale (6 options Art. 6), responsable, catégories de données/personnes, destinataires, mesures de sécurité, statut
@@ -16,7 +16,7 @@ Application web chiffrée destinée aux RSSI et professionnels de la cybersécur
   - **Registre des incidents** — Taxonomie ENISA/ANSSI (15 types : ransomware, phishing, fuite de données, DDoS, compromission, intrusion, malware, FOVI…), impact, statut, date de résolution
   - **Registre des actifs** — Inventaire, propriétaire, classification, localisation, statut
   - **Registre des risques** — Analyse, cotation, traitement, responsable, statut
-  - **Politique PSSI** — 20 sections pré-définies, ~80 clauses suggérées, cycle de validation (Brouillon→Rédaction→Validé→En révision→Publié), fréquence de révision, vue Document complet avec rendu Markdown et impression
+  - **Politique PSSI** — 20 sections pré-définies, ~80 clauses suggérées, cycle de validation (Brouillon→Rédaction→Validé→En révision→Publié), fréquence de révision (Annuelle/Semestrielle/Trimestrielle), vue Document complet avec rendu Markdown et impression
   - **Matrice RACI** — 15 activités, 7 rôles, cycle R→A→C→I au clic, double-clic pour effacer, export CSV presse-papier
   - **AIPD / DPIA** — Analyse d'impact complète, gravité, statut
   - **Auto-évaluation NIST CSF 2.0** — 6 domaines, sous-domaines détaillés, échelle CMMI 1→5, score pondéré, radar chart, date d'évaluation
