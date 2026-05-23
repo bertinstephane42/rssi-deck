@@ -2981,12 +2981,13 @@ function showModal(id) {
       </section>
       <section>
         <h3>Checklist (${checks.filter(Boolean).length}/${data.checklist.length})</h3>
-        ${data.checklist.map((step, i) => `
-          <label class="checklist-item ${checks[i] ? 'done' : ''}">
+        ${data.checklist.map((step, i) => {
+          if (!step.trim()) return `<div class="checklist-item" style="opacity:0.3;cursor:not-allowed"><span style="color:#64748b;font-style:italic">Action ${i+1} — non renseignée</span></div>`;
+          return `<label class="checklist-item ${checks[i] ? 'done' : ''}">
             <input type="checkbox" ${checks[i] ? 'checked' : ''} data-pb-id="${data.id}" data-idx="${i}">
             <span>${esc(step)}</span>
-          </label>
-        `).join('')}
+          </label>`;
+        }).join('')}
       </section>
       <section>
         <h3>Contacts Utiles</h3>
@@ -2997,7 +2998,10 @@ function showModal(id) {
         <div id="pbHistoriqueContainer">${typeof renderHistorique === 'function' ? renderHistorique(data) : ''}</div>
         <button class="btn btn-sm btn-primary mt-2" id="pbHistoAddBtn" data-pb-id="${data.id}"><i class="fas fa-plus mr-1"></i> Ajouter une entrée</button>
         <div id="pbHistoForm" style="display:none" class="mt-2">
-          <input type="date" id="pbHistoDate" class="lock-input" style="width:auto">
+          <div style="display:flex;gap:0.5rem;align-items:center">
+            <input type="text" id="pbHistoDate" class="lock-input" style="flex:1;min-width:0" placeholder="jj/mm/aaaa" maxlength="10">
+            <button type="button" id="pbHistoDatePicker" class="btn btn-secondary btn-xs" title="Calendrier" style="padding:0.4rem 0.55rem;flex-shrink:0"><i class="fas fa-calendar-alt"></i></button>
+          </div>
           <textarea id="pbHistoContenu" class="memo-editor mt-1" placeholder="Notes / REX de l'exercice…" rows="3"></textarea>
           <div class="flex gap-2 mt-1">
             <button class="btn btn-sm btn-primary" id="pbHistoSave" data-pb-id="${data.id}"><i class="fas fa-check mr-1"></i> Enregistrer</button>
@@ -3062,6 +3066,51 @@ function bindModalEvents() {
     document.getElementById('pbHistoAddBtn').style.display = '';
     _histoEditing = -1;
   };
+  /* Date auto-format jj/mm/aaaa */
+  var histoDateInput = document.getElementById('pbHistoDate');
+  if (histoDateInput) {
+    histoDateInput.oninput = function() {
+      var raw = this.value.replace(/[^\d]/g, '');
+      if (raw.length > 8) raw = raw.slice(0, 8);
+      var parts = [];
+      if (raw.length > 4) {
+        parts.push(raw.slice(0,2), raw.slice(2,4), raw.slice(4));
+      } else if (raw.length > 2) {
+        parts.push(raw.slice(0,2), raw.slice(2));
+      } else {
+        parts.push(raw);
+      }
+      this.value = parts.join('/');
+    };
+    histoDateInput.onkeydown = function(e) {
+      if (e.key === 'Backspace' || e.key === 'Delete') return;
+      if (this.value.length >= 10) e.preventDefault();
+    };
+  }
+  /* Calendar picker */
+  var datePickerBtn = document.getElementById('pbHistoDatePicker');
+  if (datePickerBtn) {
+    datePickerBtn.onclick = function() {
+      var tmp = document.createElement('input');
+      tmp.type = 'date';
+      tmp.style.position = 'fixed';
+      tmp.style.opacity = '0';
+      tmp.style.pointerEvents = 'none';
+      tmp.style.left = '-9999px';
+      tmp.style.top = '-9999px';
+      document.body.appendChild(tmp);
+      var cleanup = function() { if (document.body.contains(tmp)) document.body.removeChild(tmp); };
+      tmp.addEventListener('change', function() {
+        if (this.value) {
+          var p = this.value.split('-');
+          document.getElementById('pbHistoDate').value = p[2] + '/' + p[1] + '/' + p[0];
+        }
+        cleanup();
+      });
+      tmp.addEventListener('blur', function() { setTimeout(cleanup, 300); });
+      tmp.showPicker ? tmp.showPicker() : tmp.click();
+    };
+  }
   const histoSave = document.getElementById('pbHistoSave');
   if (histoSave) histoSave.onclick = function() {
     const pid = this.dataset.pbId;
@@ -3071,6 +3120,10 @@ function bindModalEvents() {
     const date = document.getElementById('pbHistoDate').value;
     const contenu = document.getElementById('pbHistoContenu').value.trim();
     if (!date || !contenu) { notify('Date et contenu requis.', 'error'); return; }
+    if (!/^\d{2}\/\d{2}\/\d{4}$/.test(date)) { notify('Format de date invalide. Utilisez jj/mm/aaaa.', 'error'); return; }
+    var parts = date.split('/');
+    var d = parseInt(parts[0],10), m = parseInt(parts[1],10), y = parseInt(parts[2],10);
+    if (m < 1 || m > 12 || d < 1 || d > 31) { notify('Date invalide (mois ou jour hors limites).', 'error'); return; }
     const raw = vault.playbook_checks[pid] ? [...vault.playbook_checks[pid]] : [];
     const checks = new Array(pb.checklist.length).fill(false);
     for (let i = 0; i < raw.length; i++) { if (raw[i] === true) checks[i] = true; }
@@ -3111,7 +3164,12 @@ function bindModalEvents() {
         const h = vault.playbooks.find(p => p.id === document.querySelector('#pbHistoSave').dataset.pbId);
         if (!h || !h.historique[idx]) return;
         _histoEditing = idx;
-        document.getElementById('pbHistoDate').value = h.historique[idx].date;
+        var oldDate = h.historique[idx].date;
+        if (/^\d{4}-\d{2}-\d{2}$/.test(oldDate)) {
+          var parts = oldDate.split('-');
+          oldDate = parts[2] + '/' + parts[1] + '/' + parts[0];
+        }
+        document.getElementById('pbHistoDate').value = oldDate;
         document.getElementById('pbHistoContenu').value = h.historique[idx].contenu;
         document.getElementById('pbHistoForm').style.display = 'block';
         document.getElementById('pbHistoAddBtn').style.display = 'none';
