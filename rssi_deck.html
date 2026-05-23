@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>RSSI Secure Command Deck</title>
 <script src="https://cdn.tailwindcss.com"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" integrity="sha384-b759edf0142860c2c5379a78dad440b6e00015068240e0de91455e28a66b127132a781f6474447173d0a5a99a3ee2f20">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" crossorigin="anonymous" integrity="sha384-becadf78b38e63a2ae218283966547e548819a021d075a047fba74d588161eeaa63877d9af7ef8fa8744bfdea7f6d342"></script>
-<script src="https://cdn.jsdelivr.net/npm/marked@15.0.4/marked.min.js" crossorigin="anonymous" integrity="sha384-d8d9dd945025d2dc22da79aedf0f668b1a1d64588dd9f6f195a91c60917ce9b9f525e4b5541f3bfd7a80edcab29b34be"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" integrity="sha384-t1nt8BQoYMLFN5p42tRAtuAAFQaCQODekUVeKKZrEnEyp4H2R0RHFz0KWpmj7i8g">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" crossorigin="anonymous" integrity="sha384-vsrfeLOOY6KuIYKDlmVH5UiBmgIdB1oEf7p01YgWHuqmOHfZr374+odEv96n9tNC"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked@15.0.4/marked.min.js" crossorigin="anonymous" integrity="sha384-2NndlFAl0twi2nmu3w9mixodZFiN2fbxlakcYJF86bn1JeS1VB87/XqA7cqymzS+"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 html{font-size:15px}
@@ -213,7 +213,7 @@ body{font-family:system-ui,-apple-system,'Inter','Segoe UI',sans-serif;backgroun
     <div class="text-center mb-6">
       <i class="fas fa-shield-halved text-4xl text-blue-400 mb-3"></i>
       <h1>RSSI Secure Command Deck</h1>
-      <p class="text-xs text-slate-500 mt-1">Chiffrement AES-GCM 256 bits • PBKDF2 100k itérations</p>
+      <p class="text-xs text-slate-500 mt-1">Chiffrement AES-GCM 256 bits • PBKDF2 600k itérations</p>
     </div>
     <div class="lock-tabs">
       <button class="lock-tab" data-tab="load"><i class="fas fa-rotate-left mr-1" style="font-size:0.7rem"></i> Charger</button>
@@ -245,7 +245,6 @@ body{font-family:system-ui,-apple-system,'Inter','Segoe UI',sans-serif;backgroun
       <p class="text-xs text-slate-400 mb-4 text-center">Purger les données de l'application afin d'empêcher toute récupération par un attaquant qui passerait après le RSSI.</p>
       <button class="btn btn-danger w-full justify-center" id="lockPurgeBtn"><i class="fas fa-trash-can"></i> Purger les données</button>
     </div>
-    <div id="lockFsUnsupported" class="lock-hint" style="display:none"><i class="fas fa-triangle-exclamation mr-1"></i> Stockage navigateur (IndexedDB) — exporter vers disque recommandé</div>
     <p id="lockError" class="text-xs text-red-400 mt-3 text-center" style="display:none"></p>
   </div>
 </div>
@@ -281,8 +280,8 @@ body{font-family:system-ui,-apple-system,'Inter','Segoe UI',sans-serif;backgroun
       <button class="btn btn-secondary btn-sm" id="pwdChangeBtn" title="Changer le mot de passe du coffre"><i class="fas fa-key"></i> Mot de passe</button>
       <span id="fsPathDisplay" class="fs-path" style="display:none"><i class="fas fa-folder"></i> <span id="fsPathText"></span></span>
       <button class="btn btn-secondary btn-sm" id="refreshBtn"><i class="fas fa-rotate"></i> Rafraîchir</button>
-      <button class="btn btn-secondary btn-sm" id="helpBtn" title="Aide"><i class="fas fa-question-circle"></i><span style="font-weight:700;font-size:0.82rem">?</span></button>
-      <button class="btn btn-secondary btn-sm" id="lexiconBtn" title="Lexique"><i class="fas fa-book-open"></i><span style="font-weight:700;font-size:0.82rem">L</span></button>
+      <button class="btn btn-secondary btn-sm" id="helpBtn" title="Aide"><i class="fas fa-question-circle"></i></button>
+      <button class="btn btn-secondary btn-sm" id="lexiconBtn" title="Lexique"><i class="fas fa-book-open"></i></button>
       <button class="btn btn-secondary btn-sm" id="creditBtn" title="Crédits"><span style="font-weight:700;font-size:0.82rem">C</span></button>
       <button class="btn btn-secondary btn-sm" id="reportBtn" title="Rapport exécutif PDF"><i class="fas fa-file-pdf"></i> Rapport</button>
     </div>
@@ -4239,10 +4238,6 @@ async function lockApp() {
    ============================================================ */
 document.addEventListener('DOMContentLoaded', async function() {
   /* Detect FSA support */
-  if (!FS.supportsApi()) {
-    document.getElementById('lockFsUnsupported').style.display = 'block';
-  }
-
   /* Migrate old (v1) vaultHandle from IDB */
   await FS.migrateOldHandle();
 
