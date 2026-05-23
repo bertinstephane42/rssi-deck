@@ -10,10 +10,17 @@ Application web chiffrée destinée aux RSSI et professionnels de la cybersécur
 - **Threat Intel** — Sources OSINT, flux CISA/ANSSI, modèles conceptuels (Kill Chain, Diamond Model)
 - **Frameworks & Normes** — 7 référentiels (RGPD, NIS 2, DORA, ISO 27001/27002, CIS Controls v8, NIST CSF 2.0)
 - **Calculateurs** — Amende RGPD (paramétrable de 0€ au plafond légal), grille de risque EBIOS, **RPO/RTO avec coût d'arrêt horaire**
-- **Gouvernance** — 3 sous-onglets :
+- **Gouvernance** — 10 sous-onglets :
   - **Registre des traitements RGPD** (Art. 30) — Finalité, base légale (6 options Art. 6), responsable, catégories de données/personnes, destinataires, mesures de sécurité, statut
   - **Plan d'actions Sécurité** — Actions pré-remplies (PSSI, audit RGPD, MFA, sensibilisation), priorité, responsable, échéance, statut
   - **Registre des incidents** — Taxonomie ENISA/ANSSI (15 types : ransomware, phishing, fuite de données, DDoS, compromission, intrusion, malware, FOVI…), impact, statut, date de résolution
+  - **Registre des actifs** — Inventaire, propriétaire, classification, localisation, statut
+  - **Registre des risques** — Analyse, cotation, traitement, responsable, statut
+  - **Politique PSSI** — 20 sections pré-définies, ~80 clauses suggérées, cycle de validation (Brouillon→Rédaction→Validé→En révision→Publié), fréquence de révision, vue Document complet avec rendu Markdown et impression
+  - **Matrice RACI** — 15 activités, 7 rôles, cycle R→A→C→I au clic, double-clic pour effacer, export CSV presse-papier
+  - **AIPD / DPIA** — Analyse d'impact complète, gravité, statut
+  - **Auto-évaluation NIST CSF 2.0** — 6 domaines, sous-domaines détaillés, échelle CMMI 1→5, score pondéré, radar chart, date d'évaluation
+  - **Registre des prestataires** — Criticité, conformité, planification d'audit
 - **Mémos & Playbooks** — 4 playbooks (Ransomware, Fuite RGPD, Panne Datacenter, Compromission Admin) avec historique des exercices, date, éditeur de notes Markdown, vue/édition/suppression
 - **Contacts d'Urgence** — 4 fiches modifiables (assurance, avocat, hébergeur, direction)
 - **Recherche globale** — Filtrage instantané de toutes les fiches
@@ -42,7 +49,7 @@ Deux couches de persistance :
 - **file://** : IndexedDB automatique + bouton "Exporter" pour copie fichier manuelle
 - **Export** : Téléchargement du fichier `.json` chiffré (nom horodaté)
 - **Import** : Chargement depuis un fichier `.json` externe (toujours disponible)
-- **Migration automatique** : Ajout des champs manquants (historique playbooks, registres gouvernance) au chargement des coffres existants
+- **Migration automatique** : Ajout des champs manquants (fréquence de révision PSSI, pondération et date d'évaluation maturité, historique playbooks, registres gouvernance) au chargement des coffres existants
 
 ## Utilisation
 
@@ -58,7 +65,7 @@ Deux couches de persistance :
 - **Vanilla JS** — Zéro framework, zéro dépendance build
 - **Tailwind CSS** (CDN) — Styles utilitaires
 - **FontAwesome 6** (CDN) — Icônes
-- **Chart.js** — Graphiques du dashboard
+- **Chart.js** — Graphiques du dashboard et radar chart maturité NIST CSF
 - **Marked.js** — Rendu Markdown des mémos et playbooks
 - **Web Crypto API** — Chiffrement AES-GCM 256 + PBKDF2
 - **IndexedDB** — Persistance navigateur
