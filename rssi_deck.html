@@ -3494,6 +3494,19 @@ const LEXICON_CATEGORIES = [
       {acro:'CASB', def:'Cloud Access Security Broker — point de contrôle entre les utilisateurs et les services cloud.'},
       {acro:'SASE', def:'Secure Access Service Edge — architecture convergente réseau + sécurité pour le cloud.'},
       {acro:'ZTNA', def:'Zero Trust Network Access — accès réseau basé sur le principe Zero Trust (jamais confiance, toujours vérifier).'},
+      {acro:'RBAC', def:'Role-Based Access Control — contrôle d\'accès basé sur les rôles, où les permissions sont attribuées selon le périmètre fonctionnel.'},
+      {acro:'AD / AAD', def:'Active Directory (Microsoft) / Azure AD — annuaire d\'entreprise pour l\'authentification et la gestion centralisée des identités.'},
+      {acro:'RDP', def:'Remote Desktop Protocol — protocole Microsoft d\'accès distant aux postes et serveurs Windows, vecteur d\'attaque fréquent.'},
+      {acro:'HTTP/S', def:'HyperText Transfer Protocol (Secure) — protocole de base du web. HTTPS ajoute le chiffrement TLS.'},
+      {acro:'SSL', def:'Secure Sockets Layer — ancien protocole de chiffrement (obsolète, remplacé par TLS). Ne jamais utiliser SSL 2.0/3.0.'},
+      {acro:'TCP', def:'Transmission Control Protocol — protocole de transport orienté connexion garantissant la livraison des paquets.'},
+      {acro:'CVE', def:'Common Vulnerabilities and Exposures — identifiant unique des vulnérabilités de sécurité publiées (ex: CVE-2023-12345).'},
+      {acro:'NVD', def:'National Vulnerability Database — base de données américaine de référence sur les CVE, enrichie de scores CVSS.'},
+      {acro:'CVSS', def:'Common Vulnerability Scoring System — système de notation de la gravité des vulnérabilités (score de 0 à 10).'},
+      {acro:'IoC', def:'Indicator of Compromise — artefact (hash, IP, domaine, URL) témoignant d\'une compromission. Utilisé pour la détection et le threat hunting.'},
+      {acro:'TTP', def:'Tactics, Techniques and Procedures — méthodes, techniques et procédures adverses, modélisées dans MITRE ATT&CK.'},
+      {acro:'STIX', def:'Structured Threat Information eXpression — langage standardisé d\'échange de données de cybermenaces (JSON).'},
+      {acro:'TAXII', def:'Trusted Automated eXchange of Indicator Information — protocole de transport pour l\'échange de flux STIX entre plateformes.'},
     ]
   },
   {
@@ -3515,6 +3528,9 @@ const LEXICON_CATEGORIES = [
       {acro:'SNMP', def:'Simple Network Management Protocol — protocole de gestion et supervision des équipements réseau.'},
       {acro:'DMZ', def:'Zone Démilitarisée — réseau isolé exposant les services publics (web, mail) avec accès limité au réseau interne.'},
       {acro:'SLA', def:'Service Level Agreement — contrat définissant les niveaux de service attendus (disponibilité, temps de réponse).'},
+      {acro:'S3', def:'Amazon Simple Storage Service — stockage objet cloud scalable. Sécurisé via chiffrement côté serveur et bucket policies.'},
+      {acro:'API', def:'Application Programming Interface — interface de programmation applicative. Les API REST sont la cible privilégiée des attaques OWASP API Top 10.'},
+      {acro:'CLI', def:'Command-Line Interface — interface en ligne de commande utilisée par les administrateurs pour l\'automatisation et l\'orchestration SSI.'},
     ]
   },
   {
@@ -3560,6 +3576,61 @@ const LEXICON_CATEGORIES = [
       {acro:'RACI', def:'Responsible, Accountable, Consulted, Informed — matrice d\'attribution des responsabilités.'},
       {acro:'PSSI', def:'Politique de Sécurité des Systèmes d\'Information — document stratégique déclinant la PSI au niveau SI.'},
       {acro:'SMSI', def:'Système de Management de la Sécurité de l\'Information — approche systémique de la SSI (ISO 27001).'},
+      {acro:'DPD', def:'Délégué à la Protection des Données — équivalent français du DPO (Data Protection Officer), chargé de la conformité RGPD.'},
+      {acro:'COMEX', def:'Comité EXécutif — instance décisionnelle de l\'entreprise. Le RSSI y présente les risques, le budget et la roadmap sécurité.'},
+    ]
+  },
+  {
+    id:'crypto', label:'Cryptographie & Formats',
+    entries:[
+      {acro:'AES-GCM', def:'Advanced Encryption Standard — Galois/Counter Mode. Chiffrement symétrique 256 bits utilisé par le coffre pour protéger les données au repos.'},
+      {acro:'PBKDF2', def:'Password-Based Key Derivation Function 2 — fonction de dérivation de clé utilisée par le coffre (600 000 itérations, SHA-256).'},
+      {acro:'SHA-256', def:'Secure Hash Algorithm 256 bits — fonction de hachage cryptographique utilisée par PBKDF2 pour la dérivation de clé.'},
+      {acro:'JSON', def:'JavaScript Object Notation — format d\'échange de données textuel utilisé pour le stockage et l\'export du coffre chiffré.'},
+      {acro:'Markdown', def:'Langage de balisage léger pour la rédaction de mémos et de documentation technique, rendu en HTML par la bibliothèque Marked.'},
+      {acro:'IndexedDB', def:'API de stockage côté navigateur (NoSQL) utilisée comme persistance principale du coffre chiffré.'},
+      {acro:'FSA', def:'File System Access API — API navigateur permettant d\'accéder au système de fichiers local pour lire/écrire le coffre.'},
+    ]
+  },
+  {
+    id:'concepts', label:'Concepts RSSI',
+    entries:[
+      {acro:'Playbook', def:'Procédure de réponse standardisée face à un incident de sécurité, composée d\'un scénario, d\'une checklist et d\'un historique.'},
+      {acro:'Checklist', def:'Liste ordonnée d\'actions à cocher au sein d\'un playbook pour suivre la progression de la réponse sur incident.'},
+      {acro:'Scénario', def:'Description du contexte, des hypothèses et du déroulé attendu d\'un playbook de réponse sur incident.'},
+      {acro:'Sévérité', def:'Niveau de criticité d\'un playbook (Critique, Haute, Moyenne, Basse) déterminant la priorité de réponse.'},
+      {acro:'Historique', def:'Registre des exercices et déclenchements réels d\'un playbook, avec l\'état des actions cochées à chaque occurrence.'},
+      {acro:'REX', def:'Retour d\'EXpérience — analyse post-incident visant à capitaliser sur les enseignements et améliorer les procédures.'},
+      {acro:'Dashboard', def:'Tableau de bord synthétique affichant les indicateurs clés de performance (KPI) et la vue d\'ensemble du dispositif RSSI.'},
+      {acro:'Roadmap', def:'Feuille de route stratégique pour planifier, visualiser et suivre l\'avancement des initiatives de sécurité dans le temps.'},
+      {acro:'Maturité', def:'Niveau d\'atteinte d\'un domaine de sécurité selon un référentiel (NIST CSF, CIS Controls), évalué de 1 à 5.'},
+    ]
+  },
+  {
+    id:'outils', label:'Solutions & Outils SSI',
+    entries:[
+      {acro:'Nmap', def:'Scanner de ports et cartographie réseau. Indispensable pour l\'audit de périmètre et la découverte de services exposés.'},
+      {acro:'Wireshark', def:'Analyseur de paquets réseau en temps réel. Inspection approfondie des flux et détection de comportements anormaux.'},
+      {acro:'Metasploit', def:'Framework d\'exploitation et de validation de vulnérabilités. Utilisé en test d\'intrusion pour valider la criticité des failles.'},
+      {acro:'Burp Suite', def:'Proxy d\'interception et framework de test d\'intrusion web. Indispensable pour l\'audit de sécurité des applications web.'},
+      {acro:'Velociraptor', def:'Plateforme open source de chasse de menaces, collecte forensique et réponse sur incident. Agent déployable à grande échelle.'},
+      {acro:'Volatility', def:'Framework d\'analyse de la mémoire volatile (RAM). Extraction des processus, connexions réseau et artefacts des dumps mémoire.'},
+      {acro:'Wazuh', def:'Plateforme de sécurité unifiée (SIEM + XDR). Détection de menaces, analyse de conformité et réponse sur incident.'},
+      {acro:'CrowdStrike Falcon', def:'Plateforme EDR/XDR cloud leader. Détection en temps réel, threat hunting, réponse automatisée et analyse forensique.'},
+      {acro:'Splunk', def:'Plateforme de recherche et analyse de logs machine. Corrélation temps réel et visualisation avancée des données de sécurité.'},
+      {acro:'Elastic Stack (ELK)', def:'Stack Elasticsearch + Logstash + Kibana + Fleet. Centralisation des logs, détection et visualisation.'},
+      {acro:'TheHive', def:'Plateforme de réponse sur incident collaborative. Casel management, corrélation d\'alertes et workflow d\'investigation.'},
+      {acro:'MISP', def:'Plateforme de partage de renseignement sur les menaces. Base de données collaborative d\'IoC et de TTPs.'},
+      {acro:'HashiCorp Vault', def:'Gestion centralisée des secrets, clés API, certificats et mots de passe. Chiffrement en transit et au repos.'},
+      {acro:'Ansible', def:'Moteur d\'automatisation IT. Configuration, déploiement et orchestration sans agent sur les cibles.'},
+      {acro:'Docker / Podman', def:'Moteur de conteneurisation. Déploiement standardisé d\'applications. Podman est l\'alternative daemonless compatible OCI.'},
+      {acro:'Kubernetes', def:'Orchestrateur de conteneurs. Automatise le déploiement, la mise à l\'échelle et la gestion des applications conteneurisées.'},
+      {acro:'Terraform', def:'Outil d\'Infrastructure as Code. Déploie et gère les ressources cloud et on-premise par déclaration.'},
+      {acro:'Keycloak', def:'Solution open source d\'Identity & Access Management. SSO, fédération d\'identités, MFA, gestion des rôles et permissions.'},
+      {acro:'Veeam', def:'Solution de backup et restauration entreprise. Sauvegardes immuables, réplication site-à-site, PRA intégré.'},
+      {acro:'Obsidian', def:'Base de connaissances. Notes liées, graphe de connaissances. Idéal pour la documentation RSSI et les PAM.'},
+      {acro:'Bitwarden', def:'Gestionnaire de mots de passe open source. Chiffrement de bout en bout, partage sécurisé entre équipes.'},
+      {acro:'GLPI', def:'Gestion de services IT (ITSM) open source. Inventaire IT, helpdesk, gestion d\'incidents avec module sécurité intégré.'},
     ]
   },
   {
