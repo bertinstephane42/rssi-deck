@@ -205,6 +205,10 @@ body{font-family:system-ui,-apple-system,'Inter','Segoe UI',sans-serif;backgroun
 .gravite-élevé{background:rgba(239,68,68,0.12);color:#fca5a5}
 .gravite-critique{background:rgba(220,38,38,0.2);color:#fca5a5;border:1px solid rgba(239,68,68,0.3)}
 .help-notice{margin-top:1.5rem;margin-bottom:1.5rem;padding:0.75rem 1rem;border-radius:8px;font-size:0.75rem;line-height:1.5;background:rgba(96,165,250,0.08);border:1px solid rgba(96,165,250,0.15);color:#93c5fd}
+.date-input-group{display:flex;align-items:center;gap:4px}
+.date-input-group .lock-input{flex:1;min-width:0}
+.date-picker-btn{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:#94a3b8;cursor:pointer;padding:0.55rem 0.65rem;font-size:0.85rem;line-height:1;transition:all 0.2s;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.date-picker-btn:hover{background:rgba(59,130,246,0.15);border-color:rgba(59,130,246,0.3);color:#60a5fa}
 @media print{body{background:#fff!important;color:#000!important}#sidebar,#topbar,.nav-item,.btn,.sub-tabs{display:none!important}.gouv-section{display:block!important}#pssiDocView{display:block!important}#pssiListView{display:none!important}}
 </style>
 </head>
@@ -1499,6 +1503,52 @@ function renderGouvContent(tab) {
 }
 
 function escDate(d) { return d ? new Date(d).toLocaleDateString('fr-FR') : '—'; }
+function dateISOtoFR(iso) { return iso ? iso.split('-').reverse().join('/') : ''; }
+function dateFRtoISO(fr) {
+  if (!/^\d{2}\/\d{2}\/\d{4}$/.test(fr)) return null;
+  var p = fr.split('/'), d = parseInt(p[0],10), m = parseInt(p[1],10);
+  if (m < 1 || m > 12 || d < 1 || d > 31) return null;
+  return p[2] + '-' + p[1] + '-' + p[0];
+}
+function initDateInput(id) {
+  var el = typeof id === 'string' ? document.getElementById(id) : id;
+  if (!el) return null;
+  el.placeholder = 'jj/mm/aaaa'; el.maxLength = 10;
+  el.oninput = function() {
+    var raw = this.value.replace(/[^\d]/g, '');
+    if (raw.length > 8) raw = raw.slice(0, 8);
+    var parts = [];
+    if (raw.length > 4) parts.push(raw.slice(0,2), raw.slice(2,4), raw.slice(4));
+    else if (raw.length > 2) parts.push(raw.slice(0,2), raw.slice(2));
+    else parts.push(raw);
+    this.value = parts.join('/');
+  };
+  el.onkeydown = function(e) {
+    if (e.key === 'Backspace' || e.key === 'Delete') return;
+    if (this.value.length >= 10) e.preventDefault();
+  };
+  var btn = el.nextElementSibling;
+  if (btn && btn.classList.contains('date-picker-btn')) {
+    btn.onclick = function() {
+      var tmp = document.createElement('input');
+      tmp.type = 'date';
+      tmp.style.position = 'fixed'; tmp.style.opacity = '0'; tmp.style.pointerEvents = 'none'; tmp.style.left = '-9999px'; tmp.style.top = '-9999px';
+      document.body.appendChild(tmp);
+      var cleanup = function() { if (document.body.contains(tmp)) document.body.removeChild(tmp); };
+      tmp.addEventListener('change', function() {
+        if (this.value) el.value = dateISOtoFR(this.value);
+        cleanup();
+      });
+      tmp.addEventListener('blur', function() { setTimeout(cleanup, 300); });
+      tmp.showPicker ? tmp.showPicker() : tmp.click();
+    };
+  }
+  return {
+    getValue: function() { return el.value; },
+    setValue: function(v) { el.value = v ? dateISOtoFR(v) : ''; },
+    reset: function() { el.value = ''; }
+  };
+}
 function statutBadge(s) { return '<span class="status-badge status-' + (s||'').toLowerCase().replace(/\s/g,'-') + '">' + esc(s||'—') + '</span>'; }
 
 function renderTraitements() {
@@ -1589,7 +1639,11 @@ function showGouvModal(config) {
     if (f.type === 'color') {
       return `<div class="calc-group"><label>${esc(f.label)}</label><input type="color" id="gouvField_${f.key}" value="${f.value||'#f59e0b'}" style="width:2.5rem;height:2rem;border:0;border-radius:4px;cursor:pointer;padding:2px;background:transparent"></div>`;
     }
-    return `<div class="calc-group"><label>${esc(f.label)}</label><input class="lock-input" id="gouvField_${f.key}" value="${esc(f.value||'')}"${f.type === 'date' ? ' type="date"' : ' type="text"'}>`;
+    if (f.type === 'date') {
+      var frVal = f.value ? dateISOtoFR(f.value) : '';
+      return `<div class="calc-group"><label>${esc(f.label)}</label><div class="date-input-group"><input class="lock-input" id="gouvField_${f.key}" value="${esc(frVal)}" placeholder="jj/mm/aaaa" maxlength="10"><button type="button" class="date-picker-btn" title="Calendrier"><i class="fas fa-calendar-alt"></i></button></div></div>`;
+    }
+    return `<div class="calc-group"><label>${esc(f.label)}</label><input class="lock-input" id="gouvField_${f.key}" value="${esc(f.value||'')}" type="text">`;
   }).join('');
   const overlay = document.getElementById('gouvModal');
   const content = document.getElementById('gouvModalContent');
@@ -1603,15 +1657,27 @@ function showGouvModal(config) {
     </div>
   </div>`;
   overlay.style.display = 'flex';
+  var dateErr = null;
+  config.fields.forEach(f => {
+    if (f.type === 'date') { initDateInput('gouvField_' + f.key); }
+  });
   const saveBtn = document.getElementById('gouvEditSave');
   const cancelBtn = document.getElementById('gouvEditCancel');
   const onCancel = () => { overlay.style.display = 'none'; cancelBtn.removeEventListener('click', onCancel); saveBtn.removeEventListener('click', onSave); };
   const onSave = () => {
     const err = document.getElementById('gouvEditError');
     const data = {};
+    dateErr = null;
     config.fields.forEach(f => {
-      data[f.key] = document.getElementById('gouvField_' + f.key).value.trim() || f.default || '';
+      var val = document.getElementById('gouvField_' + f.key).value.trim() || f.default || '';
+      if (f.type === 'date' && val) {
+        var iso = dateFRtoISO(val);
+        if (!iso) { dateErr = 'Date invalide pour «' + f.label + '» (format jj/mm/aaaa).'; return; }
+        val = iso;
+      }
+      data[f.key] = val;
     });
+    if (dateErr) { err.textContent = dateErr; err.style.display = 'block'; return; }
     if (config.validate) { const e = config.validate(data); if (e) { err.textContent = e; err.style.display = 'block'; return; } }
     err.style.display = 'none';
     config.onSave(data);
@@ -3000,7 +3066,7 @@ function showModal(id) {
         <div id="pbHistoForm" style="display:none" class="mt-2">
           <div style="display:flex;gap:0.5rem;align-items:center">
             <input type="text" id="pbHistoDate" class="lock-input" style="flex:1;min-width:0" placeholder="jj/mm/aaaa" maxlength="10">
-            <button type="button" id="pbHistoDatePicker" class="btn btn-secondary btn-xs" title="Calendrier" style="padding:0.4rem 0.55rem;flex-shrink:0"><i class="fas fa-calendar-alt"></i></button>
+            <button type="button" class="date-picker-btn" title="Calendrier"><i class="fas fa-calendar-alt"></i></button>
           </div>
           <textarea id="pbHistoContenu" class="memo-editor mt-1" placeholder="Notes / REX de l'exercice…" rows="3"></textarea>
           <div class="flex gap-2 mt-1">
@@ -3066,51 +3132,8 @@ function bindModalEvents() {
     document.getElementById('pbHistoAddBtn').style.display = '';
     _histoEditing = -1;
   };
-  /* Date auto-format jj/mm/aaaa */
-  var histoDateInput = document.getElementById('pbHistoDate');
-  if (histoDateInput) {
-    histoDateInput.oninput = function() {
-      var raw = this.value.replace(/[^\d]/g, '');
-      if (raw.length > 8) raw = raw.slice(0, 8);
-      var parts = [];
-      if (raw.length > 4) {
-        parts.push(raw.slice(0,2), raw.slice(2,4), raw.slice(4));
-      } else if (raw.length > 2) {
-        parts.push(raw.slice(0,2), raw.slice(2));
-      } else {
-        parts.push(raw);
-      }
-      this.value = parts.join('/');
-    };
-    histoDateInput.onkeydown = function(e) {
-      if (e.key === 'Backspace' || e.key === 'Delete') return;
-      if (this.value.length >= 10) e.preventDefault();
-    };
-  }
-  /* Calendar picker */
-  var datePickerBtn = document.getElementById('pbHistoDatePicker');
-  if (datePickerBtn) {
-    datePickerBtn.onclick = function() {
-      var tmp = document.createElement('input');
-      tmp.type = 'date';
-      tmp.style.position = 'fixed';
-      tmp.style.opacity = '0';
-      tmp.style.pointerEvents = 'none';
-      tmp.style.left = '-9999px';
-      tmp.style.top = '-9999px';
-      document.body.appendChild(tmp);
-      var cleanup = function() { if (document.body.contains(tmp)) document.body.removeChild(tmp); };
-      tmp.addEventListener('change', function() {
-        if (this.value) {
-          var p = this.value.split('-');
-          document.getElementById('pbHistoDate').value = p[2] + '/' + p[1] + '/' + p[0];
-        }
-        cleanup();
-      });
-      tmp.addEventListener('blur', function() { setTimeout(cleanup, 300); });
-      tmp.showPicker ? tmp.showPicker() : tmp.click();
-    };
-  }
+  /* Date jj/mm/aaaa — initDateInput gère auto-format + calendrier */
+  initDateInput('pbHistoDate');
   const histoSave = document.getElementById('pbHistoSave');
   if (histoSave) histoSave.onclick = async function() {
     const pid = this.dataset.pbId;
@@ -3120,14 +3143,12 @@ function bindModalEvents() {
     const date = document.getElementById('pbHistoDate').value;
     const contenu = document.getElementById('pbHistoContenu').value.trim();
     if (!date || !contenu) { notify('Date et contenu requis.', 'error'); return; }
-    if (!/^\d{2}\/\d{2}\/\d{4}$/.test(date)) { notify('Format de date invalide. Utilisez jj/mm/aaaa.', 'error'); return; }
-    var parts = date.split('/');
-    var d = parseInt(parts[0],10), m = parseInt(parts[1],10), y = parseInt(parts[2],10);
-    if (m < 1 || m > 12 || d < 1 || d > 31) { notify('Date invalide (mois ou jour hors limites).', 'error'); return; }
+    var dateISO = dateFRtoISO(date);
+    if (!dateISO) { notify('Date invalide. Utilisez le format jj/mm/aaaa.', 'error'); return; }
     const raw = vault.playbook_checks[pid] ? [...vault.playbook_checks[pid]] : [];
     const checks = new Array(pb.checklist.length).fill(false);
     for (let i = 0; i < raw.length; i++) { if (raw[i] === true) checks[i] = true; }
-    const entry = { date: date, contenu: contenu, checks: checks };
+    const entry = { date: dateISO, contenu: contenu, checks: checks };
     const isEditing = _histoEditing >= 0 && _histoEditing < pb.historique.length;
     if (isEditing) {
       var oldChecks = pb.historique[_histoEditing].checks || [];
@@ -3176,12 +3197,7 @@ function bindModalEvents() {
         const h = vault.playbooks.find(p => p.id === document.querySelector('#pbHistoSave').dataset.pbId);
         if (!h || !h.historique[idx]) return;
         _histoEditing = idx;
-        var oldDate = h.historique[idx].date;
-        if (/^\d{4}-\d{2}-\d{2}$/.test(oldDate)) {
-          var parts = oldDate.split('-');
-          oldDate = parts[2] + '/' + parts[1] + '/' + parts[0];
-        }
-        document.getElementById('pbHistoDate').value = oldDate;
+        document.getElementById('pbHistoDate').value = dateISOtoFR(h.historique[idx].date);
         document.getElementById('pbHistoContenu').value = h.historique[idx].contenu;
         document.getElementById('pbHistoForm').style.display = 'block';
         document.getElementById('pbHistoAddBtn').style.display = 'none';
@@ -3199,7 +3215,7 @@ function renderHistorique(pb) {
     return `
     <div class="border-b border-white/5 py-2 last:border-0">
       <div class="flex items-center justify-between">
-        <span class="text-xs font-semibold text-slate-300">📅 ${esc(h.date)}</span>
+        <span class="text-xs font-semibold text-slate-300">📅 ${esc(dateISOtoFR(h.date) || h.date)}</span>
         <div class="flex items-center gap-2">
           ${total > 0 ? `<span class="text-[0.6rem] font-mono ${done === total ? 'text-emerald-400' : 'text-amber-400'}">✓ ${done}/${total}</span>` : ''}
           <div class="flex gap-1">
