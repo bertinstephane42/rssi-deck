@@ -456,6 +456,37 @@ body{font-family:system-ui,-apple-system,'Inter','Segoe UI',sans-serif;backgroun
 
 <div id="gouvModal" class="pwd-modal"><div class="pwd-box glass-card" id="gouvModalContent"></div></div>
 
+<div id="playbookEditModal" class="pwd-modal" style="z-index:10000">
+  <div class="pwd-box glass-card" style="position:relative;max-width:600px">
+    <button class="modal-close" id="playbookEditClose" style="position:absolute;top:0.75rem;right:0.75rem">&times;</button>
+    <input type="hidden" id="playbookEditId">
+    <div id="playbookEditHistoWarning" style="display:none;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.2);color:#fcd34d;font-size:0.75rem;padding:0.5rem 0.75rem;border-radius:6px;margin-bottom:0.75rem"><i class="fas fa-triangle-exclamation mr-1"></i> Ce playbook contient un historique. La checklist ne peut pas être modifiée pour éviter la corruption des données.</div>
+    <p class="text-slate-300 mb-3" id="playbookEditTitle">Nouveau Playbook</p>
+    <label class="text-xs text-slate-400 block mb-1">Titre du playbook</label>
+    <input type="text" id="playbookEditTitre" class="lock-input mb-2">
+    <label class="text-xs text-slate-400 block mb-1">Scénario</label>
+    <textarea id="playbookEditScenario" class="lock-input mb-3" rows="3" style="resize:vertical;font-family:inherit"></textarea>
+    <label class="text-xs text-slate-400 block mb-1">Checklist (10 actions maximum)</label>
+    <div id="playbookEditChecklist">
+      <div class="flex items-center gap-2 mb-1"><span class="text-xs text-slate-500 w-5 flex-shrink-0">1.</span><input type="text" class="lock-input flex-1 pb-checklist" data-idx="0" placeholder="Action 1"></div>
+      <div class="flex items-center gap-2 mb-1"><span class="text-xs text-slate-500 w-5 flex-shrink-0">2.</span><input type="text" class="lock-input flex-1 pb-checklist" data-idx="1" placeholder="Action 2"></div>
+      <div class="flex items-center gap-2 mb-1"><span class="text-xs text-slate-500 w-5 flex-shrink-0">3.</span><input type="text" class="lock-input flex-1 pb-checklist" data-idx="2" placeholder="Action 3"></div>
+      <div class="flex items-center gap-2 mb-1"><span class="text-xs text-slate-500 w-5 flex-shrink-0">4.</span><input type="text" class="lock-input flex-1 pb-checklist" data-idx="3" placeholder="Action 4"></div>
+      <div class="flex items-center gap-2 mb-1"><span class="text-xs text-slate-500 w-5 flex-shrink-0">5.</span><input type="text" class="lock-input flex-1 pb-checklist" data-idx="4" placeholder="Action 5"></div>
+      <div class="flex items-center gap-2 mb-1"><span class="text-xs text-slate-500 w-5 flex-shrink-0">6.</span><input type="text" class="lock-input flex-1 pb-checklist" data-idx="5" placeholder="Action 6"></div>
+      <div class="flex items-center gap-2 mb-1"><span class="text-xs text-slate-500 w-5 flex-shrink-0">7.</span><input type="text" class="lock-input flex-1 pb-checklist" data-idx="6" placeholder="Action 7"></div>
+      <div class="flex items-center gap-2 mb-1"><span class="text-xs text-slate-500 w-5 flex-shrink-0">8.</span><input type="text" class="lock-input flex-1 pb-checklist" data-idx="7" placeholder="Action 8"></div>
+      <div class="flex items-center gap-2 mb-1"><span class="text-xs text-slate-500 w-5 flex-shrink-0">9.</span><input type="text" class="lock-input flex-1 pb-checklist" data-idx="8" placeholder="Action 9"></div>
+      <div class="flex items-center gap-2 mb-1"><span class="text-xs text-slate-500 w-5 flex-shrink-0">10.</span><input type="text" class="lock-input flex-1 pb-checklist" data-idx="9" placeholder="Action 10"></div>
+    </div>
+    <p id="playbookEditError" class="text-xs text-red-400 mb-2 text-center" style="display:none"></p>
+    <div class="flex gap-2">
+      <button id="playbookEditCancel" class="btn btn-secondary flex-1 justify-center">Annuler</button>
+      <button id="playbookEditSave" class="btn btn-primary flex-1 justify-center">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
 <div id="pwdModal" class="pwd-modal">
   <div class="pwd-box glass-card">
     <p id="pwdModalMsg" class="text-slate-300">Mot de passe pour chiffrer le coffre :</p>
@@ -493,7 +524,7 @@ body{font-family:system-ui,-apple-system,'Inter','Segoe UI',sans-serif;backgroun
   </div>
 </div>
 
-<div id="confirmModal" class="pwd-modal" style="z-index:10000">
+<div id="confirmModal" class="pwd-modal" style="z-index:30000">
   <div class="pwd-box glass-card" style="max-width:400px">
     <p id="confirmModalMsg" class="text-sm text-slate-300 mb-4"></p>
     <div class="flex gap-2 justify-end">
@@ -2731,14 +2762,16 @@ async function deletePrestataire(i) {
 /* ---------- MEMOS & PLAYBOOKS ---------- */
 renderFn.memos = function() {
   return `
-    <div class="category-label"><i class="fas fa-tower-broadcast mr-1"></i> Playbooks de Réponse</div>
+    <div class="category-label"><i class="fas fa-tower-broadcast mr-1"></i> Playbooks de Réponse <button class="btn btn-primary btn-xs ml-2 align-middle" onclick="addPlaybook()"><i class="fas fa-plus"></i> Nouveau</button></div>
     <div class="grid-bento mb-6">${(() => {
       const playbooks = searchFilter(vault.playbooks, ['titre','scenario']);
       return !playbooks.length && searchQuery ? '<div class="empty-state" style="padding:1rem"><i class="fa-regular fa-tower-broadcast"></i><p>Aucun playbook trouvé.</p></div>' : playbooks.map(p => {
       const checks = vault.playbook_checks[p.id] || [];
       const done = checks.filter(Boolean).length;
       const total = p.checklist.length;
-      return `<div class="glass-card cursor-pointer" data-playbook="${p.id}" data-modal="pb-${p.id}">
+      return `<div class="glass-card cursor-pointer relative threat-card" data-playbook="${p.id}" data-modal="pb-${p.id}">
+        <button class="threat-del-btn" data-pb-del="${p.id}" onclick="event.stopPropagation();deletePlaybook('${p.id}')" title="Supprimer"><i class="fas fa-times"></i></button>
+        <button class="threat-edit-btn" data-pb-edit="${p.id}" onclick="event.stopPropagation();editPlaybook('${p.id}')" title="Modifier"><i class="fas fa-pencil-alt"></i></button>
         <div class="flex items-start gap-3 mb-2">
           <div class="card-icon ${p.severity === 'crit' ? 'bg-red-500/10' : 'bg-amber-500/10'}"><i class="fas fa-${p.severity === 'crit' ? 'skull' : 'triangle-exclamation'} ${p.severity === 'crit' ? 'text-red-400' : 'text-amber-400'}"></i></div>
           <div style="min-width:0">
@@ -3120,6 +3153,120 @@ function refreshHistorique(pid) {
   if (container) { container.innerHTML = renderHistorique(pb); }
   const h3 = document.querySelector('#pbHistoriqueSection h3');
   if (h3) { h3.textContent = 'Historique (' + (pb.historique ? pb.historique.length : 0) + ')'; }
+}
+
+/* ============================================================
+   PLAYBOOK CRUD
+   ============================================================ */
+function addPlaybook() {
+  document.getElementById('playbookEditId').value = '';
+  document.getElementById('playbookEditTitle').textContent = 'Nouveau Playbook';
+  document.getElementById('playbookEditTitre').value = '';
+  document.getElementById('playbookEditScenario').value = '';
+  document.getElementById('playbookEditHistoWarning').style.display = 'none';
+  document.getElementById('playbookEditError').style.display = 'none';
+  document.querySelectorAll('#playbookEditChecklist .pb-checklist').forEach(function(inp, i) {
+    inp.value = '';
+    inp.disabled = false;
+    inp.placeholder = 'Action ' + (i + 1);
+  });
+  document.getElementById('playbookEditModal').style.display = 'flex';
+  setTimeout(function() { document.getElementById('playbookEditTitre').focus(); }, 100);
+}
+
+function editPlaybook(pid) {
+  var pb = vault.playbooks.find(function(p) { return p.id === pid; });
+  if (!pb) return;
+  document.getElementById('playbookEditId').value = pid;
+  document.getElementById('playbookEditTitle').textContent = 'Modifier le Playbook';
+  document.getElementById('playbookEditTitre').value = pb.titre;
+  document.getElementById('playbookEditScenario').value = pb.scenario;
+  document.getElementById('playbookEditError').style.display = 'none';
+  var hasHisto = pb.historique && pb.historique.length > 0;
+  document.getElementById('playbookEditHistoWarning').style.display = hasHisto ? 'block' : 'none';
+  document.querySelectorAll('#playbookEditChecklist .pb-checklist').forEach(function(inp, i) {
+    inp.value = pb.checklist[i] || '';
+    inp.disabled = hasHisto;
+    inp.placeholder = hasHisto ? '(verrouill\u00e9 — historique existant)' : 'Action ' + (i + 1);
+  });
+  document.getElementById('playbookEditModal').style.display = 'flex';
+  setTimeout(function() { document.getElementById('playbookEditTitre').focus(); }, 100);
+}
+
+function deletePlaybook(pid) {
+  var pb = vault.playbooks.find(function(p) { return p.id === pid; });
+  if (!pb) return;
+  showConfirm('Supprimer le playbook \u00ab ' + pb.titre + ' \u00bb ?').then(function(ok) {
+    if (!ok) return;
+    var hasHisto = pb.historique && pb.historique.length > 0;
+    if (hasHisto) {
+      showConfirm(
+        'Ce playbook contient ' + pb.historique.length + ' entr\u00e9e(s) d\'historique. ' +
+        'La suppression est d\u00e9finitive et les donn\u00e9es d\'historique seront perdues. Confirmer ?',
+        'Supprimer d\u00e9finitivement', 'Annuler'
+      ).then(function(ok2) {
+        if (!ok2) return;
+        doDeletePlaybook(pid);
+      });
+    } else {
+      doDeletePlaybook(pid);
+    }
+  });
+}
+
+function doDeletePlaybook(pid) {
+  var idx = vault.playbooks.findIndex(function(p) { return p.id === pid; });
+  if (idx === -1) return;
+  vault.playbooks.splice(idx, 1);
+  delete vault.playbook_checks[pid];
+  setDirty();
+  renderView('memos');
+  notify('Playbook supprim\u00e9.', 'info');
+}
+
+function savePlaybook() {
+  var pid = document.getElementById('playbookEditId').value;
+  var titre = document.getElementById('playbookEditTitre').value.trim();
+  var scenario = document.getElementById('playbookEditScenario').value.trim();
+  var errEl = document.getElementById('playbookEditError');
+  if (!titre) { errEl.textContent = 'Le titre est obligatoire.'; errEl.style.display = 'block'; return; }
+  if (!scenario) { errEl.textContent = 'Le sc\u00e9nario est obligatoire.'; errEl.style.display = 'block'; return; }
+  var checklistInputs = document.querySelectorAll('#playbookEditChecklist .pb-checklist');
+  var checklist = [];
+  var hasContent = false;
+  checklistInputs.forEach(function(inp) {
+    var v = inp.value.trim();
+    checklist.push(v);
+    if (v) hasContent = true;
+  });
+  if (!hasContent) { errEl.textContent = 'Au moins une action de checklist est requise.'; errEl.style.display = 'block'; return; }
+  errEl.style.display = 'none';
+  var isNew = !pid;
+  if (isNew) {
+    pid = 'pb_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+    vault.playbooks.push({
+      id: pid,
+      titre: titre,
+      scenario: scenario,
+      severity: 'high',
+      date: '',
+      historique: [],
+      checklist: checklist
+    });
+    vault.playbook_checks[pid] = [];
+  } else {
+    var pb = vault.playbooks.find(function(p) { return p.id === pid; });
+    if (!pb) return;
+    pb.titre = titre;
+    pb.scenario = scenario;
+    if (!pb.historique || pb.historique.length === 0) {
+      pb.checklist = checklist;
+    }
+  }
+  document.getElementById('playbookEditModal').style.display = 'none';
+  setDirty();
+  renderView('memos');
+  notify(isNew ? 'Playbook ajout\u00e9.' : 'Playbook modifi\u00e9.', 'success');
 }
 
 function hideModal() {
@@ -4625,6 +4772,8 @@ document.addEventListener('DOMContentLoaded', async function() {
       if (memoEditModal.classList.contains('visible')) { memoEditModal.classList.remove('visible'); return; }
       const contactEditModal = document.getElementById('contactEditModal');
       if (contactEditModal.classList.contains('visible')) { contactEditModal.classList.remove('visible'); return; }
+      const playbookEditModal = document.getElementById('playbookEditModal');
+      if (playbookEditModal.style.display === 'flex') { playbookEditModal.style.display = 'none'; return; }
       hideModal();
     }
   });
@@ -4694,6 +4843,15 @@ document.addEventListener('DOMContentLoaded', async function() {
   };
   document.getElementById('contactEditClose').onclick = function() {
     document.getElementById('contactEditModal').classList.remove('visible');
+  };
+
+  /* Playbook edit modal */
+  document.getElementById('playbookEditSave').onclick = savePlaybook;
+  document.getElementById('playbookEditCancel').onclick = function() {
+    document.getElementById('playbookEditModal').style.display = 'none';
+  };
+  document.getElementById('playbookEditClose').onclick = function() {
+    document.getElementById('playbookEditModal').style.display = 'none';
   };
   /* Icon preview in threat edit modal */
   document.getElementById('urlEditIcon').addEventListener('change', function() {
