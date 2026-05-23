@@ -3112,7 +3112,7 @@ function bindModalEvents() {
     };
   }
   const histoSave = document.getElementById('pbHistoSave');
-  if (histoSave) histoSave.onclick = function() {
+  if (histoSave) histoSave.onclick = async function() {
     const pid = this.dataset.pbId;
     const pb = vault.playbooks.find(p => p.id === pid);
     if (!pb) return;
@@ -3130,6 +3130,18 @@ function bindModalEvents() {
     const entry = { date: date, contenu: contenu, checks: checks };
     const isEditing = _histoEditing >= 0 && _histoEditing < pb.historique.length;
     if (isEditing) {
+      var oldChecks = pb.historique[_histoEditing].checks || [];
+      var changed = false;
+      for (var ci = 0; ci < Math.max(oldChecks.length, checks.length); ci++) {
+        if (!!oldChecks[ci] !== !!checks[ci]) { changed = true; break; }
+      }
+      if (changed) {
+        var ok = await showConfirm(
+          'Les \u00e9l\u00e9ments coch\u00e9s de la checklist ont \u00e9t\u00e9 modifi\u00e9s depuis l\'enregistrement de cette entr\u00e9e. ' +
+          'L\'entr\u00e9e sera mise \u00e0 jour avec les nouveaux \u00e9l\u00e9ments coch\u00e9s. Continuer ?'
+        );
+        if (!ok) return;
+      }
       pb.historique[_histoEditing] = entry;
     } else {
       pb.historique.push(entry);
@@ -3139,7 +3151,7 @@ function bindModalEvents() {
     _histoEditing = -1;
     refreshHistorique(pid);
     setDirty();
-    notify(isEditing ? 'Entrée modifiée.' : 'Entrée ajoutée.', 'success');
+    notify(isEditing ? 'Entr\u00e9e modifi\u00e9e.' : 'Entr\u00e9e ajout\u00e9e.', 'success');
   };
   /* Historique — event delegation (survit à refreshHistorique) */
   const histoContainer = document.getElementById('pbHistoriqueContainer');
