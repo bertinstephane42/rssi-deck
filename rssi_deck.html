@@ -1572,10 +1572,16 @@ renderFn.frameworks = function() {
         <p class="text-xs text-slate-500 mb-3">Méthode inspirée d\'EBIOS RM. Évaluez la vraisemblance et la gravité.</p>
         <div class="calc-group"><label><span class="text-slate-400">Vraisemblance</span> <span id="vraiVal" class="text-blue-400">3/5</span></label><input type="range" min="1" max="5" value="3" id="vraiSlider"></div>
         <div class="calc-group"><label><span class="text-slate-400">Gravité de l\'impact</span> <span id="gravImpVal" class="text-blue-400">3/5</span></label><input type="range" min="1" max="5" value="3" id="gravImpSlider"></div>
+        <div class="calc-group"><label><span class="text-slate-400">Impact financier potentiel (€)</span></label><input type="number" id="impactFinInput" class="lock-input" placeholder="Ex : 1 000 000" min="0" style="font-size:0.85rem"></div>
         <div class="border-t border-white/5 pt-3 mt-3">
           <div class="text-xs text-slate-500">Niveau de risque :</div>
           <div class="calc-result" id="risqueResult" style="font-size:1.1rem">Moyen (9/25)</div>
           <div class="text-xs text-slate-500 mt-1">Matrice 5×5 : ≤4 Faible, 5-9 Moyen, 10-15 Élevé, ≥16 Critique</div>
+          <div class="mt-3 pt-2 border-t border-white/5" id="risqueExpoSection" style="display:none">
+            <div class="text-xs text-slate-500">Exposition financière :</div>
+            <div class="calc-result" id="risqueExpo" style="font-size:1rem;font-weight:600"></div>
+            <div class="text-xs text-slate-500 mt-1"><span id="risqueRecommandation"></span></div>
+          </div>
         </div>
       </div>
       <div class="glass-card">
@@ -4710,6 +4716,10 @@ function bindViewEvents(name) {
         };
       }
     });
+    ['impactFinInput'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('input', updateRisque);
+    });
     /* RPO/RTO calculator */
     ['rpoSelect','rtoSelect','caInput','regimeSelect','regimeCustom','typeSelect','rpoImpactSelect','rtoImpactSelect'].forEach(function(id) {
       var el = document.getElementById(id);
@@ -4911,6 +4921,23 @@ function updateRisque() {
   const el = document.getElementById('risqueResult');
   el.textContent = level + ' (' + score + '/25)';
   el.style.color = color;
+  const impact = parseFloat(document.getElementById('impactFinInput').value) || 0;
+  const expoSection = document.getElementById('risqueExpoSection');
+  if (impact > 0) {
+    const expo = Math.round((score / 25) * impact);
+    document.getElementById('risqueExpo').textContent = Number(expo).toLocaleString('fr-FR') + ' €';
+    const recs = {
+      Faible:   { action:'Surveiller', detail:'Risque acceptable, documentation suffisante.' },
+      Moyen:    { action:'Planifier', detail:'Prévoir des mesures correctives dans les 3 à 6 mois.' },
+      Élevé:    { action:'Traiter', detail:'Allouer des ressources dans les semaines à venir.' },
+      Critique: { action:'Action immédiate', detail:'Mobiliser la cellule de crise.' }
+    };
+    document.getElementById('risqueRecommandation').innerHTML =
+      '<strong>Traitement recommandé :</strong> ' + recs[level].action + ' — ' + recs[level].detail;
+    expoSection.style.display = 'block';
+  } else {
+    expoSection.style.display = 'none';
+  }
 }
 
 const RPO_IMPACTS = {
