@@ -1986,9 +1986,23 @@ async function deleteTraitement(i) {
   if (!await showConfirm('Supprimer ce traitement RGPD ?')) return;
   vault.traitements.splice(i,1); setDirty(); renderGouvSubtab('traitements'); notify('Traitement supprimé.','success');
 }
+function planActionCoherenceWarnings(d) {
+  var priorite = d.priorite || '';
+  var echeance = d.echeance || '';
+  var statut = d.statut || '';
+
+  if (echeance && (statut === 'À faire' || statut === 'En cours') && echeance < new Date().toISOString().slice(0,10)) {
+    return '⚠️ L\'échéance (' + echeance + ') est dépassée mais le statut est « ' + statut + ' ». L\'action est en retard. Envisagez de mettre à jour l\'échéance ou le statut.';
+  }
+  if (priorite === 'Haute' && !echeance) {
+    return '⚠️ Action prioritaire « Haute » sans échéance définie. Les actions critiques doivent avoir une date limite pour garantir leur suivi.';
+  }
+  return null;
+}
 
 /* Plan d'actions */
 function addPlanAction() {
+  var warningAcknowledged = false;
   showGouvModal({ title:'Nouvelle action sécurité', saveLabel:'Ajouter',
     fields:[
       { key:'action', label:'Action *' },
@@ -1997,12 +2011,25 @@ function addPlanAction() {
       { key:'echeance', label:'Échéance', type:'date' },
       { key:'statut', label:'Statut', type:'select', options:['À faire','En cours','Fait','Abandonné'], value:'À faire' }
     ],
-    validate: d => d.action ? null : 'L\'action est obligatoire.',
-    onSave: d => { vault.plan_actions.push(d); setDirty(); renderGouvSubtab('plan-actions'); notify('Action ajoutée.','success'); }
+    validate: function(d) {
+      if (!d.action) return 'L\'action est obligatoire.';
+      return null;
+    },
+    onSave: async function(d) {
+      if (!warningAcknowledged) {
+        var w = planActionCoherenceWarnings(d);
+        if (w) {
+          if (await showConfirm(w)) warningAcknowledged = true;
+          return false;
+        }
+      }
+      vault.plan_actions.push(d); setDirty(); renderGouvSubtab('plan-actions'); notify('Action ajoutée.','success');
+    }
   });
 }
 function editPlanAction(i) {
   const a = vault.plan_actions[i]; if (!a) return;
+  var warningAcknowledged = false;
   showGouvModal({ title:'Modifier l\'action', saveLabel:'Enregistrer',
     fields:[
       { key:'action', label:'Action *', value:a.action },
@@ -2011,8 +2038,20 @@ function editPlanAction(i) {
       { key:'echeance', label:'Échéance', type:'date', value:a.echeance || '' },
       { key:'statut', label:'Statut', type:'select', options:['À faire','En cours','Fait','Abandonné'], value:a.statut || 'À faire' }
     ],
-    validate: d => d.action ? null : 'L\'action est obligatoire.',
-    onSave: d => { vault.plan_actions[i] = d; setDirty(); renderGouvSubtab('plan-actions'); notify('Action mise à jour.','success'); }
+    validate: function(d) {
+      if (!d.action) return 'L\'action est obligatoire.';
+      return null;
+    },
+    onSave: async function(d) {
+      if (!warningAcknowledged) {
+        var w = planActionCoherenceWarnings(d);
+        if (w) {
+          if (await showConfirm(w)) warningAcknowledged = true;
+          return false;
+        }
+      }
+      vault.plan_actions[i] = d; setDirty(); renderGouvSubtab('plan-actions'); notify('Action mise à jour.','success');
+    }
   });
 }
 async function deletePlanAction(i) {
@@ -2129,6 +2168,7 @@ async function deleteIncident(i) {
 const TYPES_ACTIFS = ['Serveur','Poste de travail','Application','Base de données','Équipement réseau','Périphérique sécurité','Service cloud','Mobile / Nomade','OT / ICS','Local / Bâtiment'];
 const CRITICITE_ACTIFS = ['Haute','Moyenne','Basse'];
 const STATUTS_ACTIFS = ['Actif','Inactif','Décommissionné'];
+const LOCALISATIONS_ACTIFS = ['Datacenter principal','Datacenter secondaire','Cloud (AWS)','Cloud (Azure)','Cloud (GCP)','Cloud (OVH)','Cloud (autre)','Site A','Site B','Site distant','Nomade / Télétravail','Externalisé (prestataire)','Local / Bâtiment','Autre'];
 
 function renderActifs() {
   const items = searchFilter(vault.actifs || [], ['nom','type','proprietaire','criticite','localisation','statut']);
@@ -2163,11 +2203,14 @@ function addActif() {
       { key:'type', label:'Type', type:'select', options:TYPES_ACTIFS, value:'Serveur' },
       { key:'proprietaire', label:'Propriétaire' },
       { key:'criticite', label:'Criticité', type:'select', options:CRITICITE_ACTIFS, value:'Moyenne' },
-      { key:'localisation', label:'Localisation' },
+      { key:'localisation', label:'Localisation', type:'select', options:LOCALISATIONS_ACTIFS, value:LOCALISATIONS_ACTIFS[0] },
       { key:'statut', label:'Statut', type:'select', options:STATUTS_ACTIFS, value:'Actif' }
     ],
-    validate: d => d.nom ? null : 'Le nom est obligatoire.',
-    onSave: d => { vault.actifs.push(d); setDirty(); renderGouvSubtab('actifs'); notify('Actif ajouté.','success'); }
+    validate: function(d) {
+      if (!d.nom) return 'Le nom est obligatoire.';
+      return null;
+    },
+    onSave: function(d) { vault.actifs.push(d); setDirty(); renderGouvSubtab('actifs'); notify('Actif ajouté.','success'); }
   });
 }
 function editActif(i) {
@@ -2178,11 +2221,14 @@ function editActif(i) {
       { key:'type', label:'Type', type:'select', options:TYPES_ACTIFS, value:TYPES_ACTIFS.includes(a.type) ? a.type : 'Serveur' },
       { key:'proprietaire', label:'Propriétaire', value:a.proprietaire },
       { key:'criticite', label:'Criticité', type:'select', options:CRITICITE_ACTIFS, value:CRITICITE_ACTIFS.includes(a.criticite) ? a.criticite : 'Moyenne' },
-      { key:'localisation', label:'Localisation', value:a.localisation },
+      { key:'localisation', label:'Localisation', type:'select', options:LOCALISATIONS_ACTIFS, value:LOCALISATIONS_ACTIFS.indexOf(a.localisation) > -1 ? a.localisation : 'Autre' },
       { key:'statut', label:'Statut', type:'select', options:STATUTS_ACTIFS, value:STATUTS_ACTIFS.includes(a.statut) ? a.statut : 'Actif' }
     ],
-    validate: d => d.nom ? null : 'Le nom est obligatoire.',
-    onSave: d => { vault.actifs[i] = d; setDirty(); renderGouvSubtab('actifs'); notify('Actif mis à jour.','success'); }
+    validate: function(d) {
+      if (!d.nom) return 'Le nom est obligatoire.';
+      return null;
+    },
+    onSave: function(d) { vault.actifs[i] = d; setDirty(); renderGouvSubtab('actifs'); notify('Actif mis à jour.','success'); }
   });
 }
 async function deleteActif(i) {
@@ -2618,6 +2664,11 @@ function editPssiMeta() {
       { key:'date_prochaine_revue', label:'Prochaine revue', type:'date', value:p.date_prochaine_revue||'' },
       { key:'frequence_revision', label:'Fréquence de révision', type:'select', options:['Annuelle','Semestrielle','Trimestrielle','Personnalisée'], value:p.frequence_revision||'Annuelle' }
     ],
+    validate: function(d) {
+      if (!d.organisation) return 'L\'organisation est obligatoire.';
+      if (d.date_prochaine_revue && d.date_validation && d.date_prochaine_revue < d.date_validation) return 'La date de prochaine revue est antérieure à la date de validation.';
+      return null;
+    },
     onSave: d => {
       if (!vault.pssi) vault.pssi = { sections:[] };
       Object.assign(vault.pssi, d);
@@ -2975,6 +3026,32 @@ const STATUTS_AIPD = ['En cours','Validé','À revoir','Annulé'];
 const TYPES_TRAITEMENT_AIPD = ['Données clients / CRM','Gestion RH / paie','Vidéosurveillance','Géolocalisation','Données de santé','Prospection commerciale','Gestion des accès','Données bancaires','Évaluation / scoring','Autre'];
 const BASES_JURIDIQUES_AIPD = ['Exécution contractuelle (art. 6.1.b)','Obligation légale (art. 6.1.c)','Intérêt légitime (art. 6.1.f)','Mission d\'intérêt public (art. 6.1.e)','Consentement (art. 6.1.a)','Autre'];
 const GRAVITE_RISQUE_AIPD = ['Faible','Moyen','Élevé','Critique'];
+function aipdCoherenceWarnings(d) {
+  var gravite = d.gravite_risque || '';
+  var statut = d.statut || '';
+  var typeT = d.type_traitement || '';
+  var base = d.base_juridique || '';
+  var mesures = d.mesures || '';
+  var dtEval = d.date_evaluation || '';
+  var dtRev = d.date_revision || '';
+
+  if ((gravite === 'Critique' || gravite === 'Élevé') && (statut === 'En cours' || statut === 'À revoir')) {
+    return '⚠️ La gravité est « ' + gravite + ' » mais le statut est « ' + statut + ' ». Une AIPD à risque élevé nécessite des actions correctives urgentes. Envisagez la consultation de l\'autorité de contrôle (CNIL).';
+  }
+  if ((gravite === 'Élevé' || gravite === 'Critique') && !mesures.trim()) {
+    return '⚠️ Aucune mesure prévue pour un risque de gravité « ' + gravite + ' ». L\'article 35 du RGPD exige des mesures pour atténuer les risques identifiés.';
+  }
+  if (dtRev && dtEval && dtRev < dtEval) {
+    return '⚠️ La date de prochaine révision (' + dtRev + ') est antérieure à la date d\'évaluation (' + dtEval + '). Veuillez corriger.';
+  }
+  if ((typeT === 'Données de santé' || typeT === 'Données bancaires') && gravite === 'Faible') {
+    return '⚠️ Le type de traitement « ' + typeT + ' » est rarement associé à une gravité « Faible ». Vérifiez que l\'analyse d\'impact n\'est pas sous-estimée.';
+  }
+  if (base === 'Consentement (art. 6.1.a)' && typeT === 'Vidéosurveillance') {
+    return 'ℹ️ La vidéosurveillance au travail repose rarement sur le consentement (déséquilibre de pouvoir). L\'intérêt légitime ou l\'obligation légale sont généralement plus appropriés.';
+  }
+  return null;
+}
 function renderAipd() {
   const items = searchFilter(vault.aipd || [], ['traitement','type_traitement','base_juridique','responsable','gravite_risque','description_risques','mesures','statut']);
   return `
@@ -3006,9 +3083,11 @@ function renderAipd() {
 }
 function addAipd() {
   if (!Array.isArray(vault.aipd)) vault.aipd = [];
+  var traitementsList = ['Autre'].concat((vault.traitements||[]).map(function(t) { return t.finalite || 'Autre'; }));
+  var warningAcknowledged = false;
   showGouvModal({ title:'Nouvelle AIPD / DPIA', saveLabel:'Ajouter',
     fields:[
-      { key:'traitement', label:'Traitement concern\u00e9 *' },
+      { key:'traitement', label:'Traitement concern\u00e9 *', type:'select', options:traitementsList, value:traitementsList[1]||'Autre' },
       { key:'type_traitement', label:'Type de traitement', type:'select', options:TYPES_TRAITEMENT_AIPD, value:TYPES_TRAITEMENT_AIPD[0] },
       { key:'base_juridique', label:'Base juridique', type:'select', options:BASES_JURIDIQUES_AIPD, value:BASES_JURIDIQUES_AIPD[0] },
       { key:'responsable', label:'Responsable' },
@@ -3019,16 +3098,30 @@ function addAipd() {
       { key:'date_evaluation', label:"Date d'\u00e9valuation", type:'date' },
       { key:'date_revision', label:'Prochaine r\u00e9vision', type:'date' }
     ],
-    validate: d => d.traitement ? null : 'Le traitement est obligatoire.',
-    onSave: d => { vault.aipd.push(d); setDirty(); renderGouvSubtab('aipd'); notify('AIPD ajout\u00e9e.','success'); }
+    validate: function(d) {
+      if (!d.traitement) return 'Le traitement est obligatoire.';
+      return null;
+    },
+    onSave: async function(d) {
+      if (!warningAcknowledged) {
+        var w = aipdCoherenceWarnings(d);
+        if (w) {
+          if (await showConfirm(w)) warningAcknowledged = true;
+          return false;
+        }
+      }
+      vault.aipd.push(d); setDirty(); renderGouvSubtab('aipd'); notify('AIPD ajout\u00e9e.','success');
+    }
   });
 }
 function editAipd(i) {
   if (!Array.isArray(vault.aipd)) vault.aipd = [];
   const a = vault.aipd[i]; if (!a) return;
+  var traitementsList = ['Autre'].concat((vault.traitements||[]).map(function(t) { return t.finalite || 'Autre'; }));
+  var warningAcknowledged = false;
   showGouvModal({ title:"Modifier l'AIPD", saveLabel:'Enregistrer',
     fields:[
-      { key:'traitement', label:'Traitement concern\u00e9 *', value:a.traitement },
+      { key:'traitement', label:'Traitement concern\u00e9 *', type:'select', options:traitementsList, value:traitementsList.indexOf(a.traitement) > -1 ? a.traitement : 'Autre' },
       { key:'type_traitement', label:'Type de traitement', type:'select', options:TYPES_TRAITEMENT_AIPD, value:TYPES_TRAITEMENT_AIPD.includes(a.type_traitement) ? a.type_traitement : TYPES_TRAITEMENT_AIPD[0] },
       { key:'base_juridique', label:'Base juridique', type:'select', options:BASES_JURIDIQUES_AIPD, value:BASES_JURIDIQUES_AIPD.includes(a.base_juridique) ? a.base_juridique : BASES_JURIDIQUES_AIPD[0] },
       { key:'responsable', label:'Responsable', value:a.responsable||'' },
@@ -3039,8 +3132,20 @@ function editAipd(i) {
       { key:'date_evaluation', label:"Date d'\u00e9valuation", type:'date', value:a.date_evaluation||'' },
       { key:'date_revision', label:'Prochaine r\u00e9vision', type:'date', value:a.date_revision||'' }
     ],
-    validate: d => d.traitement ? null : 'Le traitement est obligatoire.',
-    onSave: d => { vault.aipd[i] = d; setDirty(); renderGouvSubtab('aipd'); notify('AIPD mise \u00e0 jour.','success'); }
+    validate: function(d) {
+      if (!d.traitement) return 'Le traitement est obligatoire.';
+      return null;
+    },
+    onSave: async function(d) {
+      if (!warningAcknowledged) {
+        var w = aipdCoherenceWarnings(d);
+        if (w) {
+          if (await showConfirm(w)) warningAcknowledged = true;
+          return false;
+        }
+      }
+      vault.aipd[i] = d; setDirty(); renderGouvSubtab('aipd'); notify('AIPD mise \u00e0 jour.','success');
+    }
   });
 }
 async function deleteAipd(i) {
@@ -3187,6 +3292,7 @@ function initMaturiteChart() {
 /* ---------- PRESTATAIRES ---------- */
 const CRITICITE_PRESTATAIRE = ['Haute','Moyenne','Basse'];
 const STATUTS_CONFORMITE = ['Conforme','Non conforme',"En cours d'\u00e9valuation",'Audit programm\u00e9'];
+const SERVICES_PRESTATAIRE = ['H\u00e9bergement / Infog\u00e9rance','SaaS','S\u00e9curit\u00e9 / SOC','Audit / Conseil','D\u00e9veloppement','Support technique','Cloud (IaaS/PaaS)','T\u00e9l\u00e9coms / R\u00e9seau','Maintenance mat\u00e9rielle','Formation','Nettoyage / Entretien','Transport / Logistique','Autre'];
 function renderPrestataires() {
   const items = searchFilter(vault.prestataires || [], ['nom','contact','service','criticite','statut_conformite']);
   return `
@@ -3202,35 +3308,72 @@ function renderPrestataires() {
     </table></div>`}
     <div class="text-[0.65rem] text-slate-600 mt-2">${items.length} prestataire(s) affiché(s)</div>`;
 }
+function prestataireCoherenceWarnings(d) {
+  var criticite = d.criticite || '';
+  var conformite = d.statut_conformite || '';
+  var dateAudit = d.date_audit || '';
+  var dateProchain = d.date_prochain_audit || '';
+
+  if (conformite === 'Non conforme' && !dateProchain) {
+    return '⚠️ Prestataire « Non conforme » sans prochain audit planifié. Un plan de remédiation avec échéance doit être mis en place.';
+  }
+  if (criticite === 'Haute' && !dateAudit) {
+    return '⚠️ Prestataire de criticité « Haute » sans date de dernier audit. Les prestataires critiques doivent être audités régulièrement.';
+  }
+  if (dateProchain && dateAudit && dateProchain < dateAudit) {
+    return '⚠️ La date du prochain audit (' + dateProchain + ') est antérieure au dernier audit (' + dateAudit + '). Veuillez corriger.';
+  }
+  return null;
+}
 function addPrestataire() {
+  var warningAcknowledged = false;
   showGouvModal({ title:'Nouveau prestataire', saveLabel:'Ajouter',
     fields:[
       { key:'nom', label:'Nom *' },
       { key:'contact', label:'Contact principal' },
-      { key:'service', label:'Service fourni' },
+      { key:'service', label:'Service fourni', type:'select', options:SERVICES_PRESTATAIRE, value:SERVICES_PRESTATAIRE[0] },
       { key:'criticite', label:'Criticit\u00e9', type:'select', options:CRITICITE_PRESTATAIRE, value:'Moyenne' },
       { key:'statut_conformite', label:'Conformit\u00e9', type:'select', options:STATUTS_CONFORMITE, value:"En cours d'\u00e9valuation" },
       { key:'date_audit', label:'Dernier audit', type:'date' },
       { key:'date_prochain_audit', label:'Prochain audit', type:'date' }
     ],
     validate: function(d) { return d.nom ? null : 'Le nom est obligatoire.'; },
-    onSave: function(d) { vault.prestataires.push(d); setDirty(); renderGouvSubtab('prestataires'); notify('Prestataire ajout\u00e9.','success'); }
+    onSave: async function(d) {
+      if (!warningAcknowledged) {
+        var w = prestataireCoherenceWarnings(d);
+        if (w) {
+          if (await showConfirm(w)) warningAcknowledged = true;
+          return false;
+        }
+      }
+      vault.prestataires.push(d); setDirty(); renderGouvSubtab('prestataires'); notify('Prestataire ajout\u00e9.','success');
+    }
   });
 }
 function editPrestataire(i) {
   const p = vault.prestataires[i]; if (!p) return;
+  var warningAcknowledged = false;
   showGouvModal({ title:'Modifier le prestataire', saveLabel:'Enregistrer',
     fields:[
       { key:'nom', label:'Nom *', value:p.nom },
       { key:'contact', label:'Contact principal', value:p.contact||'' },
-      { key:'service', label:'Service fourni', value:p.service||'' },
+      { key:'service', label:'Service fourni', type:'select', options:SERVICES_PRESTATAIRE, value:SERVICES_PRESTATAIRE.indexOf(p.service) > -1 ? p.service : 'Autre' },
       { key:'criticite', label:'Criticit\u00e9', type:'select', options:CRITICITE_PRESTATAIRE, value:CRITICITE_PRESTATAIRE.includes(p.criticite) ? p.criticite : 'Moyenne' },
       { key:'statut_conformite', label:'Conformit\u00e9', type:'select', options:STATUTS_CONFORMITE, value:STATUTS_CONFORMITE.includes(p.statut_conformite) ? p.statut_conformite : "En cours d'\u00e9valuation" },
       { key:'date_audit', label:'Dernier audit', type:'date', value:p.date_audit||'' },
       { key:'date_prochain_audit', label:'Prochain audit', type:'date', value:p.date_prochain_audit||'' }
     ],
     validate: function(d) { return d.nom ? null : 'Le nom est obligatoire.'; },
-    onSave: function(d) { vault.prestataires[i] = d; setDirty(); renderGouvSubtab('prestataires'); notify('Prestataire mis \u00e0 jour.','success'); }
+    onSave: async function(d) {
+      if (!warningAcknowledged) {
+        var w = prestataireCoherenceWarnings(d);
+        if (w) {
+          if (await showConfirm(w)) warningAcknowledged = true;
+          return false;
+        }
+      }
+      vault.prestataires[i] = d; setDirty(); renderGouvSubtab('prestataires'); notify('Prestataire mis \u00e0 jour.','success');
+    }
   });
 }
 async function deletePrestataire(i) {
