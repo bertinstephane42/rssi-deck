@@ -2162,6 +2162,7 @@ function renderRisques() {
     <div class="text-[0.65rem] text-slate-600 mt-2">${items.length} risque(s) affiché(s)</div>`;
 }
 function addRisque() {
+  var warningAcknowledged = false;
   showGouvModal({ title:'Nouveau risque', saveLabel:'Ajouter',
     fields:[
       { key:'menace', label:'Menace / Scénario *' },
@@ -2176,10 +2177,12 @@ function addRisque() {
       return null;
     },
     onSave: async function(d) {
-      var w = risqTraitWarning(d.traitement, parseInt(d.vraisemblance), parseInt(d.gravite));
-      if (w) {
-        var go = await showConfirm(w);
-        if (!go) return false;
+      if (!warningAcknowledged) {
+        var w = risqTraitWarning(d.traitement, parseInt(d.vraisemblance), parseInt(d.gravite));
+        if (w) {
+          if (await showConfirm(w)) warningAcknowledged = true;
+          return false;
+        }
       }
       vault.risques.push(d); setDirty(); renderGouvSubtab('risques'); notify('Risque ajouté.','success');
     }
@@ -2187,6 +2190,7 @@ function addRisque() {
 }
 function editRisque(i) {
   const r = vault.risques[i]; if (!r) return;
+  var warningAcknowledged = false;
   showGouvModal({ title:'Modifier le risque', saveLabel:'Enregistrer',
     fields:[
       { key:'menace', label:'Menace / Scénario *', value:r.menace },
@@ -2201,10 +2205,12 @@ function editRisque(i) {
       return null;
     },
     onSave: async function(d) {
-      var w = risqTraitWarning(d.traitement, parseInt(d.vraisemblance), parseInt(d.gravite));
-      if (w) {
-        var go = await showConfirm(w);
-        if (!go) return false;
+      if (!warningAcknowledged) {
+        var w = risqTraitWarning(d.traitement, parseInt(d.vraisemblance), parseInt(d.gravite));
+        if (w) {
+          if (await showConfirm(w)) warningAcknowledged = true;
+          return false;
+        }
       }
       vault.risques[i] = d; setDirty(); renderGouvSubtab('risques'); notify('Risque mis à jour.','success');
     }
