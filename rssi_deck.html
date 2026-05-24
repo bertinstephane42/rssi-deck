@@ -1961,6 +1961,7 @@ async function deletePlanAction(i) {
 
 /* Incidents */
 function addIncident() {
+  var warningAcknowledged = false;
   showGouvModal({ title:'Nouvel incident de sécurité', saveLabel:'Ajouter',
     fields:[
       { key:'date', label:'Date', type:'date', value:new Date().toISOString().slice(0,10) },
@@ -1990,12 +1991,25 @@ function addIncident() {
       { key:'statut', label:'Statut', type:'select', options:['Ouvert','En cours','Résolu','Fermé'], value:'Ouvert' },
       { key:'date_resolution', label:'Date de résolution', type:'date' }
     ],
-    validate: d => d.type ? null : 'Le type d\'incident est obligatoire.',
-    onSave: d => { vault.incidents.push(d); setDirty(); renderGouvSubtab('incidents'); notify('Incident ajouté.','success'); }
+    validate: function(d) {
+      if (!d.type) return 'Le type d\'incident est obligatoire.';
+      return null;
+    },
+    onSave: async function(d) {
+      if (!warningAcknowledged) {
+        var w = incidentCoherenceWarnings(d);
+        if (w) {
+          if (await showConfirm(w)) warningAcknowledged = true;
+          return false;
+        }
+      }
+      vault.incidents.push(d); setDirty(); renderGouvSubtab('incidents'); notify('Incident ajouté.','success');
+    }
   });
 }
 function editIncident(i) {
   const inc = vault.incidents[i]; if (!inc) return;
+  var warningAcknowledged = false;
   showGouvModal({ title:'Modifier l\'incident', saveLabel:'Enregistrer',
     fields:[
       { key:'date', label:'Date', type:'date', value:inc.date || '' },
@@ -2025,8 +2039,20 @@ function editIncident(i) {
       { key:'statut', label:'Statut', type:'select', options:['Ouvert','En cours','Résolu','Fermé'], value:inc.statut || 'Ouvert' },
       { key:'date_resolution', label:'Date de résolution', type:'date', value:inc.date_resolution || '' }
     ],
-    validate: d => d.type ? null : 'Le type d\'incident est obligatoire.',
-    onSave: d => { vault.incidents[i] = d; setDirty(); renderGouvSubtab('incidents'); notify('Incident mis à jour.','success'); }
+    validate: function(d) {
+      if (!d.type) return 'Le type d\'incident est obligatoire.';
+      return null;
+    },
+    onSave: async function(d) {
+      if (!warningAcknowledged) {
+        var w = incidentCoherenceWarnings(d);
+        if (w) {
+          if (await showConfirm(w)) warningAcknowledged = true;
+          return false;
+        }
+      }
+      vault.incidents[i] = d; setDirty(); renderGouvSubtab('incidents'); notify('Incident mis à jour.','success');
+    }
   });
 }
 async function deleteIncident(i) {
@@ -2132,7 +2158,36 @@ function risqTraitWarning(traitement, vrais, grav) {
   if (traitement === 'Évité' && score < 6) return 'ℹ️ Ce risque est faible ('+score+'/25). L\'éviter (abandonner l\'activité) est disproportionné. Un traitement par réduction ou acceptation serait plus pertinent.';
   return null;
 }
+function incidentCoherenceWarnings(d) {
+  var impact = d.impact || 'Non défini';
+  var perim = d.perimetre || 'Non défini';
+  var risque = d.risque_type || 'Non défini';
+  var type = d.type || '';
+  var statut = d.statut || '';
 
+  if (type === 'Ransomware / Rançongiciel' && impact === 'Non défini') {
+    return '⚠️ L\'impact d\'un rançongiciel devrait être qualifié (perte financière, indisponibilité, compromission). L\'impact « Non défini » empêche toute priorisation de la réponse.';
+  }
+  if ((type === 'Fuite de données' || type === 'Intrusion réseau') && impact === 'Non défini') {
+    return '⚠️ Cet incident est sensible. Un impact « Non défini » ne permettra pas de mesurer la gravité réelle ni de déclencher les bonnes actions correctives.';
+  }
+  if (impact === 'Aucun impact détecté' && statut !== 'Fermé') {
+    return 'ℹ️ Si aucun impact n\'est détecté, envisagez de clore l\'incident (statut « Fermé ») pour éviter un suivi inutile.';
+  }
+  if ((impact.includes('Crédit') || impact.includes('image') || impact.includes('réputation')) && (perim === 'Local (poste de travail)' || perim === 'Réseau local (LAN / DMZ)')) {
+    return '⚠️ Une atteinte à la réputation ou financière dépasse rarement le périmètre local. Vérifiez que le périmètre reflète bien l\'exposition réelle (Internet, clients, médias).';
+  }
+  if (risque === 'Physique (accès, intrusion, vol)' && (perim === 'Cloud (IaaS / PaaS / SaaS)' || perim === 'Réseau étendu (WAN / multi-sites)')) {
+    return '⚠️ Un risque physique (vol, intrusion) est incohérent avec un périmètre « Cloud » ou « WAN ». Les actifs cloud ne sont pas accessibles physiquement. Vérifiez la saisie.';
+  }
+  if (risque === 'Réseau (sniffing, MitM, DDoS, routage)' && perim === 'Local (poste de travail)') {
+    return '⚠️ Un risque réseau (DDoS, sniffing) sur un périmètre « Local (poste de travail) » est incohérent. Ce type de risque concerne un segment réseau ou une exposition Internet.';
+  }
+  if (risque === 'Réseau (sniffing, MitM, DDoS, routage)' && perim === 'Physique (site / salle serveur / datacenter)') {
+    return '⚠️ Un risque réseau (DDoS, MitM) peut difficilement se limiter à un périmètre physique (site, salle serveur). Le réseau traverse les infrastructures.';
+  }
+  return null;
+}
 function renderRisques() {
   const items = searchFilter(vault.risques || [], ['menace','actif_concerne','traitement','responsable']);
   return `
