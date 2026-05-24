@@ -1750,7 +1750,7 @@ function showGouvModal(config) {
   const saveBtn = document.getElementById('gouvEditSave');
   const cancelBtn = document.getElementById('gouvEditCancel');
   const onCancel = () => { overlay.style.display = 'none'; cancelBtn.removeEventListener('click', onCancel); saveBtn.removeEventListener('click', onSave); };
-  const onSave = () => {
+  const onSave = async () => {
     const err = document.getElementById('gouvEditError');
     const data = {};
     dateErr = null;
@@ -1766,7 +1766,8 @@ function showGouvModal(config) {
     if (dateErr) { err.textContent = dateErr; err.style.display = 'block'; return; }
     if (config.validate) { const e = config.validate(data); if (e) { err.textContent = e; err.style.display = 'block'; return; } }
     err.style.display = 'none';
-    config.onSave(data);
+    var saveResult = await config.onSave(data);
+    if (saveResult === false) return;
     overlay.style.display = 'none';
     cancelBtn.removeEventListener('click', onCancel);
     saveBtn.removeEventListener('click', onSave);
@@ -2100,6 +2101,37 @@ async function deleteActif(i) {
 
 /* Risques */
 const TRAITEMENTS_RISQUE = ['Accepté','Réduit','Transféré','Évité'];
+const ACTIFS_CONCERNES = [
+  'Serveur (physique / virtuel)',
+  'Poste de travail (fixe / portable)',
+  'Réseau (routeur, switch, firewall, WiFi)',
+  'Application métier (ERP, CRM, SIRH)',
+  'Base de données',
+  'Annuaire et identité (AD, LDAP, SSO)',
+  'Messagerie et collaboration (Exchange, Teams)',
+  'Infrastructure cloud (IaaS, PaaS, SaaS)',
+  'Solution de sécurité (SIEM, EDR, anti-virus, proxy)',
+  'Terminal mobile (smartphone, tablette)',
+  'VPN et accès distant',
+  'Téléphonie (VOIP, standard)',
+  'Système industriel (SCADA, IoT, GTC)',
+  'Imprimante et multifonction',
+  'Support amovible (clé USB, disque externe)',
+  'Certificat et infrastructure PKI',
+  'Données personnelles (RGPD)',
+  'Document et information sensible',
+  'Local et infrastructure physique (datacenter, baie technique)',
+  'Contrôle d\'accès physique (badge, vidéosurveillance)',
+  'Prestataire et tiers',
+  'Ressource humaine et compétence critique'
+];
+function risqTraitWarning(traitement, vrais, grav) {
+  var score = (vrais||3)*(grav||3);
+  if (traitement === 'Accepté' && score >= 16) return '⚠️ Ce risque est critique ('+score+'/25). L\'accepter sans mesure de réduction expose l\'entreprise à un sinistre majeur. Envisagez un transfert (assurance) ou une réduction par des mesures techniques.';
+  if (traitement === 'Accepté' && score >= 10) return '⚠️ Ce risque est élevé ('+score+'/25). L\'accepter sans précaution pourrait nuire à l\'activité. Envisagez un plan de réduction ou de transfert.';
+  if (traitement === 'Évité' && score < 6) return 'ℹ️ Ce risque est faible ('+score+'/25). L\'éviter (abandonner l\'activité) est disproportionné. Un traitement par réduction ou acceptation serait plus pertinent.';
+  return null;
+}
 
 function renderRisques() {
   const items = searchFilter(vault.risques || [], ['menace','actif_concerne','traitement','responsable']);
@@ -2133,14 +2165,24 @@ function addRisque() {
   showGouvModal({ title:'Nouveau risque', saveLabel:'Ajouter',
     fields:[
       { key:'menace', label:'Menace / Scénario *' },
-      { key:'actif_concerne', label:'Actif concerné' },
+      { key:'actif_concerne', label:'Actif concerné', type:'select', options:ACTIFS_CONCERNES, value:ACTIFS_CONCERNES[0] },
       { key:'vraisemblance', label:'Vraisemblance (1-5)', type:'select', options:['1','2','3','4','5'], value:'3' },
       { key:'gravite', label:'Gravité (1-5)', type:'select', options:['1','2','3','4','5'], value:'3' },
       { key:'traitement', label:'Traitement', type:'select', options:TRAITEMENTS_RISQUE, value:'Accepté' },
       { key:'responsable', label:'Responsable' }
     ],
-    validate: d => d.menace ? null : 'La menace est obligatoire.',
-    onSave: d => { vault.risques.push(d); setDirty(); renderGouvSubtab('risques'); notify('Risque ajouté.','success'); }
+    validate: function(d) {
+      if (!d.menace) return 'La menace est obligatoire.';
+      return null;
+    },
+    onSave: async function(d) {
+      var w = risqTraitWarning(d.traitement, parseInt(d.vraisemblance), parseInt(d.gravite));
+      if (w) {
+        var go = await showConfirm(w);
+        if (!go) return false;
+      }
+      vault.risques.push(d); setDirty(); renderGouvSubtab('risques'); notify('Risque ajouté.','success');
+    }
   });
 }
 function editRisque(i) {
@@ -2148,14 +2190,24 @@ function editRisque(i) {
   showGouvModal({ title:'Modifier le risque', saveLabel:'Enregistrer',
     fields:[
       { key:'menace', label:'Menace / Scénario *', value:r.menace },
-      { key:'actif_concerne', label:'Actif concerné', value:r.actif_concerne },
+      { key:'actif_concerne', label:'Actif concerné', type:'select', options:ACTIFS_CONCERNES, value:ACTIFS_CONCERNES.includes(r.actif_concerne) ? r.actif_concerne : ACTIFS_CONCERNES[0] },
       { key:'vraisemblance', label:'Vraisemblance (1-5)', type:'select', options:['1','2','3','4','5'], value:String(r.vraisemblance||3) },
       { key:'gravite', label:'Gravité (1-5)', type:'select', options:['1','2','3','4','5'], value:String(r.gravite||3) },
       { key:'traitement', label:'Traitement', type:'select', options:TRAITEMENTS_RISQUE, value:TRAITEMENTS_RISQUE.includes(r.traitement) ? r.traitement : 'Accepté' },
       { key:'responsable', label:'Responsable', value:r.responsable }
     ],
-    validate: d => d.menace ? null : 'La menace est obligatoire.',
-    onSave: d => { vault.risques[i] = d; setDirty(); renderGouvSubtab('risques'); notify('Risque mis à jour.','success'); }
+    validate: function(d) {
+      if (!d.menace) return 'La menace est obligatoire.';
+      return null;
+    },
+    onSave: async function(d) {
+      var w = risqTraitWarning(d.traitement, parseInt(d.vraisemblance), parseInt(d.gravite));
+      if (w) {
+        var go = await showConfirm(w);
+        if (!go) return false;
+      }
+      vault.risques[i] = d; setDirty(); renderGouvSubtab('risques'); notify('Risque mis à jour.','success');
+    }
   });
 }
 async function deleteRisque(i) {
