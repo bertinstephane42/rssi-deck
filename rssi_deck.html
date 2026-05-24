@@ -83,7 +83,7 @@ body{font-family:system-ui,-apple-system,'Inter','Segoe UI',sans-serif;backgroun
 .lock-input:focus{border-color:rgba(59,130,246,0.5)}
 .lock-input::placeholder{color:var(--input-placeholder)}
 .pwd-modal{position:fixed;inset:0;z-index:9998;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
-.pwd-modal .pwd-box{width:92%;max-width:420px;padding:1.5rem}
+.pwd-modal .pwd-box{width:92%;max-width:420px;max-height:85vh;overflow-y:auto;padding:1.5rem}
 .pwd-modal .pwd-box p{text-align:center;margin-bottom:1rem;font-size:0.9rem}
 .pwd-modal .flex{gap:0.5rem}
 .pwd-modal.visible{display:flex}
@@ -1041,7 +1041,7 @@ const DEFAULT_VAULT = {
         assign:{'RSSI':'A','DSI':'R','Équipe technique':'R','COMEX':'I','DPO':'C'} },
       { id:'ra3', activite:"Notification des violations (RGPD)",
         assign:{'RSSI':'R','DPO':'A','Juridique / RH':'C','COMEX':'I','DSI':'C'} },
-      { id:'ra4', activite:"Analyse de risques et plan d'actions",
+      { id:'ra4', activite:"Analyse de risques et plan d\'actions",
         assign:{'RSSI':'R','DSI':'C','DPO':'C','COMEX':'A'} },
       { id:'ra5', activite:"Gestion des accès et habilitations",
         assign:{'DSI':'R','RSSI':'A','Chef de projet':'C','Équipe technique':'R'} },
@@ -1066,7 +1066,8 @@ const DEFAULT_VAULT = {
       { id:'ra15', activite:"Reporting sécurité au COMEX",
         assign:{'RSSI':'R','DPO':'C','DSI':'C','COMEX':'A'} }
     ]
-  }
+  },
+  cvss: []
 };
 
 /* ============================================================
@@ -1121,6 +1122,7 @@ function migrateVault(v) {
     if (!v.maturite) v.maturite = [];
     if (v.maturite) v.maturite.forEach(function(m) { if (m.date_evaluation === undefined) m.date_evaluation = ''; if (m.poids === undefined) m.poids = 1; });
     if (!v.prestataires) v.prestataires = [];
+    if (!v.cvss) v.cvss = [];
     if (!v.outils_techniques) v.outils_techniques = [];
     if (!v.outils_fonctionnels) v.outils_fonctionnels = [];
     if (v.pssi && v.pssi.sections) {
@@ -1216,7 +1218,7 @@ const HELP_TEXT = {
   'outils-fonctionnels': '<p>La rubrique des outils fonctionnels regroupe les plateformes et services logiciels destinés à accompagner le RSSI dans ses missions transverses de gestion de la sécurité. Ces outils sont organisés par catégories : Gestion de crise (TheHive, MISP, OpenCTI, Cortex), GRC (Eramba, SimpleRisk, Lynis, OpenSCAP), Documentation (Obsidian, Wiki.js, Draw.io), Mots de passe (Bitwarden, KeePassXC) et Ticketing (GLPI). Chacune de ces catégories répond à un besoin spécifique du métier de RSSI, depuis la réponse sur incident jusqu\'à la gestion de la conformité réglementaire, en passant par la documentation des procédures.</p><p>Comme pour les outils techniques, chaque fiche détaille le nom de l\'outil, sa priorité, son icône, une description complète de ses fonctionnalités, les cas d\'usage RSSI, le lien officiel et les commandes clés lorsqu\'elles existent. Un clic sur la carte ouvre une fenêtre modale pour une consultation approfondie. Le système de favoris, commun à l\'ensemble de l\'application, vous permet de marquer vos outils fonctionnels préférés pour les retrouver rapidement sur le tableau de bord.</p><p>La barre de tri offre les mêmes trois modes d\'affichage que la rubrique des outils techniques — ordre par défaut, ordre alphabétique et tri par favoris — afin de faciliter la navigation dans votre catalogue d\'outils, quel que soit son ampleur.</p>',
   'threat-intel': '<p>Le module de renseignement sur les menaces constitue votre point d\'accès centralisé à l\'ensemble des sources d\'information nécessaires à une veille cybersécurité efficace et structurée. Il s\'articule autour de cinq sections complémentaires, chacune répondant à un besoin spécifique du cycle de renseignement.</p><p>La section de recherche CVE vous permet d\'interroger la National Vulnerability Database (NVD) du NIST directement depuis l\'application, en saisissant un identifiant CVE ou un mot-clé. Cette fonctionnalité vous offre un accès immédiat à la base de référence mondiale des vulnérabilités, sans avoir à quitter votre environnement de travail.</p><p>La section des frameworks de menaces présente les deux référentiels majeurs de classification des cyberattaques : MITRE ATT&CK, qui détaille les tactiques, techniques et procédures adverses selon une matrice exhaustive, et MITRE D3FEND, qui cartographie les contre-mesures défensives correspondantes. Ces frameworks constituent le langage commun de la communauté de la cybersécurité et sont indispensables à la qualification précise des incidents.</p><p>La section des modèles conceptuels regroupe le Cyber Kill Chain de Lockheed Martin, qui décompose une cyberattaque en sept phases séquentielles, de la reconnaissance initiale jusqu\'aux actions finales sur les objectifs, et le Diamond Model, qui analyse chaque événement malveillant selon quatre axes : l\'adversaire, la capacité, l\'infrastructure et la victime.</p><p>La section des sources et de la veille réunit les principales sources d\'information en continu : les alertes officielles de l\'ANSSI, les avis de la CISA américaine, les actualités de The Hacker News et de BleepingComputer. Chaque source est accessible d\'un clic et peut être modifiée ou complétée selon vos besoins de veille.</p><p>Enfin, la section OSINT vous donne accès aux moteurs de recherche et d\'analyse incontournables : Shodan pour la découverte d\'équipements connectés, Censys pour la cartographie de surface d\'attaque, VirusTotal pour l\'analyse multi-antivirus de fichiers et Have I Been Pwned pour la détection de fuites de données. L\'ensemble des liens est modifiable via le crayon d\'édition qui apparaît au survol de chaque carte.</p>',
   frameworks: '<p>La section des référentiels et cadres de conformité rassemble les principaux standards, réglementations et bonnes pratiques applicables à la sécurité des systèmes d\'information. Vous y trouverez les sept références essentielles : le RGPD, la directive NIS 2, le règlement DORA, la norme ISO 27001, le code de bonnes pratiques ISO 27002, les CIS Controls v8 et le NIST Cybersecurity Framework 2.0. Chaque fiche présente le nom du référentiel, une description claire de son périmètre et de ses objectifs, un lien officiel vers la ressource et son icône représentative.</p><p>Au-delà de cette bibliothèque de références, la section intègre trois calculateurs décisionnels conçus pour vous assister dans vos évaluations stratégiques et vos présentations à la direction.</p><p>Le calculateur d\'estimation d\'amende RGPD simule, sur la base des critères de l\'article 83 du règlement, le montant potentiel d\'une sanction administrative en fonction de la gravité de la violation, du nombre de personnes concernées et de l\'existence de mesures correctives. Cette estimation, indicative, vous aide à sensibiliser votre direction aux conséquences financières d\'une non-conformité, dans la limite du plafond légal de 20 millions d\'euros ou 4 % du chiffre d\'affaires annuel mondial.</p><p>L\'analyse de risque simplifiée, inspirée de la méthode EBIOS RM, vous permet d\'évaluer rapidement un scénario de risque en croisant sa vraisemblance et sa gravité sur une matrice 5×5, produisant un niveau de risque qualifié de faible à critique avec un score numérique. Cet outil pédagogique est utile pour les sensibilisations ou les premières évaluations rapides.</p><p>Le calculateur RPO/RTO et coût d\'arrêt est un outil d\'aide à la décision pour dimensionner votre politique de continuité d\'activité. En renseignant votre chiffre d\'affaires annuel, votre régime d\'activité, le type d\'entreprise, vos objectifs de reprise (RPO) et de temps de restauration (RTO), ainsi que la nature des impacts associés, vous obtenez une estimation du coût horaire d\'arrêt, des coûts individuels RPO et RTO, du coût total d\'un sinistre et une classe de résilience allant de A (excellent) à D (critique). Ce calculateur est particulièrement utile pour justifier vos investissements PCA/PRA auprès de la direction financière.</p><p>Chaque référentiel peut être suivi comme favori via l\'étoile située sur sa fiche, et les liens peuvent être modifiés à tout moment.</p>',
-  gouvernance: '<p>L\'espace de gouvernance constitue le centre névralgique du RSSI Secure Command Deck. Cette section concentre l\'ensemble des mécanismes de pilotage, de supervision documentaire, de suivi réglementaire et d\'orchestration opérationnelle nécessaires à l\'administration d\'un dispositif de cybersécurité moderne. Elle offre au RSSI, au DPO, aux responsables conformité et aux instances dirigeantes une vision consolidée, cohérente et continuellement actualisée du niveau de maîtrise de l\'organisation face aux risques numériques, réglementaires et opérationnels.</p><p>Conçu selon les principes directeurs des référentiels ISO 27001, ISO 27005, NIST Cybersecurity Framework 2.0, EBIOS RM, RGPD, NIS 2 et DORA, cet espace ne se limite pas à une simple centralisation documentaire. Il agit comme une véritable plateforme de gouvernance stratégique où chaque registre interagit avec les autres afin d\'alimenter les tableaux de bord, les indicateurs de maturité, les rapports exécutifs et les dispositifs de contrôle interne.</p><p>Chaque module intègre des assistants de contrôle intelligents destinés à renforcer la qualité, la cohérence et la fiabilité des informations saisies. Ces mécanismes analysent dynamiquement les données renseignées afin de détecter les incohérences, omissions, contradictions ou valeurs manifestement erronées susceptibles d\'altérer la pertinence du pilotage SSI. Les assistants peuvent notamment signaler des incohérences entre la finalité et la base légale des traitements, des données sensibles ou bancaires sans mesures de sécurité adaptées, des types de risque inappropriés au périmètre d\'incident, des traitements de risque inadaptés au niveau de criticité, ou des échéances d\'actions dépassées sans mise à jour. Cette approche vise à limiter les erreurs humaines, homogénéiser les pratiques de gouvernance et améliorer durablement la qualité du référentiel documentaire.</p><p>Les contrôles embarqués ne remplacent toutefois pas l\'expertise du RSSI ou des responsables métier. Ils constituent une assistance méthodologique destinée à accompagner les utilisateurs dans l\'application des bonnes pratiques de cybersécurité, de conformité et de gestion des risques. L\'objectif est de garantir une documentation exploitable, crédible et défendable dans le cadre d\'audits, de contrôles réglementaires ou de comités de direction.</p><ul class=\"list-disc list-inside space-y-2\">\n<li><strong>Traitements RGPD</strong> — Ce registre constitue le socle documentaire exig\u00e9 par l\'article 30 du RGPD. Chaque traitement est document\u00e9 avec sa finalit\u00e9, sa base l\u00e9gale, les cat\u00e9gories de donn\u00e9es, les personnes concern\u00e9es, les destinataires et les mesures de s\u00e9curit\u00e9. Un assistant de coh\u00e9rence int\u00e9gr\u00e9 croise dynamiquement ces informations : il alerte en cas de donn\u00e9es sensibles (Art. 9) associ\u00e9es \u00e0 une base l\u00e9gale inadapt\u00e9e, de finalit\u00e9 marketing ou cookies fond\u00e9e sur l\'ex\u00e9cution d\'un contrat, d\'obligation l\u00e9gale sans destinataire externe, de donn\u00e9es bancaires ou sensibles sans chiffrement ni authentification forte, ou d\'incoh\u00e9rence entre finalit\u00e9 RH/paie et cat\u00e9gorie de personnes. Chaque alerte peut \u00eatre acquitt\u00e9e pour permettre la sauvegarde apr\u00e8s validation explicite.</li>\n<li><strong>Plan d\'actions</strong> — Cet outil pilote l\'ensemble des actions de s\u00e9curisation, rem\u00e9diations, projets SSI et mesures correctives. Chaque action est suivie avec une priorit\u00e9, un responsable, une \u00e9ch\u00e9ance et un statut. L\'assistant int\u00e9gr\u00e9 d\u00e9tecte les actions en retard (\u00e9ch\u00e9ance d\u00e9pass\u00e9e mais statut \u00ab \u00c0 faire \u00bb ou \u00ab En cours \u00bb) ainsi que les actions prioritaires sans \u00e9ch\u00e9ance d\u00e9finie, afin d\'\u00e9viter les d\u00e9rives de la feuille de route SSI.</li>\n<li><strong>Incidents de s\u00e9curit\u00e9</strong> — Ce registre centralise les \u00e9v\u00e9nements de s\u00e9curit\u00e9 avec leur origine, typologie, impact, p\u00e9rim\u00e8tre, type de risque et statut. L\'assistant de coh\u00e9rence int\u00e8gre 14 r\u00e8gles de v\u00e9rification crois\u00e9e entre ces champs : il signale les ran\u00e7ongiciels sans impact qualifi\u00e9, les fuites ou intrusions sans impact d\u00e9fini, les incoh\u00e9rences entre type de risque et p\u00e9rim\u00e8tre (ex. risque physique en cloud, risque r\u00e9seau sur un seul poste), les classements inappropri\u00e9s par type d\'incident (phishing non class\u00e9 en risque humain, FOVI en p\u00e9rim\u00e8tre local, compromission de compte en risque physique), les impacts r\u00e9putationnels en p\u00e9rim\u00e8tre trop restreint et les incidents clos sans impact. L\'alerte peut \u00eatre acquitt\u00e9e avant sauvegarde.</li>\n<li><strong>Registre des actifs</strong> — Cette section inventorie les ressources num\u00e9riques critiques : infrastructures, applications, \u00e9quipements r\u00e9seau, solutions cloud, SaaS, syst\u00e8mes industriels. Chaque actif est associ\u00e9 \u00e0 un type, un propri\u00e9taire, une criticit\u00e9, une localisation (d\u00e9sormais en liste d\u00e9roulante : Datacenter, Cloud AWS/Azure/GCP/OVH, Site A/B, Nomade, Externalis\u00e9\u2026) et un statut. La localisation en liste d\u00e9roulante \u00e9vite les doublons et uniformise le r\u00e9f\u00e9rentiel.</li>\n<li><strong>Registre des risques</strong> — Inspir\u00e9 d\'EBIOS RM et ISO 27005, ce registre formalise les sc\u00e9narios de risques avec leur vraisemblance, gravit\u00e9, traitement et responsable. La liste des actifs concern\u00e9s couvre 22 cat\u00e9gories (serveurs, r\u00e9seau, cloud, SCADA, PKI, RH\u2026). L\'assistant alerte lorsque le traitement est inappropri\u00e9 au niveau de risque : acceptation d\'un risque \u00e9lev\u00e9 (\u226510/25) ou critique (\u226516/25) ou \u00e9vitement disproportionn\u00e9 d\'un risque faible (&lt;6/25). L\'alerte peut \u00eatre acquitt\u00e9e pour confirmer la d\u00e9cision.</li>\n<li><strong>Matrice RACI</strong> — Cet outil permet de d\u00e9finir les responsabilit\u00e9s par activit\u00e9 SSI selon le mod\u00e8le RACI (Responsable, Approbateur, Consult\u00e9, Inform\u00e9). Le bouton \u00ab Valider \u00bb v\u00e9rifie l\'unicit\u00e9 du A par ligne, la pr\u00e9sence d\'au moins un R par activit\u00e9, et l\'absence de goulots d\'\u00e9tranglement (trop de r\u00f4les sur un m\u00eame A). Chaque r\u00f4le dispose d\'un seuil d\'alerte personnalis\u00e9 (ex. COMEX jusqu\'\u00e0 12 A, RSSI jusqu\'\u00e0 3) avec trois niveaux de protection : prot\u00e9g\u00e9 (r\u00f4le socle, suppression impossible), important (double confirmation requise), normal (confirmation simple).</li>\n<li><strong>Politique (PSSI)</strong> — Le module PSSI r\u00e9dige, structure et maintient la Politique de S\u00e9curit\u00e9 des Syst\u00e8mes d\'Information. Il propose 23 sections pr\u00e9-r\u00e9dig\u00e9es (s1 \u00e0 s23) couvrant l\'engagement de la direction, le contr\u00f4le d\'acc\u00e8s, la gestion des incidents, le cloud, la s\u00e9paration des t\u00e2ches, etc. Les clauses sugg\u00e9r\u00e9es peuvent \u00eatre ins\u00e9r\u00e9es en un clic, et la d\u00e9tection des doublons \u00e9vite de saisir deux fois la m\u00eame clause. La double confirmation avant suppression d\'une section prot\u00e8ge contre les erreurs.</li>\n<li><strong>AIPD / DPIA</strong> — Ce registre documente les analyses d\'impact relatives \u00e0 la protection des donn\u00e9es. Le champ \u00ab Traitement concern\u00e9 \u00bb est d\u00e9sormais une liste d\u00e9roulante aliment\u00e9e dynamiquement par le registre des traitements RGPD, cr\u00e9ant un lien de navigation crois\u00e9 entre les deux registres. L\'assistant int\u00e9gr\u00e9 v\u00e9rifie la coh\u00e9rence entre gravit\u00e9 et statut (risque Critique ou \u00c9lev\u00e9 n\u00e9cessitant des actions urgentes), la pr\u00e9sence de mesures pour les risques \u00e9lev\u00e9s, la coh\u00e9rence des dates (\u00e9valuation ant\u00e9rieure \u00e0 la r\u00e9vision), la sous-estimation potentielle des traitements sensibles (sant\u00e9, bancaire) class\u00e9s en gravit\u00e9 Faible, et l\'ad\u00e9quation de la base juridique (vid\u00e9osurveillance fond\u00e9e sur consentement).</li>\n<li><strong>Auto-\u00e9valuation de maturit\u00e9</strong> — Fond\u00e9e sur le NIST CSF 2.0, cette section \u00e9value le niveau de maturit\u00e9 SSI selon les six fonctions : Gouvernance, Identification, Protection, D\u00e9tection, R\u00e9ponse, R\u00e9tablissement. Chaque domaine est not\u00e9 de 1 \u00e0 5 avec un niveau cible et une pond\u00e9ration. Un radar Chart.js visualise les \u00e9carts entre niveau actuel et cible. Les sous-domaines sont dynamiques selon le domaine s\u00e9lectionn\u00e9.</li>\n<li><strong>Prestataires</strong> — Ce registre assure le suivi des fournisseurs, sous-traitants et partenaires avec leur criticit\u00e9, conformit\u00e9 et dates d\'audit. Le champ \u00ab Service fourni \u00bb est d\u00e9sormais une liste d\u00e9roulante (H\u00e9bergement, SaaS, S\u00e9curit\u00e9/SOC, Audit, D\u00e9veloppement\u2026). L\'assistant int\u00e9gr\u00e9 alerte en cas de prestataire non conforme sans audit planifi\u00e9, de prestataire critique jamais audit\u00e9, ou de dates d\'audit incoh\u00e9rentes (prochain audit ant\u00e9rieur au dernier).</li>\n</ul><p>Au-delà de leur rôle documentaire, les informations saisies dans l\'espace Gouvernance alimentent directement les mécanismes transverses du RSSI Secure Command Deck : tableaux de bord consolidés, matrices de risques, indicateurs de conformité, rapports exécutifs et analyses de maturité. Chaque donnée contribue ainsi à construire une représentation fiable et exploitable de la posture de sécurité de l\'organisation.</p><p>La valeur opérationnelle de cet espace repose donc autant sur l\'exhaustivité des informations renseignées que sur leur cohérence intrinsèque. Les assistants de contrôle, combinés aux mécanismes de validation et de supervision intégrés, participent activement à l\'instauration d\'une gouvernance rigoureuse, durable et conforme aux meilleures pratiques de cybersécurité contemporaines.</p>',
+  gouvernance: '<p>L\'espace de gouvernance constitue le centre névralgique du RSSI Secure Command Deck. Cette section concentre l\'ensemble des mécanismes de pilotage, de supervision documentaire, de suivi réglementaire et d\'orchestration opérationnelle nécessaires à l\'administration d\'un dispositif de cybersécurité moderne. Elle offre au RSSI, au DPO, aux responsables conformité et aux instances dirigeantes une vision consolidée, cohérente et continuellement actualisée du niveau de maîtrise de l\'organisation face aux risques numériques, réglementaires et opérationnels.</p><p>Conçu selon les principes directeurs des référentiels ISO 27001, ISO 27005, NIST Cybersecurity Framework 2.0, EBIOS RM, RGPD, NIS 2 et DORA, cet espace ne se limite pas à une simple centralisation documentaire. Il agit comme une véritable plateforme de gouvernance stratégique où chaque registre interagit avec les autres afin d\'alimenter les tableaux de bord, les indicateurs de maturité, les rapports exécutifs et les dispositifs de contrôle interne.</p><p>Chaque module intègre des assistants de contrôle intelligents destinés à renforcer la qualité, la cohérence et la fiabilité des informations saisies. Ces mécanismes analysent dynamiquement les données renseignées afin de détecter les incohérences, omissions, contradictions ou valeurs manifestement erronées susceptibles d\'altérer la pertinence du pilotage SSI. Les assistants peuvent notamment signaler des incohérences entre la finalité et la base légale des traitements, des données sensibles ou bancaires sans mesures de sécurité adaptées, des types de risque inappropriés au périmètre d\'incident, des traitements de risque inadaptés au niveau de criticité, ou des échéances d\'actions dépassées sans mise à jour. Cette approche vise à limiter les erreurs humaines, homogénéiser les pratiques de gouvernance et améliorer durablement la qualité du référentiel documentaire.</p><p>Les contrôles embarqués ne remplacent toutefois pas l\'expertise du RSSI ou des responsables métier. Ils constituent une assistance méthodologique destinée à accompagner les utilisateurs dans l\'application des bonnes pratiques de cybersécurité, de conformité et de gestion des risques. L\'objectif est de garantir une documentation exploitable, crédible et défendable dans le cadre d\'audits, de contrôles réglementaires ou de comités de direction.</p><ul class=\"list-disc list-inside space-y-2\">\n<li><strong>Traitements RGPD</strong> — Ce registre constitue le socle documentaire exig\u00e9 par l\'article 30 du RGPD. Chaque traitement est document\u00e9 avec sa finalit\u00e9, sa base l\u00e9gale, les cat\u00e9gories de donn\u00e9es, les personnes concern\u00e9es, les destinataires et les mesures de s\u00e9curit\u00e9. Un assistant de coh\u00e9rence int\u00e9gr\u00e9 croise dynamiquement ces informations : il alerte en cas de donn\u00e9es sensibles (Art. 9) associ\u00e9es \u00e0 une base l\u00e9gale inadapt\u00e9e, de finalit\u00e9 marketing ou cookies fond\u00e9e sur l\'ex\u00e9cution d\'un contrat, d\'obligation l\u00e9gale sans destinataire externe, de donn\u00e9es bancaires ou sensibles sans chiffrement ni authentification forte, ou d\'incoh\u00e9rence entre finalit\u00e9 RH/paie et cat\u00e9gorie de personnes. Chaque alerte peut \u00eatre acquitt\u00e9e pour permettre la sauvegarde apr\u00e8s validation explicite.</li>\n<li><strong>Plan d\'actions</strong> — Cet outil pilote l\'ensemble des actions de s\u00e9curisation, rem\u00e9diations, projets SSI et mesures correctives. Chaque action est suivie avec une priorit\u00e9, un responsable, une \u00e9ch\u00e9ance et un statut. L\'assistant int\u00e9gr\u00e9 d\u00e9tecte les actions en retard (\u00e9ch\u00e9ance d\u00e9pass\u00e9e mais statut \u00ab \u00c0 faire \u00bb ou \u00ab En cours \u00bb) ainsi que les actions prioritaires sans \u00e9ch\u00e9ance d\u00e9finie, afin d\'\u00e9viter les d\u00e9rives de la feuille de route SSI.</li>\n<li><strong>Incidents de s\u00e9curit\u00e9</strong> — Ce registre centralise les \u00e9v\u00e9nements de s\u00e9curit\u00e9 avec leur origine, typologie, impact, p\u00e9rim\u00e8tre, type de risque et statut. L\'assistant de coh\u00e9rence int\u00e8gre 14 r\u00e8gles de v\u00e9rification crois\u00e9e entre ces champs : il signale les ran\u00e7ongiciels sans impact qualifi\u00e9, les fuites ou intrusions sans impact d\u00e9fini, les incoh\u00e9rences entre type de risque et p\u00e9rim\u00e8tre (ex. risque physique en cloud, risque r\u00e9seau sur un seul poste), les classements inappropri\u00e9s par type d\'incident (phishing non class\u00e9 en risque humain, FOVI en p\u00e9rim\u00e8tre local, compromission de compte en risque physique), les impacts r\u00e9putationnels en p\u00e9rim\u00e8tre trop restreint et les incidents clos sans impact. L\'alerte peut \u00eatre acquitt\u00e9e avant sauvegarde.</li>\n<li><strong>Registre des actifs</strong> — Cette section inventorie les ressources num\u00e9riques critiques : infrastructures, applications, \u00e9quipements r\u00e9seau, solutions cloud, SaaS, syst\u00e8mes industriels. Chaque actif est associ\u00e9 \u00e0 un type, un propri\u00e9taire, une criticit\u00e9, une localisation (d\u00e9sormais en liste d\u00e9roulante : Datacenter, Cloud AWS/Azure/GCP/OVH, Site A/B, Nomade, Externalis\u00e9\u2026) et un statut. La localisation en liste d\u00e9roulante \u00e9vite les doublons et uniformise le r\u00e9f\u00e9rentiel.</li>\n<li><strong>Registre des risques</strong> — Inspir\u00e9 d\'EBIOS RM et ISO 27005, ce registre formalise les sc\u00e9narios de risques avec leur vraisemblance, gravit\u00e9, traitement et responsable. La liste des actifs concern\u00e9s couvre 22 cat\u00e9gories (serveurs, r\u00e9seau, cloud, SCADA, PKI, RH\u2026). L\'assistant alerte lorsque le traitement est inappropri\u00e9 au niveau de risque : acceptation d\'un risque \u00e9lev\u00e9 (\u226510/25) ou critique (\u226516/25) ou \u00e9vitement disproportionn\u00e9 d\'un risque faible (&lt;6/25). L\'alerte peut \u00eatre acquitt\u00e9e pour confirmer la d\u00e9cision.</li>\n<li><strong>Matrice RACI</strong> — Cet outil permet de d\u00e9finir les responsabilit\u00e9s par activit\u00e9 SSI selon le mod\u00e8le RACI (Responsable, Approbateur, Consult\u00e9, Inform\u00e9). Le bouton \u00ab Valider \u00bb v\u00e9rifie l\'unicit\u00e9 du A par ligne, la pr\u00e9sence d\'au moins un R par activit\u00e9, et l\'absence de goulots d\'\u00e9tranglement (trop de r\u00f4les sur un m\u00eame A). Chaque r\u00f4le dispose d\'un seuil d\'alerte personnalis\u00e9 (ex. COMEX jusqu\'\u00e0 12 A, RSSI jusqu\'\u00e0 3) avec trois niveaux de protection : prot\u00e9g\u00e9 (r\u00f4le socle, suppression impossible), important (double confirmation requise), normal (confirmation simple).</li>\n<li><strong>Politique (PSSI)</strong> — Le module PSSI r\u00e9dige, structure et maintient la Politique de S\u00e9curit\u00e9 des Syst\u00e8mes d\'Information. Il propose 23 sections pr\u00e9-r\u00e9dig\u00e9es (s1 \u00e0 s23) couvrant l\'engagement de la direction, le contr\u00f4le d\'acc\u00e8s, la gestion des incidents, le cloud, la s\u00e9paration des t\u00e2ches, etc. Les clauses sugg\u00e9r\u00e9es peuvent \u00eatre ins\u00e9r\u00e9es en un clic, et la d\u00e9tection des doublons \u00e9vite de saisir deux fois la m\u00eame clause. La double confirmation avant suppression d\'une section prot\u00e8ge contre les erreurs.</li>\n<li><strong>AIPD / DPIA</strong> — Ce registre documente les analyses d\'impact relatives \u00e0 la protection des donn\u00e9es. Le champ \u00ab Traitement concern\u00e9 \u00bb est d\u00e9sormais une liste d\u00e9roulante aliment\u00e9e dynamiquement par le registre des traitements RGPD, cr\u00e9ant un lien de navigation crois\u00e9 entre les deux registres. L\'assistant int\u00e9gr\u00e9 v\u00e9rifie la coh\u00e9rence entre gravit\u00e9 et statut (risque Critique ou \u00c9lev\u00e9 n\u00e9cessitant des actions urgentes), la pr\u00e9sence de mesures pour les risques \u00e9lev\u00e9s, la coh\u00e9rence des dates (\u00e9valuation ant\u00e9rieure \u00e0 la r\u00e9vision), la sous-estimation potentielle des traitements sensibles (sant\u00e9, bancaire) class\u00e9s en gravit\u00e9 Faible, et l\'ad\u00e9quation de la base juridique (vid\u00e9osurveillance fond\u00e9e sur consentement).</li>\n<li><strong>Auto-\u00e9valuation de maturit\u00e9</strong> — Fond\u00e9e sur le NIST CSF 2.0, cette section \u00e9value le niveau de maturit\u00e9 SSI selon les six fonctions : Gouvernance, Identification, Protection, D\u00e9tection, R\u00e9ponse, R\u00e9tablissement. Chaque domaine est not\u00e9 de 1 \u00e0 5 avec un niveau cible et une pond\u00e9ration. Un radar Chart.js visualise les \u00e9carts entre niveau actuel et cible. Les sous-domaines sont dynamiques selon le domaine s\u00e9lectionn\u00e9.</li>\n<li><strong>Prestataires</strong> — Ce registre assure le suivi des fournisseurs, sous-traitants et partenaires avec leur criticit\u00e9, conformit\u00e9 et dates d\'audit. Le champ \u00ab Service fourni \u00bb est d\u00e9sormais une liste d\u00e9roulante (H\u00e9bergement, SaaS, S\u00e9curit\u00e9/SOC, Audit, D\u00e9veloppement\u2026). L\'assistant int\u00e9gr\u00e9 alerte en cas de prestataire non conforme sans audit planifi\u00e9, de prestataire critique jamais audit\u00e9, ou de dates d\'audit incoh\u00e9rentes (prochain audit ant\u00e9rieur au dernier).</li>\n<li><strong>Évaluation CVSS v3.1</strong> - Ce module calcule automatiquement le score CVSS v3.1 à partir des huit métriques de base : Vecteur d\'attaque (AV), Complexité (AC), Privilèges requis (PR), Interaction utilisateur (UI), Périmètre (S), Impact Confidentialité (C), Intégrité (I) et Disponibilité (A). Chaque métrique est accessible via une liste déroulante dans la modale d\'ajout ou d\'édition, avec un score calculé en temps réel affiché dans un champ en lecture seule. Le score est arrondi au dixième selon la formule officielle du Forum of Incident Response and Security Teams (FIRST). L\'assistant de cohérence intégré vérifie la concordance entre le score calculé et la gravité déclarée, signale les évaluations de plus d\'un an, alerte si un score critique (≥9.0) n\'est associé à aucun plan d\'action, et détecte les incohérences entre les métriques d\'impact (C, I, A) nulles et une gravité non nulle.</li>\n\n</ul><p>Au-delà de leur rôle documentaire, les informations saisies dans l\'espace Gouvernance alimentent directement les mécanismes transverses du RSSI Secure Command Deck : tableaux de bord consolidés, matrices de risques, indicateurs de conformité, rapports exécutifs et analyses de maturité. Chaque donnée contribue ainsi à construire une représentation fiable et exploitable de la posture de sécurité de l\'organisation.</p><p>La valeur opérationnelle de cet espace repose donc autant sur l\'exhaustivité des informations renseignées que sur leur cohérence intrinsèque. Les assistants de contrôle, combinés aux mécanismes de validation et de supervision intégrés, participent activement à l\'instauration d\'une gouvernance rigoureuse, durable et conforme aux meilleures pratiques de cybersécurité contemporaines.</p>',
   memos: '<p>La rubrique des mémos et des playbooks constitue le carnet de bord opérationnel du RSSI, réunissant en un même lieu la documentation tactique, les procédures de réponse aux incidents et les contacts d\'urgence indispensables à la gestion de crise.</p><p>Les quatre playbooks pré-enregistrés couvrent les scénarios les plus critiques auxquels un RSSI peut être confronté : la réponse à un rançongiciel actif, la gestion d\'une fuite de données dans le cadre du RGPD, la conduite à tenir lors d\'une panne de datacenter et la procédure de réponse à une compromission de compte administrateur. Chaque playbook détaille le scénario d\'attaque, indique sa sévérité — critique ou haute — et propose une checklist d\'actions à mener, classées dans un ordre logique d\'exécution. Les cases à cocher vous permettent de suivre votre progression en temps réel, et l\'historique intégré enregistre à chaque exercice ou déclenchement réel l\'état des actions cochées, assurant ainsi une traçabilité complète des interventions. Vous pouvez ajouter une nouvelle entrée d\'historique à tout moment, avec la date et le compte rendu de l\'exercice, et consulter ou modifier les entrées existantes.</p><p>Les mémos sont des notes libres au format Markdown, avec prévisualisation en direct assurée par la bibliothèque Marked. Ils vous permettent de consigner vos observations, vos décisions, vos comptes rendus de réunion ou tout autre élément de votre activité quotidienne. Chaque mémo peut être créé, visualisé, modifié ou supprimé selon vos besoins, et le contenu Markdown est automatiquement rendu en HTML pour une lecture agréable.</p><p>Les contacts d\'urgence rassemblent les coordonnées essentielles en cas de crise : l\'assurance cyber, l\'avocat spécialisé, l\'hébergeur et la direction. Chaque contact peut être modifié à tout moment pour refléter les changements d\'interlocuteurs ou de numéros. Ces contacts sont également référencés dans la fenêtre modale des playbooks, vous évitant de les rechercher en situation de stress.</p>',
   roadmap: '<p>La feuille de route stratégique est l\'instrument de pilotage prospectif qui vous permet de planifier, visualiser et suivre l\'avancement de l\'ensemble de vos initiatives de sécurité sur un horizon de plusieurs trimestres. Elle constitue le support privilégié pour présenter votre stratégie au comité de direction et démontrer la progression de votre dispositif de sécurité dans le temps.</p><p>Chaque jalon de la feuille de route est caractérisé par un titre, une description détaillée, un trimestre de rattachement, une catégorie — sécurité technique, conformité, organisation, gouvernance ou sensibilisation —, un statut — à faire, en cours, fait ou bloqué —, un pourcentage d\'avancement, une priorité et un responsable désigné. La barre de progression globale, située en haut de la page, vous offre une vision synthétique de l\'avancement de l\'ensemble de votre plan, avec le décompte des jalons par statut.</p><p>Les jalons sont automatiquement regroupés par trimestre et affichés sous forme de cartes, chaque trimestre présentant ses propres jalons avec leur statut, leur avancement matérialisé par une barre de progression colorée, leur catégorie identifiée par une pastille de couleur et le responsable attitré. La vue trimestrielle offre ainsi une lisibilité immédiate des priorités et des échéances à venir.</p><p>Chaque jalon peut être ajouté, modifié ou supprimé via les boutons dédiés. Le formulaire d\'ajout et de modification vous permet de renseigner l\'ensemble des caractéristiques du jalon, avec une sélection de trimestres couvrant le passé récent et les trimestres à venir. Utilisez cette feuille de route pour structurer votre communication auprès de la direction et démontrer l\'alignement de vos actions avec les objectifs stratégiques de l\'organisation.</p>'
 };
@@ -1596,8 +1598,8 @@ renderFn.frameworks = function() {
 renderFn.gouvernance = function() {
   const activeSubtab = document.querySelector('.sub-tab.active');
   const tab = activeSubtab ? activeSubtab.dataset.subtab : 'traitements';
-  const labels = { 'traitements':'Registre des traitements', 'plan-actions':'Plan d\'actions', 'incidents':'Registre des incidents', 'actifs':'Registre des actifs', 'risques':'Registre des risques', 'pssi':'Politique (PSSI)', 'raci':'Matrice RACI', 'aipd':'AIPD / DPIA', 'maturite':'Auto-évaluation', 'prestataires':'Prestataires' };
-  const secIds = { 'traitements':'gouvTraitements', 'plan-actions':'gouvPlanActions', 'incidents':'gouvIncidents', 'actifs':'gouvActifs', 'risques':'gouvRisques', 'pssi':'gouvPssi', 'raci':'gouvRaci', 'aipd':'gouvAipd', 'maturite':'gouvMaturite', 'prestataires':'gouvPrestataires' };
+  const labels = { 'traitements':'Registre des traitements', 'plan-actions':'Plan d\'actions', 'incidents':'Registre des incidents', 'actifs':'Registre des actifs', 'risques':'Registre des risques', 'pssi':'Politique (PSSI)', 'raci':'Matrice RACI', 'aipd':'AIPD / DPIA', 'maturite':'Auto-évaluation', 'prestataires':'Prestataires', 'cvss':'Évaluation CVSS' };
+  const secIds = { 'traitements':'gouvTraitements', 'plan-actions':'gouvPlanActions', 'incidents':'gouvIncidents', 'actifs':'gouvActifs', 'risques':'gouvRisques', 'pssi':'gouvPssi', 'raci':'gouvRaci', 'aipd':'gouvAipd', 'maturite':'gouvMaturite', 'prestataires':'gouvPrestataires', 'cvss':'gouvCvss' };
   const subTabs = Object.keys(labels).map(t =>
     `<button class="sub-tab${t===tab?' active':''}" data-subtab="${t}">${labels[t]}</button>`
   ).join('');
@@ -1617,6 +1619,7 @@ function renderGouvContent(tab) {
   if (tab === 'aipd') return renderAipd();
   if (tab === 'maturite') return renderMaturite();
   if (tab === 'prestataires') return renderPrestataires();
+  if (tab === 'cvss') return renderCvss();
   return renderPssi();
 }
 
@@ -1765,6 +1768,12 @@ function showGouvModal(config) {
       var frVal = f.value ? dateISOtoFR(f.value) : '';
       return `<div class="calc-group"><label>${esc(f.label)}</label><div class="date-input-group"><input class="lock-input" id="gouvField_${f.key}" value="${esc(frVal)}" placeholder="jj/mm/aaaa" maxlength="10"><button type="button" class="date-picker-btn" title="Calendrier"><i class="fas fa-calendar-alt"></i></button></div></div>`;
     }
+    if (f.type === 'textarea') {
+      return `<div class="calc-group"><label>${esc(f.label)}</label><textarea class="lock-input" id="gouvField_${f.key}" style="min-height:4rem;resize:vertical;font-family:inherit;padding:0.5rem">${esc(f.value||'')}</textarea></div>`;
+    }
+    if (f.type === 'readonly') {
+      return `<div class="calc-group"><label>${esc(f.label)}</label><input class="lock-input" id="gouvField_${f.key}" value="${esc(f.value||'')}" type="text" readonly style="opacity:0.7;cursor:default"></div>`;
+    }
     return `<div class="calc-group"><label>${esc(f.label)}</label><input class="lock-input" id="gouvField_${f.key}" value="${esc(f.value||'')}" type="text">`;
   }).join('');
   const overlay = document.getElementById('gouvModal');
@@ -1791,7 +1800,10 @@ function showGouvModal(config) {
     const data = {};
     dateErr = null;
     config.fields.forEach(f => {
-      var val = document.getElementById('gouvField_' + f.key).value.trim() || f.default || '';
+      var el = document.getElementById('gouvField_' + f.key);
+      if (!el) return;
+      var val = (f.type === 'textarea' ? el.value : el.value.trim()) || f.default || '';
+      if (f.type === 'readonly') { data[f.key] = val; return; }
       if (f.type === 'date' && val) {
         var iso = dateFRtoISO(val);
         if (!iso) { dateErr = 'Date invalide pour «' + f.label + '» (format jj/mm/aaaa).'; return; }
@@ -1810,6 +1822,7 @@ function showGouvModal(config) {
   };
   cancelBtn.addEventListener('click', onCancel);
   saveBtn.addEventListener('click', onSave);
+  if (config.onFieldsRender) setTimeout(config.onFieldsRender, 50);
 }
 
 /* Traitements */
@@ -2809,7 +2822,7 @@ async function deletePssiSection(i) {
 
 function renderGouvSubtab(tab) {
   document.querySelectorAll('.gouv-section').forEach(s => s.style.display = 'none');
-  const map = { 'traitements':'gouvTraitements', 'plan-actions':'gouvPlanActions', 'incidents':'gouvIncidents', 'actifs':'gouvActifs', 'risques':'gouvRisques', 'pssi':'gouvPssi', 'raci':'gouvRaci', 'aipd':'gouvAipd', 'maturite':'gouvMaturite', 'prestataires':'gouvPrestataires' };
+  const map = { 'traitements':'gouvTraitements', 'plan-actions':'gouvPlanActions', 'incidents':'gouvIncidents', 'actifs':'gouvActifs', 'risques':'gouvRisques', 'pssi':'gouvPssi', 'raci':'gouvRaci', 'aipd':'gouvAipd', 'maturite':'gouvMaturite', 'prestataires':'gouvPrestataires', 'cvss':'gouvCvss' };
   document.getElementById(map[tab]).style.display = 'block';
   document.getElementById(map[tab]).innerHTML = renderGouvContent(tab);
   if (tab === 'maturite') setTimeout(initMaturiteChart, 50);
@@ -3415,6 +3428,250 @@ function editPrestataire(i) {
 async function deletePrestataire(i) {
   if (!await showConfirm('Supprimer ce prestataire ?')) return;
   vault.prestataires.splice(i,1); setDirty(); renderGouvSubtab('prestataires'); notify('Prestataire supprim\u00e9.','success');
+}
+
+/* ---------- CVSS v3.1 ---------- */
+const CVSS_METRICS = {
+  AV: { label:'Vecteur d\'attaque (AV)', options:[
+    {v:'network', l:'Réseau (Network)'}, {v:'adjacent', l:'Adjacent (Adjacent)'},
+    {v:'local', l:'Local (Local)'}, {v:'physical', l:'Physique (Physical)'}
+  ]},
+  AC: { label:'Complexité d\'attaque (AC)', options:[
+    {v:'low', l:'Faible (Low)'}, {v:'high', l:'Élevée (High)'}
+  ]},
+  PR: { label:'Privilèges requis (PR)', options:[
+    {v:'none', l:'Aucun (None)'}, {v:'low', l:'Faibles (Low)'}, {v:'high', l:'Élevés (High)'}
+  ]},
+  UI: { label:'Interaction utilisateur (UI)', options:[
+    {v:'none', l:'Aucune (None)'}, {v:'required', l:'Requis (Required)'}
+  ]},
+  S: { label:'Périmètre (S)', options:[
+    {v:'unchanged', l:'Inchangé (Unchanged)'}, {v:'changed', l:'Modifié (Changed)'}
+  ]},
+  C: { label:'Impact Confidentialité (C)', options:[
+    {v:'none', l:'Aucun (None)'}, {v:'low', l:'Faible (Low)'}, {v:'high', l:'Élevé (High)'}
+  ]},
+  I: { label:'Impact Intégrité (I)', options:[
+    {v:'none', l:'Aucun (None)'}, {v:'low', l:'Faible (Low)'}, {v:'high', l:'Élevé (High)'}
+  ]},
+  A: { label:'Impact Disponibilité (A)', options:[
+    {v:'none', l:'Aucun (None)'}, {v:'low', l:'Faible (Low)'}, {v:'high', l:'Élevé (High)'}
+  ]}
+};
+const CVSS_VALUES = {
+  AV: { network: 0.85, adjacent: 0.62, local: 0.55, physical: 0.2 },
+  AC: { low: 0.77, high: 0.44 },
+  PR_UC: { none: 0.85, low: 0.62, high: 0.27 },
+  PR_C: { none: 0.85, low: 0.68, high: 0.5 },
+  UI: { none: 0.85, required: 0.62 },
+  CI: { none: 0, low: 0.22, high: 0.56 }
+};
+const CVSS_SEVERITY = [
+  { min: 9.0, label: 'Critique', cls: 'critique' },
+  { min: 7.0, label: 'Élevé', cls: 'eleve' },
+  { min: 4.0, label: 'Moyen', cls: 'moyen' },
+  { min: 0.1, label: 'Faible', cls: 'faible' },
+  { min: 0, label: 'Aucun', cls: 'aucun' }
+];
+function calcCvssScore(metrics) {
+  var av = CVSS_VALUES.AV[metrics.AV] || 0;
+  var ac = CVSS_VALUES.AC[metrics.AC] || 0;
+  var pr_uc = CVSS_VALUES.PR_UC[metrics.PR] || 0;
+  var pr_c = CVSS_VALUES.PR_C[metrics.PR] || 0;
+  var ui = CVSS_VALUES.UI[metrics.UI] || 0;
+  var c = CVSS_VALUES.CI[metrics.C] || 0;
+  var i = CVSS_VALUES.CI[metrics.I] || 0;
+  var a_val = CVSS_VALUES.CI[metrics.A] || 0;
+  var scopeChanged = metrics.S === 'changed';
+  var iss = 1 - ((1 - c) * (1 - i) * (1 - a_val));
+  var exploitability = 8.22 * av * ac * (scopeChanged ? pr_c : pr_uc) * ui;
+  var impact, base;
+  if (scopeChanged) {
+    impact = 7.52 * (iss - 0.029) - 3.25 * Math.pow(iss * 0.9731 - 0.02, 13);
+    base = impact <= 0 ? 0 : Math.min(1.08 * (impact + exploitability), 10);
+  } else {
+    impact = 6.42 * iss;
+    base = impact <= 0 ? 0 : Math.min(impact + exploitability, 10);
+  }
+  base = Math.round(base * 10) / 10;
+  var severity = 'Aucun';
+  for (var si = 0; si < CVSS_SEVERITY.length; si++) {
+    if (base >= CVSS_SEVERITY[si].min) { severity = CVSS_SEVERITY[si].label; break; }
+  }
+  return { score: base, severity: severity };
+}
+function cvssCoherenceWarnings(d) {
+  var gravite = d.gravite || '';
+  var score = d.score;
+  var metrics = d.metriques || {};
+  var dateEval = d.date_evaluation || '';
+  var planAction = d.plan_action || '';
+  var warnings = [];
+  if (dateEval) {
+    var oneYearAgo = new Date();
+    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+    if (new Date(dateEval) < oneYearAgo) {
+      warnings.push('⚠️ L\'évaluation date de plus d\'un an (' + dateEval + '). Une réévaluation est recommandée.');
+    }
+  }
+  if (score !== undefined && score !== null) {
+    if (score >= 9.0 && gravite !== 'Critique') {
+      warnings.push('⚠️ Le score CVSS (' + score + ') atteint le seuil « Critique » (≥9.0) mais la gravité déclarée est « ' + gravite + ' ».');
+    }
+    if (score >= 7.0 && score < 9.0 && gravite !== 'Élevé' && gravite !== 'Critique') {
+      warnings.push('⚠️ Le score CVSS (' + score + ') est en zone « Élevé » (≥7.0) mais la gravité déclarée est « ' + gravite + ' ».');
+    }
+    if (score >= 9.0 && !planAction) {
+      warnings.push('⚠️ Score critique (≥9.0) sans plan d\'action associé. Un plan de remédiation doit être défini.');
+    }
+  }
+  if (metrics.AV === 'physical' && gravite === 'Critique') {
+    warnings.push('⚠️ Un vecteur d\'attaque « Physique » est difficilement compatible avec une gravité « Critique ». Vérifiez la cohérence.');
+  }
+  if (metrics.C === 'none' && metrics.I === 'none' && metrics.A === 'none') {
+    if (gravite !== 'Aucun' && gravite !== 'Faible') {
+      warnings.push('⚠️ Aucun impact (C, I, A = None) mais la gravité déclarée est « ' + gravite + ' ». Le score devrait être nul.');
+    }
+  }
+  return warnings.length > 0 ? warnings.join('\n\n') : null;
+}
+function renderCvss() {
+  const items = searchFilter(vault.cvss || [], ['nom','cve','logiciel','gravite','score']);
+  return `
+    <div class="flex items-center gap-2 mb-3"><button class="btn btn-primary btn-sm" onclick="addCvss()"><i class="fas fa-plus"></i> Évaluer une vulnérabilité</button></div>
+    ${!items.length ? (searchQuery ? '<div class="empty-state" style="padding:1.5rem"><i class="fa-regular fa-chart-line"></i><p>Aucune évaluation trouvée.</p></div>' : '<div class="empty-state" style="padding:1.5rem"><i class="fa-regular fa-chart-line"></i><p>Aucune évaluation CVSS. Évaluez vos premières vulnérabilités.</p></div>') : `
+    <div style="overflow-x:auto"><table class="gouv-table">
+      <thead><tr><th>Identifiant</th><th>Logiciel / Actif</th><th>CVE</th><th>Score</th><th>Gravité</th><th>Date évaluation</th><th class="gouv-actions"></th></tr></thead>
+      <tbody>${items.map(function(c) {
+        const idx = vault.cvss.indexOf(c);
+        var scoreStr = c.score !== undefined && c.score !== null ? c.score.toFixed(1) : '—';
+        var sevMap = { 'critique':'critique', 'Élevé':'haute', 'Moyen':'moyenne', 'Faible':'basse', 'Aucun':'basse' };
+        var sevCls = 'gouv-prio-' + (sevMap[c.gravite] || 'moyenne');
+        return '<tr><td><strong>'+filterText(c.nom||'')+'</strong></td><td>'+filterText(c.logiciel||'')+'</td><td>'+filterText(c.cve||'')+'</td><td><strong>'+scoreStr+'</strong></td><td><span class="'+sevCls+'">'+filterText(c.gravite||'—')+'</span></td><td>'+escDate(c.date_evaluation)+'</td><td class="gouv-actions"><button onclick="editCvss('+idx+')" title="Modifier"><i class="fas fa-pencil-alt"></i></button><button onclick="deleteCvss('+idx+')" title="Supprimer"><i class="fas fa-trash"></i></button></td></tr>';
+      }).join('')}</tbody>
+    </table></div>`}
+    <div class="text-[0.65rem] text-slate-600 mt-2">${items.length} évaluation(s) CVSS affichée(s)</div>`;
+}
+function _cvssFields(vals) {
+  var v = vals || {};
+  var m = v.metriques || {};
+  var f = [
+    { key:'nom', label:'Identifiant *', value:v.nom||'' },
+    { key:'cve', label:'CVE (ID)', value:v.cve||'' },
+    { key:'logiciel', label:'Logiciel / Actif concerné', value:v.logiciel||'' },
+    { key:'description', label:'Description', type:'textarea', value:v.description||'' },
+    { key:'date_evaluation', label:'Date d\'évaluation', type:'date', value:v.date_evaluation||'' },
+    { key:'gravite', label:'Gravité déclarée', type:'select', options:['Critique','Élevé','Moyen','Faible','Aucun'], value:v.gravite||'Moyen' },
+  ];
+  for (var mk in CVSS_METRICS) {
+    var def = CVSS_METRICS[mk];
+    var opts = def.options.map(function(o) { return o.l; });
+    var curVal = m[mk] ? def.options.filter(function(o) { return o.v === m[mk]; }).map(function(o) { return o.l; })[0] || def.options[0].l : def.options[0].l;
+    f.push({ key: 'm_' + mk, label: def.label, type:'select', options:opts, value:curVal });
+  }
+  f.push({ key:'score_auto', label:'Score calculé', type:'readonly', value:'' });
+  f.push({ key:'plan_action', label:'Plan d\'action / Remédiation', type:'textarea', value:v.plan_action||'' });
+  f.push({ key:'notes', label:'Notes complémentaires', type:'textarea', value:v.notes||'' });
+  return f;
+}
+function addCvss() {
+  var warningAcknowledged = false;
+  showGouvModal({ title:'Nouvelle évaluation CVSS v3.1', saveLabel:'Ajouter',
+    fields: _cvssFields({}),
+    validate: function(d) { return d.nom ? null : 'L\'identifiant est obligatoire.'; },
+    onSave: async function(d) {
+      var metrics = {};
+      for (var mk in CVSS_METRICS) {
+        var selVal = d['m_' + mk];
+        var matched = CVSS_METRICS[mk].options.filter(function(o) { return o.l === selVal; });
+        metrics[mk] = matched.length > 0 ? matched[0].v : CVSS_METRICS[mk].options[0].v;
+      }
+      d.metriques = metrics;
+      var calc = calcCvssScore(metrics);
+      d.score = calc.score;
+      d.gravite = d.gravite || calc.severity;
+      if (!warningAcknowledged) {
+        var w = cvssCoherenceWarnings(d);
+        if (w) {
+          if (await showConfirm(w)) warningAcknowledged = true;
+          return false;
+        }
+      }
+      vault.cvss.push(d); setDirty(); renderGouvSubtab('cvss'); notify('Évaluation CVSS ajoutée.','success');
+    },
+    onFieldsRender: function() {
+      var updateScore = function() {
+        var f = {};
+        for (var mk in CVSS_METRICS) {
+          var sel = document.getElementById('gouvField_m_' + mk);
+          if (sel) {
+            var matched = CVSS_METRICS[mk].options.filter(function(o) { return o.l === sel.value; });
+            f[mk] = matched.length > 0 ? matched[0].v : CVSS_METRICS[mk].options[0].v;
+          }
+        }
+        var calc = calcCvssScore(f);
+        var el = document.getElementById('gouvField_score_auto');
+        if (el) el.value = calc.score.toFixed(1) + ' - ' + calc.severity;
+      };
+      for (var mk in CVSS_METRICS) {
+        var sel = document.getElementById('gouvField_m_' + mk);
+        if (sel) sel.onchange = updateScore;
+      }
+      updateScore();
+    }
+  });
+}
+function editCvss(i) {
+  const c = vault.cvss[i]; if (!c) return;
+  var warningAcknowledged = false;
+  showGouvModal({ title:'Modifier l\'évaluation CVSS', saveLabel:'Enregistrer',
+    fields: _cvssFields(c),
+    validate: function(d) { return d.nom ? null : 'L\'identifiant est obligatoire.'; },
+    onSave: async function(d) {
+      var metrics = {};
+      for (var mk in CVSS_METRICS) {
+        var selVal = d['m_' + mk];
+        var matched = CVSS_METRICS[mk].options.filter(function(o) { return o.l === selVal; });
+        metrics[mk] = matched.length > 0 ? matched[0].v : CVSS_METRICS[mk].options[0].v;
+      }
+      d.metriques = metrics;
+      var calc = calcCvssScore(metrics);
+      d.score = calc.score;
+      d.gravite = d.gravite || calc.severity;
+      if (!warningAcknowledged) {
+        var w = cvssCoherenceWarnings(d);
+        if (w) {
+          if (await showConfirm(w)) warningAcknowledged = true;
+          return false;
+        }
+      }
+      vault.cvss[i] = d; setDirty(); renderGouvSubtab('cvss'); notify('Évaluation CVSS mise à jour.','success');
+    },
+    onFieldsRender: function() {
+      var updateScore = function() {
+        var f = {};
+        for (var mk in CVSS_METRICS) {
+          var sel = document.getElementById('gouvField_m_' + mk);
+          if (sel) {
+            var matched = CVSS_METRICS[mk].options.filter(function(o) { return o.l === sel.value; });
+            f[mk] = matched.length > 0 ? matched[0].v : CVSS_METRICS[mk].options[0].v;
+          }
+        }
+        var calc = calcCvssScore(f);
+        var el = document.getElementById('gouvField_score_auto');
+        if (el) el.value = calc.score.toFixed(1) + ' - ' + calc.severity;
+      };
+      for (var mk in CVSS_METRICS) {
+        var sel = document.getElementById('gouvField_m_' + mk);
+        if (sel) sel.onchange = updateScore;
+      }
+      updateScore();
+    }
+  });
+}
+async function deleteCvss(i) {
+  if (!await showConfirm('Supprimer cette évaluation CVSS ?')) return;
+  vault.cvss.splice(i,1); setDirty(); renderGouvSubtab('cvss'); notify('Évaluation CVSS supprimée.','success');
 }
 
 /* ---------- MEMOS & PLAYBOOKS ---------- */
