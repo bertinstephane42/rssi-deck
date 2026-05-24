@@ -17,7 +17,7 @@ Application web chiffrée destinée aux RSSI et professionnels de la cybersécur
   - **Registre des actifs** — Inventaire, propriétaire, classification, localisation, statut
   - **Registre des risques** — Analyse, cotation, traitement, responsable, statut
   - **Politique PSSI** — 20 sections pré-définies, ~80 clauses suggérées, cycle de validation (Brouillon→Rédaction→Validé→En révision→Publié), fréquence de révision (Annuelle/Semestrielle/Trimestrielle), vue Document complet avec rendu Markdown et impression
-  - **Matrice RACI** — 15 activités, 7 rôles, cycle R→A→C→I au clic, double-clic pour effacer une cellule, export CSV presse-papier
+  - **Matrice RACI** — 15 activités, 7 rôles, cycle R→A→C→I au clic, double-clic pour effacer une cellule, **bouton « Valider »** avec détection d'anomalies (doublons A, absence R, goulots d'étranglement par rôle), **3 niveaux de protection** des rôles (protégé/important/normal), export CSV presse-papier
   - **AIPD / DPIA** — Analyse d'impact complète, gravité, statut
   - **Auto-évaluation NIST CSF 2.0** — 6 domaines, sous-domaines détaillés, échelle CMMI 1→5, score pondéré, radar chart, date d'évaluation
   - **Registre des prestataires** — Criticité, conformité, planification d'audit
@@ -36,8 +36,6 @@ Application web chiffrée destinée aux RSSI et professionnels de la cybersécur
 - Mot de passe saisi via **modale DOM** (plus de `prompt()`)
 - Alerte de confirmation avant écrasement d'un coffre existant à la création
 - **Rate-limiting exponentiel** (1 s → 60 s) sur les tentatives de déchiffrement échouées
-- **SRI (Subresource Integrity)** sur toutes les ressources CDN (FontAwesome 6.5.1, Chart.js 4.4.7, Marked.js 15.0.4) avec `crossorigin="anonymous"`
-- **Anti-XSS** : `filterText()` blindé (`esc()` interne) sur toutes les données utilisateur affichées ; texte de secours `<span>` pour les icônes quand le CDN est indisponible
 
 ## Stockage
 
@@ -52,24 +50,25 @@ Deux couches de persistance :
 - **file://** : IndexedDB automatique + bouton "Exporter" pour copie fichier manuelle
 - **Export** : Téléchargement du fichier `.json` chiffré (nom horodaté)
 - **Import** : Chargement depuis un fichier `.json` externe (toujours disponible)
-- **Migration automatique** : Ajout des champs manquants (fréquence de révision PSSI, pondération et date d'évaluation maturité, historique playbooks, registres gouvernance) au chargement des coffres existants
+- **Migration automatique** : Ajout des champs manquants (fréquence de révision PSSI, pondération et date d'évaluation maturité, historique playbooks, registres gouvernance, **correction des doublons RACI**) au chargement des coffres existants
 
 ## Utilisation
 
-1. Ouvrir `rssi_deck.html` dans Chrome, Edge ou Opera
-2. Créer un coffre : choisir ou créer un dossier `.rssi_deck`, définir un mot de passe
-3. Naviguer dans les vues via la barre latérale
-4. "Sauvegarder" → chiffre et persiste le coffre
-5. "Verrouiller" → protège l'accès
-6. Au rechargement : "Charger" depuis le dossier ou le navigateur
+1. Cloner ce dépôt (ou télécharger l'archive) — le dossier `lib/` avec ses dépendances locales est inclus
+2. Ouvrir `rssi_deck.html` dans Chrome, Edge ou Opera
+3. Créer un coffre : choisir ou créer un dossier `.rssi_deck`, définir un mot de passe
+4. Naviguer dans les vues via la barre latérale
+5. "Sauvegarder" → chiffre et persiste le coffre
+6. "Verrouiller" → protège l'accès
+7. Au rechargement : "Charger" depuis le dossier ou le navigateur
 
 ## Technologies
 
 - **Vanilla JS** — Zéro framework, zéro dépendance build
-- **Tailwind CSS** (CDN) — Styles utilitaires
-- **FontAwesome 6.5.1** (CDN, version figée + SRI) — Icônes
-- **Chart.js 4.4.7** (CDN, version figée + SRI) — Graphiques du dashboard et radar chart maturité NIST CSF
-- **Marked.js 15.0.4** (CDN, version figée + SRI) — Rendu Markdown des mémos et playbooks
+- **Tailwind CSS** (local `lib/tailwind.css`) — Styles utilitaires
+- **FontAwesome 6.5.1** (local `lib/fontawesome/`) — Icônes
+- **Chart.js 4.4.7** (local `lib/chart.umd.min.js`) — Graphiques du dashboard et radar chart maturité NIST CSF
+- **Marked.js 15.0.4** (local `lib/marked.min.js`) — Rendu Markdown des mémos et playbooks
 - **Web Crypto API** — Chiffrement AES-GCM 256 + PBKDF2
 - **IndexedDB** — Persistance navigateur
 - **File System Access API** — Accès fichier disque (Chrome http://)
@@ -85,4 +84,4 @@ Deux couches de persistance :
 
 ## Licence
 
-Usage interne. Aucune dépendance externe autre que les CDN listés.
+Usage interne. Toutes les dépendances (`lib/`) sont embarquées localement — aucune requête CDN externe.
