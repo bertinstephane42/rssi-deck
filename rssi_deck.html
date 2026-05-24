@@ -1557,12 +1557,14 @@ renderFn.frameworks = function() {
         <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3"><i class="fas fa-calculator mr-1"></i> Estimation Amende RGPD</h3>
         <p class="text-xs text-slate-500 mb-3">Simulation basée sur les critères de l\'Article 83 du RGPD.</p>
         <div class="calc-group"><label><span class="text-slate-400">Gravité de la violation</span> <span id="gravVal" class="text-blue-400">0 - Aucune</span></label><input type="range" min="0" max="5" value="0" id="gravSlider"></div>
-        <div class="calc-group"><label><span class="text-slate-400">Personnes concernées</span> <span id="nbreVal" class="text-blue-400">10 000</span></label><input type="range" min="100" max="10000000" value="10000" id="nbreSlider"></div>
-        <div class="calc-group"><label><span class="text-slate-400">Mesures correctives</span> <span id="corrVal" class="text-blue-400">2/5</span></label><input type="range" min="1" max="5" value="2" id="corrSlider"></div>
+        <div class="calc-group"><label><span class="text-slate-400">Personnes concernées</span> <span id="nbreVal" class="text-blue-400">10 000</span></label><input type="range" min="0" max="100" value="57" id="nbreSlider"></div>
+        <div class="calc-group"><label><span class="text-slate-400">Chiffre d'affaires annuel (€)</span> <input type="number" id="caAmendeInput" class="lock-input" placeholder="Ex : 50 000 000" min="0" style="font-size:0.85rem;width:180px;display:inline-block;margin-left:0.5rem"></label></div>
+        <div class="calc-group"><label><span class="text-slate-400">Catégorie de données</span></label><select id="dataCatSelect" class="lock-input" style="font-size:0.85rem"><option value="standard">Données personnelles standard</option><option value="sensible">Données sensibles (santé, biométrie, opinions…)</option><option value="financiere">Données bancaires / financières</option></select></div>
+        <div class="calc-group"><label><span class="text-slate-400">Mesures correctives</span> <span id="corrVal" class="text-blue-400">2/5</span></label><input type="range" min="0" max="5" value="2" id="corrSlider"></div>
         <div class="border-t border-white/5 pt-3 mt-3">
           <div class="text-xs text-slate-500">Estimation indicative :</div>
           <div class="calc-result" id="amendeResult">Aucune amende (gravité nulle)</div>
-          <div class="text-xs text-slate-500 mt-1">Plafond légal : 20M€ ou 4% du CA annuel mondial</div>
+          <div class="text-xs text-slate-500 mt-1" id="amendePlafond">Plafond légal : 20M€ ou 4% du CA annuel mondial</div>
         </div>
       </div>
       <div class="glass-card">
@@ -4682,10 +4684,21 @@ function bindViewEvents(name) {
       if (slider && val) {
         slider.oninput = function() {
           const v = parseInt(this.value);
-          val.textContent = id === 'nbre' ? Number(v).toLocaleString('fr-FR') : v === 0 ? '0 - Aucune' : v + '/5';
+          if (id === 'nbre') {
+            const n = Math.round(Math.pow(10, (v / 100) * 7));
+            val.textContent = Number(n).toLocaleString('fr-FR');
+          } else if (id === 'corr') {
+            val.textContent = v === 0 ? '0 - Aucune' : v + '/5';
+          } else {
+            val.textContent = v === 0 ? '0 - Aucune' : v + '/5';
+          }
           updateAmende();
         };
       }
+    });
+    ['caAmendeInput','dataCatSelect'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('input', updateAmende);
     });
     ['vrai','gravImp'].forEach(id => {
       const slider = document.getElementById(id + 'Slider');
@@ -4862,18 +4875,28 @@ function bindViewEvents(name) {
 /* ---------- CALCULATORS ---------- */
 function updateAmende() {
   const grav = parseInt(document.getElementById('gravSlider').value);
-  const nbre = parseInt(document.getElementById('nbreSlider').value);
-  const corr = parseInt(document.getElementById('corrSlider').value);
-  // Aucune violation → amende 0 €
   if (grav === 0) {
     document.getElementById('amendeResult').textContent = 'Aucune amende (gravité nulle)';
     return;
   }
-  // Simulation basée sur l'Article 83 RGPD : base * (grav/5) * log10(nbre+1) / (corr/5)
-  const base = 20000000;
-  const ratio = (grav / 5) * Math.log10(nbre + 1) / Math.log10(10000001) * (1 - corr * 0.12);
-  const val = Math.round(Math.max(0, Math.min(base, base * ratio)));
-  document.getElementById('amendeResult').textContent = 'Jusqu\'à ' + Number(val).toLocaleString('fr-FR') + ' €';
+  const sliderVal = parseInt(document.getElementById('nbreSlider').value);
+  const nbre = Math.round(Math.pow(10, (sliderVal / 100) * 7));
+  document.getElementById('nbreVal').textContent = Number(nbre).toLocaleString('fr-FR');
+  const corr = parseInt(document.getElementById('corrSlider').value);
+  const ca = parseFloat(document.getElementById('caAmendeInput').value) || 0;
+  const catMult = { standard:1, sensible:1.5, financiere:1.3 }[document.getElementById('dataCatSelect').value] || 1;
+  const plafondLegal = 20000000;
+  const plafondCA = ca * 0.04;
+  const plafond = Math.max(plafondLegal, plafondCA);
+  const ratio = (grav / 5) * Math.log10(nbre + 1) / Math.log10(10000001) * (1 - corr * 0.12) * catMult;
+  const val = Math.round(Math.max(0, Math.min(plafond, plafond * ratio)));
+  let resultat = 'Jusqu\'à ' + Number(val).toLocaleString('fr-FR') + ' €';
+  if (plafondCA > plafondLegal) {
+    resultat += ' <span class="text-xs text-slate-500">(plafond 4% CA : ' + Number(Math.round(plafondCA)).toLocaleString('fr-FR') + ' €)</span>';
+  }
+  document.getElementById('amendeResult').innerHTML = resultat;
+  document.getElementById('amendePlafond').textContent =
+    'Plafond légal : 20M€' + (ca > 0 ? ' ou 4% du CA (' + Number(Math.round(plafondCA)).toLocaleString('fr-FR') + ' €)' : '');
 }
 
 function updateRisque() {
