@@ -1888,7 +1888,43 @@ const IMPACT_OPTIONS = [
   'Aucun impact d\u00e9tect\u00e9',
   'Autre'
 ];
+function traitementCoherenceWarnings(d) {
+  var finalite = d.finalite || '';
+  var base = d.base_legale || '';
+  var donnees = d.categories_donnees || '';
+  var personnes = d.categories_personnes || '';
+  var dest = d.destinataires || '';
+  var mesures = d.mesures_securite || '';
+
+  var sensibles = ['Données biométriques','Données de santé','Données sensibles (art. 9'];
+  var estSensible = sensibles.some(function(s) { return donnees.includes(s); });
+  var incoherentContract = base === 'Exécution d\'un contrat (Art. 6.1.b)' || base === 'Intérêt légitime (Art. 6.1.f)';
+
+  if (estSensible && incoherentContract) {
+    return '⚠️ Les données relevant de l\'article 9 (données sensibles) nécessitent un consentement explicite ou une exemption spécifique. Les bases légales « Intérêt légitime » ou « Exécution d\'un contrat » sont insuffisantes.';
+  }
+  if (finalite === 'Marketing et prospection commerciale' && base === 'Exécution d\'un contrat (Art. 6.1.b)') {
+    return '⚠️ Le marketing et la prospection commerciale ne peuvent pas reposer sur l\'exécution d\'un contrat. La base légale appropriée est le consentement (Art. 6.1.a) ou l\'intérêt légitime (Art. 6.1.f).';
+  }
+  if (finalite === 'Gestion des cookies et traceurs' && base === 'Exécution d\'un contrat (Art. 6.1.b)') {
+    return '⚠️ Les cookies et traceurs non strictement nécessaires requièrent le consentement (Art. 6.1.a) conformément à la directive ePrivacy. L\'exécution d\'un contrat n\'est pas une base valable.';
+  }
+  if (base === 'Obligation légale (Art. 6.1.c)' && dest === 'Aucun destinataire externe') {
+    return '⚠️ Une obligation légale implique généralement une transmission à une autorité publique ou un organisme de contrôle (administration, CNIL, URSSAF, etc.). La sélection « Aucun destinataire externe » paraît contradictoire.';
+  }
+  if (donnees.includes('bancaires') && !(mesures.includes('Chiffrement') || mesures.includes('Authentification'))) {
+    return '⚠️ Les données bancaires et financières exigent des mesures de sécurité renforcées (Art. 32 RGPD). Au moins l\'un des contrôles suivants est attendu : chiffrement ou authentification forte.';
+  }
+  if (estSensible && !(mesures.includes('Chiffrement') || mesures.includes('Authentification'))) {
+    return '⚠️ Les données sensibles (Art. 9) nécessitent un niveau de sécurité élevé. Le chiffrement et/ou l\'authentification forte sont fortement recommandés (Art. 32).';
+  }
+  if ((finalite === 'Gestion des ressources humaines' || finalite === 'Gestion de la paie et notes de frais') && (personnes === 'Clients (particuliers)' || personnes === 'Clients (professionnels)' || personnes === 'Prospects')) {
+    return '⚠️ La finalité « ' + finalite + ' » concerne les employés, pas les clients ou prospects. Vérifiez la catégorie de personnes concernées.';
+  }
+  return null;
+}
 function addTraitement() {
+  var warningAcknowledged = false;
   showGouvModal({ title:'Nouveau traitement RGPD', saveLabel:'Ajouter',
     fields:[
       { key:'finalite', label:'Finalité *', type:'select', options:FINALITE_OPTIONS, value:'Gestion de la relation client (CRM)' },
@@ -1900,12 +1936,25 @@ function addTraitement() {
       { key:'mesures_securite', label:'Mesures de sécurité', type:'select', options:MESURES_SECURITE_OPTIONS, value:'Gestion des accès (RBAC, habilitations)' },
       { key:'statut', label:'Statut', type:'select', options:['Actif','Archivé'], value:'Actif' }
     ],
-    validate: d => d.finalite ? null : 'La finalité est obligatoire.',
-    onSave: d => { vault.traitements.push(d); setDirty(); renderGouvSubtab('traitements'); notify('Traitement ajouté.','success'); }
+    validate: function(d) {
+      if (!d.finalite) return 'La finalité est obligatoire.';
+      return null;
+    },
+    onSave: async function(d) {
+      if (!warningAcknowledged) {
+        var w = traitementCoherenceWarnings(d);
+        if (w) {
+          if (await showConfirm(w)) warningAcknowledged = true;
+          return false;
+        }
+      }
+      vault.traitements.push(d); setDirty(); renderGouvSubtab('traitements'); notify('Traitement ajouté.','success');
+    }
   });
 }
 function editTraitement(i) {
   const t = vault.traitements[i]; if (!t) return;
+  var warningAcknowledged = false;
   showGouvModal({ title:'Modifier le traitement', saveLabel:'Enregistrer',
     fields:[
       { key:'finalite', label:'Finalité *', type:'select', options:FINALITE_OPTIONS, value:FINALITE_OPTIONS.includes(t.finalite) ? t.finalite : 'Autre' },
@@ -1917,8 +1966,20 @@ function editTraitement(i) {
       { key:'mesures_securite', label:'Mesures de sécurité', type:'select', options:MESURES_SECURITE_OPTIONS, value:MESURES_SECURITE_OPTIONS.includes(t.mesures_securite) ? t.mesures_securite : 'Autre' },
       { key:'statut', label:'Statut', type:'select', options:['Actif','Archivé'], value:t.statut || 'Actif' }
     ],
-    validate: d => d.finalite ? null : 'La finalité est obligatoire.',
-    onSave: d => { vault.traitements[i] = d; setDirty(); renderGouvSubtab('traitements'); notify('Traitement mis à jour.','success'); }
+    validate: function(d) {
+      if (!d.finalite) return 'La finalité est obligatoire.';
+      return null;
+    },
+    onSave: async function(d) {
+      if (!warningAcknowledged) {
+        var w = traitementCoherenceWarnings(d);
+        if (w) {
+          if (await showConfirm(w)) warningAcknowledged = true;
+          return false;
+        }
+      }
+      vault.traitements[i] = d; setDirty(); renderGouvSubtab('traitements'); notify('Traitement mis à jour.','success');
+    }
   });
 }
 async function deleteTraitement(i) {
@@ -1982,8 +2043,10 @@ function addIncident() {
           'Applicatif (OWASP Top 10, injection, XSS, API)',
           'Système d\'exploitation (CVE OS, configuration, patch)',
           'Réseau (sniffing, MitM, DDoS, routage)',
+          'Cloud / SaaS (configuration, stockage, IAM)',
           'Humain (erreur, négligence, social engineering)',
           'Organisationnel (gouvernance, conformité, politique)',
+          'Identité et accès (IAM, SSO, MFA, provisioning)',
           'Logiciel / Malware (rançon, backdoor, spyware)',
           'Supply Chain (fournisseur, mise à jour, dépendance)',
           'Matériel (défaillance hardware, obsolescence)'],
@@ -2030,8 +2093,10 @@ function editIncident(i) {
           'Applicatif (OWASP Top 10, injection, XSS, API)',
           'Système d\'exploitation (CVE OS, configuration, patch)',
           'Réseau (sniffing, MitM, DDoS, routage)',
+          'Cloud / SaaS (configuration, stockage, IAM)',
           'Humain (erreur, négligence, social engineering)',
           'Organisationnel (gouvernance, conformité, politique)',
+          'Identité et accès (IAM, SSO, MFA, provisioning)',
           'Logiciel / Malware (rançon, backdoor, spyware)',
           'Supply Chain (fournisseur, mise à jour, dépendance)',
           'Matériel (défaillance hardware, obsolescence)'],
@@ -2185,6 +2250,27 @@ function incidentCoherenceWarnings(d) {
   }
   if (risque === 'Réseau (sniffing, MitM, DDoS, routage)' && perim === 'Physique (site / salle serveur / datacenter)') {
     return '⚠️ Un risque réseau (DDoS, MitM) peut difficilement se limiter à un périmètre physique (site, salle serveur). Le réseau traverse les infrastructures.';
+  }
+  if (type === 'Ransomware / Rançongiciel' && perim === 'Local (poste de travail)') {
+    return '⚠️ Les ransomwares modernes se propagent latéralement et rarement sur un seul poste. Un périmètre « Local » pourrait sous-estimer l\'ampleur de l\'incident.';
+  }
+  if (type === 'Phishing / Hameçonnage' && risque !== 'Humain (erreur, négligence, social engineering)') {
+    return '⚠️ Le phishing est avant tout un risque humain (social engineering). Vérifiez la classification si vous avez sélectionné un autre type de risque.';
+  }
+  if (type === 'Fraude au président (FOVI)' && perim === 'Local (poste de travail)') {
+    return '⚠️ Une fraude au président (FOVI) cible la direction ou les services financiers, rarement un seul poste de travail. Le périmètre semble sous-évalué.';
+  }
+  if (type === 'Défaillance matérielle' && risque !== 'Matériel (défaillance hardware, obsolescence)') {
+    return '⚠️ Une défaillance matérielle devrait être classée en risque « Matériel ». Vérifiez la saisie.';
+  }
+  if (type === 'Atteinte physique / Intrusion' && risque !== 'Physique (accès, intrusion, vol)') {
+    return '⚠️ Une intrusion ou atteinte physique devrait être classée en risque « Physique ». Vérifiez la saisie.';
+  }
+  if (type === 'Chaîne d\'approvisionnement' && (perim === 'Local (poste de travail)' || perim === 'Réseau local (LAN / DMZ)')) {
+    return '⚠️ Un incident Supply Chain implique des tiers externes. Un périmètre local ou LAN est incohérent.';
+  }
+  if (type === 'Compromission de compte' && risque === 'Physique (accès, intrusion, vol)') {
+    return '⚠️ Une compromission de compte est un incident numérique. La classer en risque « Physique » est incohérent.';
   }
   return null;
 }
