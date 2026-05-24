@@ -3545,7 +3545,7 @@ function renderCvss() {
       <tbody>${items.map(function(c) {
         const idx = vault.cvss.indexOf(c);
         var scoreStr = c.score !== undefined && c.score !== null ? c.score.toFixed(1) : '—';
-        var sevMap = { 'critique':'critique', 'Élevé':'haute', 'Moyen':'moyenne', 'Faible':'basse', 'Aucun':'basse' };
+        var sevMap = { 'Critique':'critique', 'Élevé':'haute', 'Moyen':'moyenne', 'Faible':'basse', 'Aucun':'basse' };
         var sevCls = 'gouv-prio-' + (sevMap[c.gravite] || 'moyenne');
         return '<tr><td><strong>'+filterText(c.nom||'')+'</strong></td><td>'+filterText(c.logiciel||'')+'</td><td>'+filterText(c.cve||'')+'</td><td><strong>'+scoreStr+'</strong></td><td><span class="'+sevCls+'">'+filterText(c.gravite||'—')+'</span></td><td>'+escDate(c.date_evaluation)+'</td><td class="gouv-actions"><button onclick="editCvss('+idx+')" title="Modifier"><i class="fas fa-pencil-alt"></i></button><button onclick="deleteCvss('+idx+')" title="Supprimer"><i class="fas fa-trash"></i></button></td></tr>';
       }).join('')}</tbody>
