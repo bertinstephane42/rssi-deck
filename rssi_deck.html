@@ -1106,7 +1106,11 @@ function migrateVault(v) {
     if (v.pssi && !v.pssi.sections) v.pssi.sections = DEFAULT_VAULT.pssi.sections;
     if (v.pssi && v.pssi.approuve_par === undefined) v.pssi.approuve_par = '';
     if (v.pssi && v.pssi.frequence_revision === undefined) v.pssi.frequence_revision = 'Annuelle';
-    if (!v.feuille_route) v.feuille_route = DEFAULT_VAULT.feuille_route;
+    if (!v.feuille_route) v.feuille_route = JSON.parse(JSON.stringify(DEFAULT_VAULT.feuille_route));
+    if (!v.favorites) v.favorites = [];
+    if (!v.playbook_checks) v.playbook_checks = {};
+    if (!v.threat_intel) v.threat_intel = JSON.parse(JSON.stringify(DEFAULT_VAULT.threat_intel));
+    if (!v.cadre_legal) v.cadre_legal = JSON.parse(JSON.stringify(DEFAULT_VAULT.cadre_legal));
     if (!v.raci) v.raci = JSON.parse(JSON.stringify(DEFAULT_VAULT.raci));
     if (v.raci && v.raci.activites) {
       var _fixA = { ra1:{'RSSI':'C','COMEX':'A'}, ra11:{'DSI':'A','RSSI':'C'}, ra13:{'RSSI':'C','COMEX':'A'} };
@@ -1166,7 +1170,7 @@ function toggleTheme() {
 }
 
 function sortTools(tools, mode) {
-  if (mode === 'alpha') return [...tools].sort((a,b) => a.nom.localeCompare(b.nom));
+  if (mode === 'alpha') return [...tools].sort((a,b) => (a.nom || '').localeCompare(b.nom || ''));
   if (mode === 'favs') {
     const favs = tools.filter(t => vault.favorites.includes(t.id));
     const rest = tools.filter(t => !vault.favorites.includes(t.id));
@@ -1250,7 +1254,7 @@ renderFn.dashboard = function() {
           const favItems = vault.favorites.map(id => findItem(id)).filter(Boolean);
           const filtered = searchFilter(favItems, ['nom','categorie']);
           if (!filtered.length && searchQuery) return '<div class="empty-state" style="padding:1.5rem"><i class="fa-regular fa-star" style="font-size:1.5rem"></i><p>Aucun favori ne correspond à la recherche.</p></div>';
-          return filtered.map(item => `<div class="flex items-center gap-3 py-2 border-b border-white/5 last:border-0"><i class="fas ${item.icone || 'fa-cube'} text-blue-400 w-5 text-center"></i><span class="text-sm">${filterText(item.nom)}</span><span class="text-xs text-slate-500 ml-auto">${filterText(item.categorie || '')}</span></div>`).join('');
+          return filtered.map(item => `<div class="flex items-center gap-3 py-2 border-b border-white/5 last:border-0"><i class="fas ${esc(item.icone || 'fa-cube')} text-blue-400 w-5 text-center"></i><span class="text-sm">${filterText(item.nom)}</span><span class="text-xs text-slate-500 ml-auto">${filterText(item.categorie || '')}</span></div>`).join('');
         })()}</div>
       </div>
     </div>
@@ -1307,7 +1311,7 @@ renderFn['outils-tech'] = function() {
   const sb = (m, l) => `<button class="sort-btn${sortOutilsTech===m?' active':''}" data-sort="${m}">${l}</button>`;
   const sortBar = `<div class="sort-bar"><span class="sort-label">Trier :</span>${sb('default','Par défaut')}${sb('alpha','A–Z')}${sb('favs','☆ Favoris')}</div>`;
   return sortBar + Object.keys(cats).map(cat => `
-    <div class="category-label"><i class="fas fa-circle text-[6px] mr-1 align-middle" style="color:${catColor(cat)}"></i> ${cat}</div>
+    <div class="category-label"><i class="fas fa-circle text-[6px] mr-1 align-middle" style="color:${catColor(cat)}"></i> ${esc(cat)}</div>
     <div class="grid-bento">${cats[cat].map(t => toolCard(t, 'tech')).join('')}</div>
   `).join('');
 };
@@ -1319,7 +1323,7 @@ renderFn['outils-fonctionnels'] = function() {
   const sb = (m, l) => `<button class="sort-btn${sortOutilsFonc===m?' active':''}" data-sort="${m}">${l}</button>`;
   const sortBar = `<div class="sort-bar"><span class="sort-label">Trier :</span>${sb('default','Par défaut')}${sb('alpha','A–Z')}${sb('favs','☆ Favoris')}</div>`;
   return sortBar + Object.keys(cats).map(cat => `
-    <div class="category-label"><i class="fas fa-circle text-[6px] mr-1 align-middle" style="color:${catColor(cat)}"></i> ${cat}</div>
+    <div class="category-label"><i class="fas fa-circle text-[6px] mr-1 align-middle" style="color:${catColor(cat)}"></i> ${esc(cat)}</div>
     <div class="grid-bento">${cats[cat].map(t => toolCard(t, 'fonc')).join('')}</div>
   `).join('');
 };
@@ -1334,13 +1338,13 @@ function toolCard(t, ns) {
   const ttl = filterText(t.nom);
   const desc = filterText(t.description);
   const prio = t.priorite === 1 ? '<span class="prio-badge prio-1">Essentiel</span>' : t.priorite === 2 ? '<span class="prio-badge prio-2">Important</span>' : '<span class="prio-badge prio-3">Complémentaire</span>';
-  return `<div class="glass-card cursor-pointer" data-id="${t.id}" data-ns="${ns}" data-modal="${t.id}">
+  return `<div class="glass-card cursor-pointer" data-id="${esc(t.id)}" data-ns="${ns}" data-modal="${esc(t.id)}">
     <div class="flex items-start gap-3 mb-2">
-      <div class="card-icon" style="background:${t.categorie === 'Réseau' ? 'rgba(59,130,246,0.12)' : t.categorie === 'Vulnérabilité' ? 'rgba(239,68,68,0.12)' : t.categorie === 'Forensic' ? 'rgba(16,185,129,0.12)' : 'rgba(245,158,11,0.12)'}"><i class="fas ${t.icone}" style="color:${catColor(t.categorie)}"></i></div>
+      <div class="card-icon" style="background:${t.categorie === 'Réseau' ? 'rgba(59,130,246,0.12)' : t.categorie === 'Vulnérabilité' ? 'rgba(239,68,68,0.12)' : t.categorie === 'Forensic' ? 'rgba(16,185,129,0.12)' : 'rgba(245,158,11,0.12)'}"><i class="fas ${esc(t.icone || 'fa-link')}" style="color:${catColor(t.categorie)}"></i></div>
       <div style="min-width:0;flex:1">
         <div class="flex items-center gap-2 mb-1">
           <span class="text-sm font-semibold text-slate-100">${ttl}${prio}</span>
-          <button class="fav-btn ${isFav?'active':''}" data-fav="${t.id}" title="Favori"><i class="${isFav?'fas':'fa-regular'} fa-star"></i></button>
+          <button class="fav-btn ${isFav?'active':''}" data-fav="${esc(t.id)}" title="Favori"><i class="${isFav?'fas':'fa-regular'} fa-star"></i></button>
         </div>
         <p class="text-xs text-slate-400 leading-relaxed line-clamp-2">${desc}</p>
       </div>
@@ -2459,17 +2463,32 @@ async function deleteRisque(i) {
 }
 
 /* KPIs personnalisés */
+const UNITE_KPIS = ['%','€','k€','jours','heures','minutes','score','nb incidents','nb','Oui/Non','cat.'];
 function addKpi() {
   showGouvModal({ title:'Nouvel indicateur (KPI)', saveLabel:'Ajouter',
     fields:[
       { key:'nom', label:'Nom *' },
       { key:'valeur', label:'Valeur actuelle', value:'0' },
       { key:'cible', label:'Objectif (cible)', value:'100' },
-      { key:'unite', label:'Unité (%, €, cat., …)' },
+      { key:'unite', label:'Unité', type:'select', options: UNITE_KPIS.concat({ value:'__autre__', label:'Autre (saisie libre)' }) },
       { key:'couleur', label:'Couleur', type:'color', value:'#f59e0b' }
     ],
     validate: d => d.nom ? null : 'Le nom est obligatoire.',
-    onSave: d => { d.valeur = parseFloat(d.valeur)||0; d.cible = parseFloat(d.cible)||1; vault.indicateurs.push(d); setDirty(); renderView('dashboard'); notify('KPI ajouté.','success'); }
+    onSave: d => {
+      d.valeur = parseFloat(d.valeur)||0; d.cible = parseFloat(d.cible)||1;
+      if (d.unite === '__autre__') {
+        var _d = d;
+        setTimeout(function() {
+          showGouvModal({ title:'Unité personnalisée', saveLabel:'Valider',
+            fields:[{ key:'unite', label:'Unité (%, €, cat., …)' }],
+            validate: d2 => d2.unite ? null : 'L\'unité est requise.',
+            onSave: d2 => { _d.unite = d2.unite; vault.indicateurs.push(_d); setDirty(); renderView('dashboard'); notify('KPI ajouté.','success'); }
+          });
+        }, 0);
+        return;
+      }
+      vault.indicateurs.push(d); setDirty(); renderView('dashboard'); notify('KPI ajouté.','success');
+    }
   });
 }
 function editKpi(i) {
@@ -2479,11 +2498,29 @@ function editKpi(i) {
       { key:'nom', label:'Nom *', value:k.nom },
       { key:'valeur', label:'Valeur actuelle', value:String(k.valeur) },
       { key:'cible', label:'Objectif (cible)', value:String(k.cible) },
-      { key:'unite', label:'Unité (%, €, cat., …)', value:k.unite||'' },
+      { key:'unite', label:'Unité', type:'select', options: (() => {
+        const u = UNITE_KPIS.slice();
+        if (!u.includes(k.unite) && k.unite) u.unshift(k.unite);
+        return u.concat({ value:'__autre__', label:'Autre (saisie libre)' });
+      })(), value: k.unite || '' },
       { key:'couleur', label:'Couleur', type:'color', value:k.couleur||'#f59e0b' }
     ],
     validate: d => d.nom ? null : 'Le nom est obligatoire.',
-    onSave: d => { d.valeur = parseFloat(d.valeur)||0; d.cible = parseFloat(d.cible)||1; vault.indicateurs[i] = d; setDirty(); renderView('dashboard'); notify('KPI mis à jour.','success'); }
+    onSave: d => {
+      d.valeur = parseFloat(d.valeur)||0; d.cible = parseFloat(d.cible)||1;
+      if (d.unite === '__autre__') {
+        var _d = d;
+        setTimeout(function() {
+          showGouvModal({ title:'Unité personnalisée', saveLabel:'Valider',
+            fields:[{ key:'unite', label:'Unité (%, €, cat., …)' }],
+            validate: d2 => d2.unite ? null : 'L\'unité est requise.',
+            onSave: d2 => { _d.unite = d2.unite; vault.indicateurs[i] = _d; setDirty(); renderView('dashboard'); notify('KPI mis à jour.','success'); }
+          });
+        }, 0);
+        return;
+      }
+      vault.indicateurs[i] = d; setDirty(); renderView('dashboard'); notify('KPI mis à jour.','success');
+    }
   });
 }
 async function deleteKpi(i) {
@@ -3883,7 +3920,7 @@ function editJalon(i) {
     validate: d => d.titre ? null : 'Le titre est obligatoire.',
     onSave: d => {
       d.avancement = Math.min(100, Math.max(0, parseInt(d.avancement)||0));
-      vault.feuille_route[i] = d; setDirty(); renderView('roadmap'); notify('Jalon mis à jour.','success');
+      d.id = r.id; vault.feuille_route[i] = d; setDirty(); renderView('roadmap'); notify('Jalon mis à jour.','success');
     }
   });
 }
@@ -3953,7 +3990,7 @@ function showModal(id) {
       </section>`;
   } else {
     const isFav = vault.favorites.includes(data.id);
-    titleEl.innerHTML = `${esc(data.nom)} <button class="fav-btn ${isFav?'active':''}" data-fav="${data.id}" style="font-size:0.9rem"><i class="${isFav?'fas':'fa-regular'} fa-star"></i></button>`;
+    titleEl.innerHTML = `${esc(data.nom)} <button class="fav-btn ${isFav?'active':''}" data-fav="${esc(data.id)}" style="font-size:0.9rem"><i class="${isFav?'fas':'fa-regular'} fa-star"></i></button>`;
     bodyEl.innerHTML = `
       <section>
         <h3>Description</h3>
@@ -3964,7 +4001,7 @@ function showModal(id) {
       ${data.commandes && data.commandes.length ? `<section><h3>Commandes Clés</h3><ul>${data.commandes.map(c => `<li><code style="background:rgba(255,255,255,0.05);padding:0.1rem 0.4rem;border-radius:3px;font-size:0.82rem">${esc(c)}</code></li>`).join('')}</ul></section>` : ''}
       <section>
         <h3>Ajouter aux Favoris</h3>
-        <button class="btn btn-sm ${isFav ? 'btn-secondary' : 'btn-primary'}" data-fav="${data.id}" id="modalFavBtn"><i class="${isFav ? 'fas' : 'fa-regular'} fa-star"></i> ${isFav ? 'Retirer des favoris' : 'Ajouter aux favoris'}</button>
+        <button class="btn btn-sm ${isFav ? 'btn-secondary' : 'btn-primary'}" data-fav="${esc(data.id)}" id="modalFavBtn"><i class="${isFav ? 'fas' : 'fa-regular'} fa-star"></i> ${isFav ? 'Retirer des favoris' : 'Ajouter aux favoris'}</button>
       </section>`;
   }
   overlay.classList.add('visible');
@@ -4716,7 +4753,7 @@ function bindViewEvents(name) {
         if (!m) return;
         const overlay = document.getElementById('modalOverlay');
         document.getElementById('modalTitle').textContent = m.titre || 'Mémo';
-        document.getElementById('modalBody').innerHTML = window.marked ? marked.parse(esc(m.contenu)) : '<pre>' + esc(m.contenu) + '</pre>';
+        document.getElementById('modalBody').innerHTML = window.marked ? marked.parse(m.contenu) : '<pre>' + esc(m.contenu) + '</pre>';
         overlay.classList.add('visible');
         document.body.style.overflow = 'hidden';
         overlay.scrollTop = 0;
