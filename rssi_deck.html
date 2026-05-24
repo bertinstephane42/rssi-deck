@@ -4,10 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>RSSI Secure Command Deck</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" integrity="sha384-t1nt8BQoYMLFN5p42tRAtuAAFQaCQODekUVeKKZrEnEyp4H2R0RHFz0KWpmj7i8g">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" crossorigin="anonymous" integrity="sha384-vsrfeLOOY6KuIYKDlmVH5UiBmgIdB1oEf7p01YgWHuqmOHfZr374+odEv96n9tNC"></script>
-<script src="https://cdn.jsdelivr.net/npm/marked@15.0.4/marked.min.js" crossorigin="anonymous" integrity="sha384-2NndlFAl0twi2nmu3w9mixodZFiN2fbxlakcYJF86bn1JeS1VB87/XqA7cqymzS+"></script>
+<link rel="stylesheet" href="lib/tailwind.css">
+<link rel="stylesheet" href="lib/fontawesome/all.min.css">
+<script src="lib/chart.umd.min.js"></script>
+<script src="lib/marked.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 html{font-size:15px}
@@ -56,6 +56,8 @@ body{font-family:system-ui,-apple-system,'Inter','Segoe UI',sans-serif;backgroun
 .btn-secondary:hover{background:rgba(255,255,255,0.12)}
 .btn-danger{background:rgba(239,68,68,0.15);color:#fca5a5;border:1px solid rgba(239,68,68,0.2)}
 .btn-danger:hover{background:rgba(239,68,68,0.25)}
+.btn-warning{background:rgba(245,158,11,0.15);color:#fbbf24;border:1px solid rgba(245,158,11,0.2)}
+.btn-warning:hover{background:rgba(245,158,11,0.25)}
 .btn-sm{padding:0.4rem 0.8rem;font-size:0.78rem}
 .btn-xs{padding:0.25rem 0.5rem;font-size:0.68rem;border-radius:6px}
 .help-content{font-size:0.85rem;line-height:1.7;color:#cbd5e1}
@@ -938,7 +940,7 @@ const DEFAULT_VAULT = {
     roles: ['RSSI','DSI','DPO','COMEX','Équipe technique','Juridique / RH','Chef de projet'],
     activites: [
       { id:'ra1', activite:"Validation et revue de la PSSI",
-        assign:{'RSSI':'A','DSI':'R','DPO':'C','COMEX':'A','Juridique / RH':'C'} },
+        assign:{'RSSI':'R','DSI':'C','DPO':'C','COMEX':'A','Juridique / RH':'C'} },
       { id:'ra2', activite:"Gestion des incidents de sécurité",
         assign:{'RSSI':'A','DSI':'R','Équipe technique':'R','COMEX':'I','DPO':'C'} },
       { id:'ra3', activite:"Notification des violations (RGPD)",
@@ -958,11 +960,11 @@ const DEFAULT_VAULT = {
       { id:'ra10', activite:"Gestion des prestataires et sous-traitants",
         assign:{'DSI':'R','RSSI':'A','DPO':'C','Juridique / RH':'C'} },
       { id:'ra11', activite:"Gestion des vulnérabilités techniques",
-        assign:{'Équipe technique':'R','DSI':'A','RSSI':'A','Chef de projet':'I'} },
+        assign:{'Équipe technique':'R','DSI':'A','RSSI':'C','Chef de projet':'I'} },
       { id:'ra12', activite:"Conformité NIS 2 / DORA",
         assign:{'RSSI':'R','DPO':'C','Juridique / RH':'C','COMEX':'A'} },
       { id:'ra13', activite:"Continuité d'activité (PCA/PRA)",
-        assign:{'DSI':'R','RSSI':'A','COMEX':'A','Équipe technique':'R'} },
+        assign:{'DSI':'R','RSSI':'C','COMEX':'A','Équipe technique':'R'} },
       { id:'ra14', activite:"Revue trimestrielle des accès",
         assign:{'DSI':'R','RSSI':'A','Chef de projet':'I','Équipe technique':'R'} },
       { id:'ra15', activite:"Reporting sécurité au COMEX",
@@ -1008,6 +1010,17 @@ function migrateVault(v) {
     if (v.pssi && v.pssi.frequence_revision === undefined) v.pssi.frequence_revision = 'Annuelle';
     if (!v.feuille_route) v.feuille_route = DEFAULT_VAULT.feuille_route;
     if (!v.raci) v.raci = JSON.parse(JSON.stringify(DEFAULT_VAULT.raci));
+    if (v.raci && v.raci.activites) {
+      var _fixA = { ra1:{'RSSI':'C','COMEX':'A'}, ra11:{'DSI':'A','RSSI':'C'}, ra13:{'RSSI':'C','COMEX':'A'} };
+      v.raci.activites.forEach(function(a) {
+        var fix = _fixA[a.id];
+        if (fix) {
+          var keep = null, demote = null;
+          for (var r in fix) { if (fix[r] === 'A') keep = r; else demote = r; }
+          if (a.assign[keep] === 'A' && a.assign[demote] === 'A') a.assign[demote] = 'C';
+        }
+      });
+    }
     if (!v.aipd) v.aipd = [];
     if (!v.maturite) v.maturite = [];
     if (v.maturite) v.maturite.forEach(function(m) { if (m.date_evaluation === undefined) m.date_evaluation = ''; if (m.poids === undefined) m.poids = 1; });
@@ -2406,6 +2419,15 @@ function renderGouvSubtab(tab) {
 }
 
 /* ---------- RACI MATRIX ---------- */
+const RACI_ROLE_PROTECTION = {
+  'COMEX':'protected', 'DSI':'protected', 'Juridique / RH':'protected', 'Équipe technique':'protected',
+  'RSSI':'important', 'DPO':'important', 'Chef de projet':'important'
+};
+const RACI_A_THRESHOLD = {
+  'COMEX':12, 'DSI':6, 'Juridique / RH':6, 'Équipe technique':8,
+  'RSSI':3, 'DPO':4, 'Chef de projet':3
+};
+function raciAThreshold(role) { return RACI_A_THRESHOLD[role] !== undefined ? RACI_A_THRESHOLD[role] : 4; }
 function raciBadge(val) {
   const map = {
     'R':'<span class="cursor-pointer select-none inline-block px-2 py-0.5 rounded text-[0.7rem] font-bold" style="background:rgba(16,185,129,0.25);color:#34d399">R</span>',
@@ -2432,6 +2454,7 @@ function renderRaci() {
       <button class="btn btn-primary btn-sm" onclick="addRaciRole()"><i class="fas fa-user-plus"></i> Rôle</button>
       <button class="btn btn-secondary btn-sm" onclick="resetRaci()"><i class="fas fa-rotate-left"></i> Réinitialiser</button>
       <button class="btn btn-secondary btn-sm" onclick="copyRaciCsv()"><i class="fas fa-copy"></i> Copier le tableau</button>
+      <button class="btn btn-warning btn-sm" onclick="validateRaci()"><i class="fas fa-check-circle"></i> Valider</button>
     </div>
     ${!activites.length ? (searchQuery ? '<div class="empty-state" style="padding:1.5rem"><i class="fa-regular fa-table-cells"></i><p>Aucune activité trouvée.</p></div>' : '<div class="empty-state" style="padding:1.5rem"><i class="fa-regular fa-table-cells"></i><p>Aucune activité. Ajoutez-en une.</p></div>') : `
     <div style="overflow-x:auto"><table class="gouv-table">
@@ -2482,6 +2505,71 @@ function clearRaciCell(actIdx, roleIdx) {
   renderGouvSubtab('raci');
 }
 
+function validateRaci() {
+  const r = vault.raci;
+  if (!r || !r.activites || !r.roles) { notify('Matrice RACI vide.', 'error'); return; }
+  var errors = [], warnings = [];
+  r.activites.forEach(function(a) {
+    var counts = { R:0, A:0, C:0, I:0, '-':0, total:0 };
+    var assignedRoles = [];
+    r.roles.forEach(function(role) {
+      var val = a.assign[role] || '—';
+      if (counts[val] !== undefined) counts[val]++;
+      counts.total++;
+      if (val !== '—') assignedRoles.push(role + '=' + val);
+    });
+    if (counts.A === 0) errors.push('Activité « ' + a.activite + ' » : aucun Approbateur (A). Chaque activité doit avoir un unique A.');
+    else if (counts.A > 1) errors.push('Activité « ' + a.activite + ' » : ' + counts.A + ' Approbateurs (A) au lieu d\'1. Rôles concernés : ' + assignedRoles.filter(function(s){return s.endsWith('=A');}).join(', ') + '.');
+    if (counts.R === 0) warnings.push('Activité « ' + a.activite + ' » : aucun Responsable (R). L\'activité risque de ne pas être exécutée.');
+    if (counts.total > 0 && assignedRoles.length === 0) warnings.push('Activité « ' + a.activite + ' » : aucune assignation. L\'activité n\'est portée par aucun rôle.');
+  });
+  if (errors.length === 0 && warnings.length === 0) {
+    r.roles.forEach(function(role) {
+      var involvements = [], aCount = 0, rCount = 0, iOnly = true;
+      r.activites.forEach(function(a) {
+        var v = a.assign[role] || '—';
+        involvements.push(v);
+        if (v === 'A') aCount++;
+        if (v === 'R') rCount++;
+        if (v !== 'I' && v !== '—') iOnly = false;
+      });
+      if (involvements.every(function(v) { return v === '—'; })) {
+        warnings.push('Rôle « ' + role + ' » : aucune assignation dans toute la matrice. Ce rôle n\'est rattaché à aucune activité.');
+      }
+      if (iOnly && involvements.some(function(v) { return v === 'I'; })) {
+        warnings.push('Rôle « ' + role + ' » : uniquement Informé (I). Ce rôle ne participe jamais activement. Envisagez de le retirer ou de lui attribuer R/C.');
+      }
+      if (aCount > raciAThreshold(role)) {
+        var seuil = raciAThreshold(role);
+        warnings.push('Rôle « ' + role + ' » : ' + aCount + ' activités en Approbateur (A). Ce rôle représente généralement ' + (seuil <= 4 ? 'une seule personne' : 'plusieurs personnes') + ' — au-delà de ' + seuil + ' A, risque de goulot d\'étranglement.');
+      }
+      if (aCount > 0 && rCount === 0) {
+        var msg = 'Rôle « ' + role + ' » : Approbateur (A) mais jamais Responsable (R). Ce rôle approuve sans jamais exécuter — cohérent si c\'est un rôle hiérarchique.';
+        if (role !== 'COMEX') warnings.push(msg);
+      }
+    });
+  }
+  if (errors.length === 0 && warnings.length === 0) { notify('Matrice RACI valide — aucune anomalie détectée.', 'success'); return; }
+  var html = '<div style="padding:0.5rem;text-align:left">';
+  if (errors.length) {
+    html += '<h4 style="color:#fca5a5;margin-bottom:0.5rem"><i class="fas fa-times-circle"></i> ' + errors.length + ' erreur(s) bloquante(s)</h4>';
+    html += '<ul style="list-style:none;padding:0;font-size:0.78rem">';
+    errors.forEach(function(e) { html += '<li style="padding:0.35rem 0;border-bottom:1px solid rgba(255,255,255,0.05);color:#fca5a5"><i class="fas fa-exclamation-triangle" style="width:1rem;margin-right:0.3rem"></i> ' + esc(e) + '</li>'; });
+    html += '</ul>';
+  }
+  if (warnings.length) {
+    html += '<h4 style="color:#fbbf24;margin-top:0.75rem;margin-bottom:0.5rem"><i class="fas fa-exclamation-circle"></i> ' + warnings.length + ' avertissement(s)</h4>';
+    html += '<ul style="list-style:none;padding:0;font-size:0.78rem">';
+    warnings.forEach(function(w) { html += '<li style="padding:0.35rem 0;border-bottom:1px solid rgba(255,255,255,0.05);color:#fbbf24"><i class="fas fa-info-circle" style="width:1rem;margin-right:0.3rem"></i> ' + esc(w) + '</li>'; });
+    html += '</ul>';
+  }
+  html += '<div style="margin-top:1rem;text-align:center"><button class="btn btn-secondary btn-sm" onclick="document.getElementById(\'gouvModal\').style.display=\'none\'">Fermer</button></div></div>';
+  var overlay = document.getElementById('gouvModal');
+  var content = document.getElementById('gouvModalContent');
+  content.innerHTML = html;
+  overlay.style.display = 'flex';
+}
+
 function addRaciActivite() {
   showGouvModal({ title:'Nouvelle activité RACI', saveLabel:'Ajouter',
     fields:[{ key:'activite', label:'Nom de l\'activité *', value:'' }],
@@ -2518,28 +2606,38 @@ function addRaciRole() {
   });
 }
 
-function editRaciRole(roleIdx) {
+async function editRaciRole(roleIdx) {
   const oldRole = vault.raci.roles[roleIdx]; if (!oldRole) return;
+  var level = RACI_ROLE_PROTECTION[oldRole] || 'normal';
+  if (level === 'protected') { notify('Le rôle « ' + oldRole + ' » est un rôle socle et ne peut pas être renommé.', 'error'); return; }
+  if (level === 'important') {
+    if (!await showConfirm('Renommer le rôle « ' + oldRole + ' » ? Ce rôle est important. La modification impactera toutes les activités qui lui sont assignées.','Continuer','Annuler')) return;
+  }
   showGouvModal({ title:'Renommer le rôle', saveLabel:'Enregistrer',
     fields:[{ key:'role', label:'Nom du rôle *', value:oldRole }],
-    validate: d => d.role ? null : 'Le nom est obligatoire.',
-    onSave: d => {
-      const newRole = d.role;
+    validate: function(d) { return d.role ? null : 'Le nom est obligatoire.'; },
+    onSave: function(d) {
+      var newRole = d.role;
       if (newRole === oldRole) { renderGouvSubtab('raci'); return; }
       vault.raci.roles[roleIdx] = newRole;
-      vault.raci.activites.forEach(a => {
+      vault.raci.activites.forEach(function(a) {
         if (a.assign[oldRole] !== undefined) { a.assign[newRole] = a.assign[oldRole]; delete a.assign[oldRole]; }
       });
-      setDirty(); renderGouvSubtab('raci'); notify('Rôle renommé.','success');
+      setDirty(); renderGouvSubtab('raci'); notify('Rôle renommé en « ' + newRole + ' ».','success');
     }
   });
 }
 
 async function deleteRaciRole(roleIdx) {
   const role = vault.raci.roles[roleIdx]; if (!role) return;
+  var level = RACI_ROLE_PROTECTION[role] || 'normal';
+  if (level === 'protected') { notify('Le rôle « ' + role + ' » est un rôle socle et ne peut pas être supprimé.', 'error'); return; }
+  if (level === 'important') {
+    if (!await showConfirm('Supprimer le rôle « ' + role + ' » ? Ce rôle est important. Toutes ses assignations RACI seront effacées.','Continuer','Annuler')) return;
+  }
   if (!await showConfirm('Supprimer le rôle "' + role + '" ? Les assignations RACI de ce rôle seront effacées.')) return;
   vault.raci.roles.splice(roleIdx, 1);
-  vault.raci.activites.forEach(a => { delete a.assign[role]; });
+  vault.raci.activites.forEach(function(a) { delete a.assign[role]; });
   setDirty(); renderGouvSubtab('raci'); notify('Rôle supprimé.','success');
 }
 
