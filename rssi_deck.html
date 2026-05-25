@@ -349,6 +349,7 @@ body{font-family:system-ui,-apple-system,'Inter','Segoe UI',sans-serif;backgroun
       <button class="btn btn-secondary btn-sm" id="lexiconBtn" title="Lexique"><i class="fas fa-book-open"></i></button>
       <button class="btn btn-secondary btn-sm" id="creditBtn" title="Crédits"><span style="font-weight:700;font-size:0.82rem">C</span></button>
       <button class="btn btn-secondary btn-sm" id="reportBtn" title="Rapport exécutif PDF"><i class="fas fa-file-pdf"></i> Rapport</button>
+      <button class="btn btn-secondary btn-sm" id="csvExportBtn" title="Export CSV"><i class="fas fa-file-csv"></i> Export CSV</button>
       <button class="btn btn-secondary btn-sm" id="themeBtn" title="Basculer le thème"><i id="themeIcon" class="fas fa-moon"></i></button>
     </div>
 
@@ -554,6 +555,51 @@ body{font-family:system-ui,-apple-system,'Inter','Segoe UI',sans-serif;backgroun
 </div>
 
 <div id="gouvModal" class="pwd-modal"><div class="pwd-box glass-card" id="gouvModalContent"></div></div>
+
+<div id="csvExportModal" class="pwd-modal">
+  <div class="pwd-box glass-card" style="max-width:500px">
+    <div style="text-align:left">
+      <h3 class="text-sm font-semibold mb-3" style="text-align:center"><i class="fas fa-file-csv mr-2"></i>Export CSV</h3>
+      <div class="calc-group">
+        <label class="text-slate-400">Type de données</label>
+        <select id="csvTypeSelect" class="lock-input" style="font-size:0.85rem">
+          <option value="gouvernance">Registre de gouvernance</option>
+          <option value="playbook">Historique de playbook</option>
+        </select>
+      </div>
+      <div id="csvGovSection">
+        <div class="calc-group">
+          <label class="text-slate-400">Registre</label>
+          <select id="csvGovSelect" class="lock-input" style="font-size:0.85rem">
+            <option value="traitements">Traitements RGPD</option>
+            <option value="plan_actions">Plan d'actions</option>
+            <option value="incidents">Incidents de sécurité</option>
+            <option value="actifs">Registre des actifs</option>
+            <option value="risques">Registre des risques</option>
+            <option value="prestataires">Prestataires</option>
+            <option value="aipd">AIPD / DPIA</option>
+            <option value="maturite">Auto-évaluation</option>
+            <option value="cvss">Évaluations CVSS</option>
+          </select>
+        </div>
+      </div>
+      <div id="csvPbSection" style="display:none">
+        <div class="calc-group">
+          <label class="text-slate-400">Playbook</label>
+          <select id="csvPbSelect" class="lock-input" style="font-size:0.85rem"></select>
+        </div>
+        <div class="calc-group">
+          <label class="text-slate-400">Entrée d'historique</label>
+          <select id="csvHistoSelect" class="lock-input" style="font-size:0.85rem"></select>
+        </div>
+      </div>
+      <div class="flex gap-2 mt-4" style="justify-content:center">
+        <button class="btn btn-primary btn-sm" id="csvExportDo"><i class="fas fa-download"></i> Exporter en CSV</button>
+        <button class="btn btn-secondary btn-sm" id="csvExportCancel">Annuler</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <div id="playbookEditModal" class="pwd-modal" style="z-index:10000">
   <div class="pwd-box glass-card" style="position:relative;max-width:600px">
@@ -3114,6 +3160,91 @@ function copyRaciCsv() {
   });
   const csv = [header, ...rows].map(function(row) { return row.map(function(cell) { return '"' + String(cell).replace(/"/g,'""') + '"'; }).join(','); }).join('\n');
   navigator.clipboard.writeText(csv).then(function() { notify('Matrice RACI copiée dans le presse-papier.','success'); }).catch(function() { notify('Erreur lors de la copie.','error'); });
+}
+
+/* ---------- EXPORT CSV ---------- */
+const CSV_GOV_HEADERS = {
+  traitements: ['Finalit\u00e9','Base l\u00e9gale','Responsable','Cat\u00e9gories de donn\u00e9es','Cat\u00e9gories de personnes','Destinataires','Mesures de s\u00e9curit\u00e9','Statut'],
+  plan_actions: ['Action','Priorit\u00e9','Responsable','\u00c9ch\u00e9ance','Statut'],
+  incidents: ['Date','Type','Description','Impact','P\u00e9rim\u00e8tre','Type de risque','Statut','Date de r\u00e9solution'],
+  actifs: ['Nom','Type','Propri\u00e9taire','Criticit\u00e9','Localisation','Statut'],
+  risques: ['Menace','Actif concern\u00e9','Vraisemblance','Gravit\u00e9','Score','Traitement','Responsable'],
+  prestataires: ['Nom','Contact','Service','Criticit\u00e9','Statut conformit\u00e9','Date audit','Prochain audit'],
+  aipd: ['Traitement','Type traitement','Base juridique','Responsable','Description risques','Gravit\u00e9 risque','Mesures','Statut','Date \u00e9valuation','Date r\u00e9vision'],
+  maturite: ['Domaine','Sous-domaine','Niveau actuel','Niveau cible','Poids','Date \u00e9valuation','Observations'],
+  cvss: ['Nom','CVE','Logiciel','Description','Date \u00e9valuation','Gravit\u00e9','Score CVSS','Plan d\'action','Notes']
+};
+const CSV_GOV_ROWS = {
+  traitements: function(r){return[r.finalite,r.base_legale,r.responsable,r.categories_donnees,r.categories_personnes,r.destinataires,r.mesures_securite,r.statut];},
+  plan_actions: function(r){return[r.action,r.priorite,r.responsable,r.echeance,r.statut];},
+  incidents: function(r){return[r.date,r.type,r.description,r.impact,r.perimetre,r.risque_type,r.statut,r.date_resolution];},
+  actifs: function(r){return[r.nom,r.type,r.proprietaire,r.criticite,r.localisation,r.statut];},
+  risques: function(r){return[r.menace,r.actif_concerne,String(r.vraisemblance),String(r.gravite),String(r.vraisemblance*r.gravite),r.traitement,r.responsable];},
+  prestataires: function(r){return[r.nom,r.contact,r.service,r.criticite,r.statut_conformite,r.date_audit,r.date_prochain_audit];},
+  aipd: function(r){return[r.traitement,r.type_traitement,r.base_juridique,r.responsable,r.description_risques,r.gravite_risque,r.mesures,r.statut,r.date_evaluation,r.date_revision];},
+  maturite: function(r){return[r.domaine,r.sous_domaine,String(r.niveau_actuel),String(r.niveau_cible),String(r.poids),r.date_evaluation,r.observations];},
+  cvss: function(r){return[r.nom,r.cve,r.logiciel,r.description,r.date_evaluation,r.gravite,String(r.score),r.plan_action,r.notes];}
+};
+function showCsvExportModal() {
+  const modal = document.getElementById('csvExportModal');
+  if (!modal) return;
+  const sel = document.getElementById('csvPbSelect');
+  const pbs = vault.playbooks.filter(function(p){return p.historique&&p.historique.length>0;});
+  sel.innerHTML = pbs.length ? pbs.map(function(p){return'<option value="'+esc(p.id)+'">'+esc(p.titre)+'</option>';}).join('') : '<option value="">— Aucun playbook avec historique —</option>';
+  sel.disabled = !pbs.length;
+  populateHistoDropdown();
+  modal.style.display = 'flex';
+}
+function populateHistoDropdown() {
+  const pbId = document.getElementById('csvPbSelect').value;
+  const pb = vault.playbooks.find(function(p){return p.id===pbId;});
+  const sel = document.getElementById('csvHistoSelect');
+  if (!pb||!pb.historique||!pb.historique.length){sel.innerHTML='<option value="">— Aucun historique —</option>';sel.disabled=true;return;}
+  sel.disabled=false;
+  var opts='<option value="__all__">Tout l\'historique</option>';
+  pb.historique.forEach(function(h,i){
+    var label=dateISOtoFR(h.date)+(h.contenu?' — '+h.contenu.slice(0,60):'');
+    opts+='<option value="'+i+'">'+esc(label)+'</option>';
+  });
+  sel.innerHTML=opts;
+}
+function exportCsv() {
+  var type=document.getElementById('csvTypeSelect').value;
+  if(type==='gouvernance') exportGovCsv(); else exportPbCsv();
+  document.getElementById('csvExportModal').style.display='none';
+}
+function exportGovCsv() {
+  var table=document.getElementById('csvGovSelect').value;
+  var data=vault[table]||[];
+  var headers=CSV_GOV_HEADERS[table]||[];
+  var rows=data.map(CSV_GOV_ROWS[table]||function(){return[];});
+  downloadCsv(headers,rows,table+'_export.csv');
+}
+function exportPbCsv() {
+  var pbId=document.getElementById('csvPbSelect').value;
+  var pb=vault.playbooks.find(function(p){return p.id===pbId;});
+  if(!pb||!pb.historique) return;
+  var idx=document.getElementById('csvHistoSelect').value;
+  var entries=[];
+  if(idx==='__all__') entries=pb.historique;
+  else {var e=pb.historique[parseInt(idx)];if(e)entries=[e];}
+  var rows=entries.map(function(h){
+    var checks=h.checks||[];
+    return[h.date,h.contenu,(pb.checklist||[]).join(' | '),(pb.checklist||[]).filter(function(_,i){return checks[i];}).join(' | ')];
+  });
+  downloadCsv(['Date','REX','Checklist','\u00c9l\u00e9ments r\u00e9alis\u00e9s'],rows,'playbook_'+pbId+'_historique.csv');
+}
+function downloadCsv(headers,rows,filename) {
+  var csv=[headers].concat(rows).map(function(row){
+    return row.map(function(cell){return'"'+String(cell||'').replace(/"/g,'""')+'"';}).join(',');
+  }).join('\n');
+  var blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  notify('Fichier CSV t\u00e9l\u00e9charg\u00e9 : '+filename,'success');
 }
 
 /* ---------- AIPD / DPIA ---------- */
@@ -5885,6 +6016,18 @@ document.addEventListener('DOMContentLoaded', async function() {
   document.getElementById('lexiconBtn').addEventListener('click', showLexiconModal);
   document.getElementById('creditBtn').addEventListener('click', showCreditsModal);
   document.getElementById('reportBtn').addEventListener('click', genererRapportExecutif);
+  document.getElementById('csvExportBtn').addEventListener('click', showCsvExportModal);
+  document.getElementById('csvTypeSelect').addEventListener('change', function() {
+    var showPb = this.value === 'playbook';
+    document.getElementById('csvGovSection').style.display = showPb ? 'none' : 'block';
+    document.getElementById('csvPbSection').style.display = showPb ? 'block' : 'none';
+    if (showPb) populateHistoDropdown();
+  });
+  document.getElementById('csvPbSelect').addEventListener('change', populateHistoDropdown);
+  document.getElementById('csvExportDo').addEventListener('click', exportCsv);
+  document.getElementById('csvExportCancel').addEventListener('click', function() {
+    document.getElementById('csvExportModal').style.display = 'none';
+  });
 
   /* Search */
   let searchTimer;
