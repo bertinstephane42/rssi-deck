@@ -65,6 +65,34 @@
 --border-lighter:#f1f5f9;
 --scrollbar-thumb:#cbd5e1;
 }
+[data-theme="grey"]{
+--bg-body:#1a2035;
+--bg-body-grad:radial-gradient(ellipse at 50% 0%,rgba(100,116,139,0.06) 0%,transparent 70%);
+--text-primary:#dce3ef;
+--text-secondary:#9aa9bf;
+--text-muted:#6d7b94;
+--text-help:#c8d2e2;
+--glass-bg:rgba(255,255,255,0.05);
+--glass-border:rgba(255,255,255,0.07);
+--glass-card-bg:rgba(255,255,255,0.04);
+--glass-card-border:rgba(255,255,255,0.07);
+--btn-sec-bg:rgba(255,255,255,0.09);
+--btn-sec-color:#dce3ef;
+--btn-sec-border:rgba(255,255,255,0.11);
+--input-bg:rgba(255,255,255,0.06);
+--input-placeholder:#5c6b82;
+--sidebar-bg:rgba(255,255,255,0.03);
+--nav-color:#9aa9bf;
+--nav-hover-bg:rgba(255,255,255,0.07);
+--nav-hover-color:#dce3ef;
+--search-bg:rgba(255,255,255,0.06);
+--search-border:rgba(255,255,255,0.09);
+--modal-bg:rgba(26,32,53,0.98);
+--modal-border:rgba(255,255,255,0.09);
+--border-light:rgba(255,255,255,0.07);
+--border-lighter:rgba(255,255,255,0.05);
+--scrollbar-thumb:rgba(255,255,255,0.1);
+}
 *{margin:0;padding:0;box-sizing:border-box}
 html{font-size:15px}
 body{font-family:system-ui,-apple-system,'Inter','Segoe UI',sans-serif;background:var(--bg-body);color:var(--text-primary);min-height:100vh;overflow-x:hidden}
@@ -1230,11 +1258,13 @@ function notify(msg, type = 'info') {
 
 function toggleTheme() {
   var html = document.documentElement;
-  var isLight = html.getAttribute('data-theme') === 'light';
-  html.setAttribute('data-theme', isLight ? 'dark' : 'light');
+  var cur = html.getAttribute('data-theme') || 'dark';
+  var next = cur === 'dark' ? 'grey' : cur === 'grey' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
   var icon = document.getElementById('themeIcon');
-  if (icon) icon.className = 'fas ' + (isLight ? 'fa-moon' : 'fa-sun');
-  try { localStorage.setItem('rssi_theme', isLight ? 'dark' : 'light'); } catch(e) {}
+  var cls = 'fas ' + (next === 'dark' ? 'fa-moon' : next === 'grey' ? 'fa-circle-half-stroke' : 'fa-sun');
+  if (icon) icon.className = cls;
+  try { localStorage.setItem('rssi_theme', next); } catch(e) {}
 }
 
 function sortTools(tools, mode) {
@@ -5896,7 +5926,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   try { savedTheme = localStorage.getItem('rssi_theme') || 'dark'; } catch(e) {}
   document.documentElement.setAttribute('data-theme', savedTheme);
   var themeIcon = document.getElementById('themeIcon');
-  if (themeIcon) themeIcon.className = 'fas ' + (savedTheme === 'light' ? 'fa-sun' : 'fa-moon');
+  if (themeIcon) themeIcon.className = 'fas ' + (savedTheme === 'light' ? 'fa-sun' : savedTheme === 'grey' ? 'fa-circle-half-stroke' : 'fa-moon');
   document.getElementById('themeBtn').addEventListener('click', toggleTheme);
 
   /* Detect FSA support */
