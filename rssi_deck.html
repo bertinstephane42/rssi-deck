@@ -146,7 +146,9 @@ body{font-family:system-ui,-apple-system,'Inter','Segoe UI',sans-serif;backgroun
 .nav-item.active{background:rgba(59,130,246,0.12);color:#60a5fa}
 .nav-item i{width:18px;text-align:center;font-size:0.9rem}
 #main{flex:1;padding:1.5rem 2rem;max-width:1400px;overflow-y:auto}
-#topbar{display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap}
+#topbar{display:flex;align-items:center;gap:0.5rem;margin-bottom:1.5rem;flex-wrap:wrap}
+.topbar-sep{width:1px;height:1.4rem;background:rgba(255,255,255,0.1);flex-shrink:0;margin:0 0.25rem}
+.btn-group{display:flex;align-items:center;gap:0.35rem}
 #topbar h2{font-size:1.25rem;font-weight:700;letter-spacing:-0.01em;flex-shrink:0}
 .search-wrap{position:relative;flex:1;max-width:420px}
 .search-wrap input{width:100%;padding:0.6rem 1rem 0.6rem 2.5rem;background:var(--search-bg);border:1px solid var(--search-border);border-radius:8px;color:var(--text-primary);font-size:0.82rem;outline:none}
@@ -340,19 +342,28 @@ body{font-family:system-ui,-apple-system,'Inter','Segoe UI',sans-serif;backgroun
         <input type="text" id="globalSearch" placeholder="Rechercher outils, playbooks, notes…">
         <span id="searchCount"></span>
       </div>
-      <div class="flex items-center gap-1.5" style="display:flex;align-items:center;gap:0.4rem">
+      <div class="btn-group">
         <button class="btn btn-secondary btn-sm" id="saveBtn" title="Sauvegarder le coffre"><i class="fas fa-floppy-disk"></i></button>
         <span id="fsPathDisplay" class="fs-path" style="display:none"><i class="fas fa-folder"></i> <span id="fsPathText"></span></span>
+        <button class="btn btn-secondary btn-sm" id="exportDiskBtn" style="display:none" title="Exporter vers un fichier sur le disque"><i class="fas fa-download"></i></button>
+        <button class="btn btn-secondary btn-sm" id="pwdChangeBtn" title="Changer le mot de passe du coffre"><i class="fas fa-key"></i></button>
       </div>
-      <button class="btn btn-secondary btn-sm" id="exportDiskBtn" style="display:none" title="Exporter vers un fichier sur le disque"><i class="fas fa-download"></i></button>
-      <button class="btn btn-secondary btn-sm" id="pwdChangeBtn" title="Changer le mot de passe du coffre"><i class="fas fa-key"></i></button>
-      <button class="btn btn-secondary btn-sm" id="refreshBtn" title="Rafraîchir"><i class="fas fa-rotate"></i></button>
-      <button class="btn btn-secondary btn-sm" id="helpBtn" title="Aide"><i class="fas fa-question-circle"></i></button>
-      <button class="btn btn-secondary btn-sm" id="lexiconBtn" title="Lexique"><i class="fas fa-book-open"></i></button>
-      <button class="btn btn-secondary btn-sm" id="creditBtn" title="Crédits"><span style="font-weight:700;font-size:0.82rem">C</span></button>
-      <button class="btn btn-secondary btn-sm" id="reportBtn" title="Rapport exécutif PDF"><i class="fas fa-file-pdf"></i></button>
-      <button class="btn btn-secondary btn-sm" id="csvExportBtn" title="Export CSV"><i class="fas fa-file-csv"></i></button>
-      <button class="btn btn-secondary btn-sm" id="themeBtn" title="Basculer le thème"><i id="themeIcon" class="fas fa-moon"></i></button>
+      <span class="topbar-sep"></span>
+      <div class="btn-group">
+        <button class="btn btn-secondary btn-sm" id="reportBtn" title="Rapport exécutif PDF"><i class="fas fa-file-pdf"></i></button>
+        <button class="btn btn-secondary btn-sm" id="csvExportBtn" title="Export CSV"><i class="fas fa-file-csv"></i></button>
+      </div>
+      <span class="topbar-sep"></span>
+      <div class="btn-group">
+        <button class="btn btn-secondary btn-sm" id="helpBtn" title="Aide"><i class="fas fa-question-circle"></i></button>
+        <button class="btn btn-secondary btn-sm" id="lexiconBtn" title="Lexique"><i class="fas fa-book-open"></i></button>
+        <button class="btn btn-secondary btn-sm" id="creditBtn" title="Crédits"><span style="font-weight:700;font-size:0.82rem">C</span></button>
+      </div>
+      <span class="topbar-sep"></span>
+      <div class="btn-group">
+        <button class="btn btn-secondary btn-sm" id="refreshBtn" title="Rafraîchir"><i class="fas fa-rotate"></i></button>
+        <button class="btn btn-secondary btn-sm" id="themeBtn" title="Basculer le thème"><i id="themeIcon" class="fas fa-moon"></i></button>
+      </div>
     </div>
 
     <div id="viewDashboard" class="view active"></div>
