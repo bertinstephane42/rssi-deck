@@ -3208,7 +3208,8 @@ function populateHistoDropdown() {
   });
   sel.innerHTML=opts;
 }
-function exportCsv() {
+async function exportCsv() {
+  if (!await showConfirm('Exporter le fichier CSV ?')) return;
   var type=document.getElementById('csvTypeSelect').value;
   if(type==='gouvernance') exportGovCsv(); else exportPbCsv();
   document.getElementById('csvExportModal').style.display='none';
@@ -3228,15 +3229,20 @@ function exportPbCsv() {
   var entries=[];
   if(idx==='__all__') entries=pb.historique;
   else {var e=pb.historique[parseInt(idx)];if(e)entries=[e];}
+  var cl=(pb.checklist||[]);
+  var headers=['Date','REX'];
+  cl.forEach(function(_,i){headers.push('Action '+(i+1),'R\u00e9alis\u00e9e '+(i+1));});
   var rows=entries.map(function(h){
     var checks=h.checks||[];
-    return[h.date,h.contenu,(pb.checklist||[]).join(' | '),(pb.checklist||[]).filter(function(_,i){return checks[i];}).join(' | ')];
+    var row=[h.date,h.contenu];
+    cl.forEach(function(a,i){row.push(a,checks[i]?1:0);});
+    return row;
   });
-  downloadCsv(['Date','REX','Checklist','\u00c9l\u00e9ments r\u00e9alis\u00e9s'],rows,'playbook_'+pbId+'_historique.csv');
+  downloadCsv(headers,rows,'playbook_'+pbId+'_historique.csv');
 }
 function downloadCsv(headers,rows,filename) {
   var csv=[headers].concat(rows).map(function(row){
-    return row.map(function(cell){return'"'+String(cell||'').replace(/"/g,'""')+'"';}).join(',');
+    return row.map(function(cell){return'"'+String(cell==null?'':cell).replace(/"/g,'""')+'"';}).join(',');
   }).join('\n');
   var blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});
   var a=document.createElement('a');
@@ -5259,8 +5265,9 @@ async function _downloadFallback(content) {
 }
 
 /* Rapport exécutif PDF */
-function genererRapportExecutif() {
+async function genererRapportExecutif() {
   if (!vault) { notify('Aucune donnée à exporter.','error'); return; }
+  if (!await showConfirm('Générer le rapport exécutif PDF ?')) return;
   const p = vault.pssi || {};
   const sections = p.sections || [];
   const items = vault.feuille_route || [];
