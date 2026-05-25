@@ -16,7 +16,7 @@ Application web chiffrée destinée aux RSSI et professionnels de la cybersécur
   - **Registre des incidents** — Taxonomie ENISA/ANSSI (15 types : ransomware, phishing, fuite de données, DDoS, compromission, intrusion, malware, FOVI…), impact, statut, date de résolution
   - **Registre des actifs** — Inventaire, propriétaire, classification, localisation, statut
   - **Registre des risques** — Analyse, cotation, traitement, responsable, statut
-  - **Politique PSSI** — 20 sections pré-définies, ~80 clauses suggérées, cycle de validation (Brouillon→Rédaction→Validé→En révision→Publié), fréquence de révision (Annuelle/Semestrielle/Trimestrielle), vue Document complet avec rendu Markdown et impression
+   - **Politique PSSI** — 23 sections pré-définies, ~90 clauses suggérées, cycle de validation (Brouillon→Rédaction→Validé→En révision→Publié), fréquence de révision (Annuelle/Semestrielle/Trimestrielle), vue Document complet avec rendu Markdown et impression
   - **Matrice RACI** — 15 activités, 7 rôles, cycle R→A→C→I au clic, double-clic pour effacer une cellule, **bouton « Valider »** avec détection d'anomalies (doublons A, absence R, goulots d'étranglement par rôle), **3 niveaux de protection** des rôles (protégé/important/normal), export CSV presse-papier
   - **AIPD / DPIA** — Analyse d'impact complète, gravité, statut
   - **Auto-évaluation NIST CSF 2.0** — 6 domaines, sous-domaines détaillés, échelle CMMI 1→5, score pondéré, radar chart, date d'évaluation
@@ -36,6 +36,10 @@ Application web chiffrée destinée aux RSSI et professionnels de la cybersécur
 - Mot de passe saisi via **modale DOM** (plus de `prompt()`)
 - Alerte de confirmation avant écrasement d'un coffre existant à la création
 - **Rate-limiting exponentiel** (1 s → 60 s) sur les tentatives de déchiffrement échouées
+- **Bouton bouclier** `securityCheck()` : vérification complète (librairies, conformité du coffre, 20 sections, doublons, favoris orphelins, anomalies structurelles, pollution de prototype, fonctions natives, API des librairies critiques)
+- **Bouton restauration** : affiche les URL officielles CDN et les empreintes SHA-256 des librairies pour téléchargement manuel avec vérification d'intégrité
+- **Surveillance du chargement** des librairies via `onerror` + variables globales (`Chart`, `marked`)
+- **Script externe `verify_integrity.ps1`** : vérification hors navigateur des hash SHA-256 des fichiers `lib/` et de l'intégrité de `rssi_deck.html` (avec initialisation par `-Init` et fichier de référence `.sha256`)
 
 ## Stockage
 
@@ -50,7 +54,7 @@ Deux couches de persistance :
 - **file://** : IndexedDB automatique + bouton "Exporter" pour copie fichier manuelle
 - **Export** : Téléchargement du fichier `.json` chiffré (nom horodaté)
 - **Import** : Chargement depuis un fichier `.json` externe (toujours disponible)
-- **Migration automatique** : Ajout des champs manquants (fréquence de révision PSSI, pondération et date d'évaluation maturité, historique playbooks, registres gouvernance, **correction des doublons RACI**) au chargement des coffres existants
+- **Migration automatique** : Ajout des champs manquants (fréquence de révision PSSI, pondération et date d'évaluation maturité, historique playbooks, registres gouvernance, **correction des doublons RACI**, **thème préféré**, **version du coffre**) au chargement des coffres existants
 
 ## Utilisation
 
@@ -61,6 +65,7 @@ Deux couches de persistance :
 5. "Sauvegarder" → chiffre et persiste le coffre
 6. "Verrouiller" → protège l'accès
 7. Au rechargement : "Charger" depuis le dossier ou le navigateur
+8. **Vérification d'intégrité** : `.\verify_integrity.ps1 -Init` (première fois), puis `.\verify_integrity.ps1` (contrôles réguliers) — compare les hash des fichiers `lib/` et l'empreinte de `rssi_deck.html`
 
 ## Technologies
 
