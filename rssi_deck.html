@@ -1226,6 +1226,8 @@ function migrateVault(v) {
     if (!v.cvss) v.cvss = [];
     if (!v.outils_techniques) v.outils_techniques = [];
     if (!v.outils_fonctionnels) v.outils_fonctionnels = [];
+    if (!v.preferences) v.preferences = {};
+    if (!v.preferences.theme) v.preferences.theme = document.documentElement.getAttribute('data-theme') || 'dark';
     if (v.pssi && v.pssi.sections) {
       const existingIds = new Set(v.pssi.sections.map(function(s){return s.id;}));
       DEFAULT_VAULT.pssi.sections.forEach(function(def) {
@@ -1256,15 +1258,22 @@ function notify(msg, type = 'info') {
   setTimeout(() => n.classList.remove('show'), 3500);
 }
 
-function toggleTheme() {
-  var html = document.documentElement;
-  var cur = html.getAttribute('data-theme') || 'dark';
-  var next = cur === 'dark' ? 'grey' : cur === 'grey' ? 'light' : 'dark';
-  html.setAttribute('data-theme', next);
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
   var icon = document.getElementById('themeIcon');
-  var cls = 'fas ' + (next === 'dark' ? 'fa-moon' : next === 'grey' ? 'fa-circle-half-stroke' : 'fa-sun');
+  var cls = 'fas ' + (theme === 'light' ? 'fa-sun' : theme === 'grey' ? 'fa-circle-half-stroke' : 'fa-moon');
   if (icon) icon.className = cls;
-  try { localStorage.setItem('rssi_theme', next); } catch(e) {}
+  try { localStorage.setItem('rssi_theme', theme); } catch(e) {}
+}
+function toggleTheme() {
+  var cur = document.documentElement.getAttribute('data-theme') || 'dark';
+  var next = cur === 'dark' ? 'grey' : cur === 'grey' ? 'light' : 'dark';
+  if (vault) {
+    if (!vault.preferences) vault.preferences = {};
+    vault.preferences.theme = next;
+    setDirty();
+  }
+  applyTheme(next);
 }
 
 function sortTools(tools, mode) {
@@ -5868,6 +5877,7 @@ async function purgeVault() {
 function unlockApp() {
   document.getElementById('lockScreen').style.display = 'none';
   document.getElementById('app').classList.add('active');
+  if (vault && vault.preferences && vault.preferences.theme) applyTheme(vault.preferences.theme);
   renderAll();
   updateFsPath();
   notify('Bienvenue sur le RSSI Command Deck.', 'info');
@@ -5987,6 +5997,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     // Create vault in memory
     vault = JSON.parse(JSON.stringify(DEFAULT_VAULT));
+    vault = migrateVault(vault);
     vault.last_updated = new Date().toISOString();
     vaultKey = true;
     const _s = crypto.getRandomValues(new Uint8Array(16));
