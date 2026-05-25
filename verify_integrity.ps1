@@ -27,8 +27,8 @@ $RefFile   = Join-Path $ScriptDir "rssi_deck.sha256"
 
 # ---- helpers ----
 function Color($C) { if (-not $Quiet -and $Host.UI.RawUI.ForegroundColor) { $P = @{ForegroundColor=$C}; return $P } else { return @{} } }
-function Ok($T)   { Write-Host "  $(Checkmark) $T" @Color('Green') }
-function Err($T)  { Write-Host "  $(Cross)    $T" @Color('Red') }
+function Ok($T)   { Write-Host "  $Checkmark $T" @Color('Green') }
+function Err($T)  { Write-Host "  $Cross    $T" @Color('Red') }
 function Warn($T) { Write-Host "  !  $T" @Color('Yellow') }
 function Info($T) { Write-Host $T @Color('Cyan') }
 function Dim($T)  { if (-not $Quiet) { Write-Host $T @Color('DarkGray') } }
@@ -75,7 +75,8 @@ foreach ($f in $cdnEntries.Keys) {
         Dim "    Reçu    : $actual"
     }
 }
-Write-Host "  -> $libOk/$libTotal librairies OK" @(if ($libOk -eq $libTotal) { Color('Green') } else { Color('Red') })
+$c = if ($libOk -eq $libTotal) { Color('Green') } else { Color('Red') }
+Write-Host "  -> $libOk/$libTotal librairies OK" @c
 Write-Host ""
 
 # ---- 3) Verify rssi_deck.html integrity ----
