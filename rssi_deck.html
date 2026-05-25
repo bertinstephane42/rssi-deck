@@ -4522,8 +4522,8 @@ function hideModal() {
    SECURITY CHECK
    ============================================================ */
 function securityCheck() {
-  var results = { libs: [], vault: [], summary: { ok: 0, warn: 0, err: 0 } };
-  function add(section, status, msg) { var r = { section: section, status: status, message: msg }; results[section === 'vault' ? 'vault' : 'libs'].push(r); results.summary[status === 'ok' ? 'ok' : status === 'warning' ? 'warn' : 'err']++; return r; }
+  var results = { libs: [], vault: [], summary: { ok: 0, warn: 0, err: 0, info: 0 } };
+  function add(section, status, msg) { var r = { section: section, status: status, message: msg }; results[section === 'vault' ? 'vault' : 'libs'].push(r); results.summary[status === 'ok' ? 'ok' : status === 'warning' ? 'warn' : status === 'error' ? 'err' : 'info']++; return r; }
 
   /* --- Lib integrity --- */
   if (_libFailures.length) {
@@ -4533,7 +4533,7 @@ function securityCheck() {
   }
   if (typeof Chart === 'undefined') add('libs', 'error', 'Chart.js indisponible — graphiques du tableau de bord inopérants.');
   if (typeof marked === 'undefined') add('libs', 'error', 'Marked.js indisponible — rendu Markdown des mémos inopérant.');
-  add('libs', 'warning', 'Fichiers critiques : chart.umd.min.js et marked.min.js exécutent du code dans le contexte de l\'application. Un attaquant les ayant modifiés pourrait voler votre coffre ou votre mot de passe. Vérifiez manuellement leur intégrité.');
+  add('libs', 'info', 'Fichiers critiques : chart.umd.min.js et marked.min.js exécutent du code dans le contexte de l\'application. Un attaquant les ayant modifiés pourrait voler votre coffre ou votre mot de passe. Vérifiez manuellement leur intégrité.');
 
   /* --- Vault conformity --- */
   if (!vault) {
@@ -4662,7 +4662,7 @@ function securityCheck() {
   }
 
   /* --- Runtime integrity --- */
-  add('libs', 'warning', 'Ces vérifications sont exécutées depuis securityCheck elle-même — un attaquant ayant modifié cette fonction pourrait en masquer les résultats. Vérifiez manuellement l\'intégrité du fichier rssi_deck.html.');
+  add('libs', 'info', 'Ces vérifications sont exécutées depuis securityCheck elle-même — un attaquant ayant modifié cette fonction pourrait en masquer les résultats. Vérifiez manuellement l\'intégrité du fichier rssi_deck.html.');
 
   /* Prototype pollution */
   try {
@@ -4696,36 +4696,34 @@ function securityCheck() {
     else { add('libs', 'ok', 'Fonctions natives (JSON, atob, Array.isArray, crypto.subtle) intactes.'); }
   } catch(e) { add('libs', 'warning', 'Vérification fonctions natives impossible : ' + e.message); }
 
-  /* Global functions hijacking */
+  /* Global functions integrity */
   try {
     var hijacked = false;
-    if (typeof Chart !== 'undefined' && typeof Chart !== 'function') { add('libs', 'warning', 'Chart.js n\'est pas une fonction — peut-être détourné.'); hijacked = true; }
-    if (typeof marked !== 'undefined' && typeof marked !== 'function') { add('libs', 'warning', 'Marked.js n\'est pas une fonction — peut-être détourné.'); hijacked = true; }
-    if (typeof Chart === 'function') {
-      var cs = Function.prototype.toString.call(Chart);
-      if (cs.indexOf('function Chart') !== 0 && cs.indexOf('class Chart') !== 0) { add('libs', 'warning', 'Chart.toString() anormal — fonction peut-être détournée.'); hijacked = true; }
+    if (typeof Chart !== 'undefined' && typeof Chart !== 'function') { add('libs', 'warning', 'RISQUE MOYEN : Chart.js — la variable globale Chart est de type "' + typeof Chart + '" au lieu de "function". Les graphiques du tableau de bord sont inopérants. Solution : rafraîchir la page (F5) ; si persistant, ouvrir un onglet privé. Si toujours présent, une extension est en cause.'); hijacked = true; }
+    if (typeof Chart === 'function' && (typeof Chart.register !== 'function' || typeof Chart.defaults !== 'object')) {
+      add('libs', 'warning', 'RISQUE MOYEN : Chart.js — l\'API attendue (Chart.register, Chart.defaults) est absente. Chart a peut-être été wrappé ou modifié. Solution : exécuter verify_integrity.ps1 pour vérifier le fichier sur le disque, ou restaurer via le bouton cloud-arrow-down.'); hijacked = true;
     }
-    if (typeof marked === 'function') {
-      var ms = Function.prototype.toString.call(marked);
-      if (ms.indexOf('function marked') !== 0 && ms.indexOf('class marked') !== 0) { add('libs', 'warning', 'Marked.toString() anormal — fonction peut-être détournée.'); hijacked = true; }
+    if (typeof marked !== 'undefined' && typeof marked !== 'function') { add('libs', 'warning', 'RISQUE MOYEN : Marked.js — la variable globale marked est de type "' + typeof marked + '" au lieu de "function". Le rendu Markdown des mémos est inopérant. Solution : rafraîchir la page (F5) ; si persistant, ouvrir un onglet privé. Si toujours présent, une extension est en cause.'); hijacked = true; }
+    if (typeof marked === 'function' && typeof marked.parse !== 'function') {
+      add('libs', 'warning', 'RISQUE MOYEN : Marked.js — la méthode marked.parse() est absente. Marked a peut-être été wrappé ou modifié. Solution : exécuter verify_integrity.ps1 pour vérifier le fichier sur le disque, ou restaurer via le bouton cloud-arrow-down.'); hijacked = true;
     }
-    if (!hijacked) add('libs', 'ok', 'Fonctions globales (Chart, marked) semblent intactes.');
-  } catch(e) { add('libs', 'warning', 'Vérification globaux impossible : ' + e.message); }
+    if (!hijacked) add('libs', 'ok', 'Fonctions globales (Chart, marked) : API présente et cohérente.');
+  } catch(e) { add('libs', 'warning', 'Vérification des globaux impossible : ' + e.message); }
 
   /* --- Browser extensions --- */
-  add('vault', 'warning', 'Détection d\'extensions navigateur impossible depuis une page locale (file://). Vérifiez manuellement vos extensions.');
+  add('vault', 'info', 'Détection d\'extensions navigateur impossible depuis une page locale (file://). Vérifiez manuellement vos extensions.');
 
   /* --- Render modal --- */
   var overlay = document.getElementById('modalOverlay');
   document.getElementById('modalTitle').textContent = 'Rapport de vérification sécurité';
   var icon = results.summary.err ? '<span style="color:#ef4444">✗</span>' : results.summary.warn ? '<span style="color:#fbbf24">!</span>' : '<span style="color:#22c55e">✓</span>';
   var summaryHtml = '<div style="margin-bottom:1rem;font-size:0.95rem">' + icon + ' ' +
-    results.summary.ok + ' succès, ' + results.summary.warn + ' avertissements, ' + results.summary.err + ' erreurs</div>';
+    results.summary.ok + ' succès, ' + results.summary.warn + ' avertissements, ' + results.summary.err + ' erreurs' + (results.summary.info ? ', ' + results.summary.info + ' informations' : '') + '</div>';
 
   function rowHtml(r) {
-    var color = r.status === 'ok' ? '#22c55e' : r.status === 'warning' ? '#fbbf24' : '#ef4444';
+    var color = r.status === 'ok' ? '#22c55e' : r.status === 'warning' ? '#fbbf24' : r.status === 'error' ? '#ef4444' : '#60a5fa';
     return '<tr><td style="padding:0.3rem 0.5rem;border:1px solid rgba(255,255,255,0.08);color:' + color + ';width:2rem;text-align:center;font-weight:700">' +
-      (r.status === 'ok' ? '✓' : r.status === 'warning' ? '!' : '✗') +
+      (r.status === 'ok' ? '✓' : r.status === 'warning' ? '!' : r.status === 'error' ? '✗' : 'i') +
       '</td><td style="padding:0.3rem 0.5rem;border:1px solid rgba(255,255,255,0.08);font-size:0.8rem;color:#94a3b8;white-space:nowrap">' +
       esc(r.section) + '</td><td style="padding:0.3rem 0.5rem;border:1px solid rgba(255,255,255,0.08);font-size:0.82rem">' +
       esc(r.message) + '</td></tr>';
@@ -4765,57 +4763,24 @@ function showRestoreLibsModal() {
   var cards = Object.keys(LIBS_CDN).map(function(f) {
     var lib = LIBS_CDN[f];
     return '<div class="glass-card" style="padding:1rem;margin-bottom:0.75rem">' +
-      '<div style="display:flex;justify-content:space-between;align-items:center">' +
-      '<div><strong style="color:#e2e8f0">' + esc(f) + '</strong><br>' +
-      '<span class="text-xs text-slate-400">' + esc(lib.label) + '</span><br>' +
-      '<span class="text-xs" style="color:#64748b;word-break:break-all">' + lib.hash + '</span></div>' +
-      '<button class="btn btn-primary btn-sm restore-file-btn" data-file="' + esc(f) + '"><i class="fas fa-download mr-1"></i> Vérifier et télécharger</button>' +
-      '</div></div>';
+      '<div><strong style="color:#e2e8f0">' + esc(f) + '</strong>' +
+      '<span class="text-xs text-slate-400 ml-2">' + esc(lib.label) + '</span><br>' +
+      '<span class="text-xs" style="color:#60a5fa;word-break:break-all"><a href="' + esc(lib.url) + '" target="_blank" rel="noopener" style="color:#60a5fa">' + esc(lib.url) + '</a></span><br>' +
+      '<span class="text-xs" style="color:#64748b;word-break:break-all">SHA-256 : ' + lib.hash + '</span></div></div>';
   }).join('');
   document.getElementById('modalBody').innerHTML =
     '<p style="color:#94a3b8;margin-bottom:1rem;font-size:0.85rem">' +
-    'Les fichiers ci-dessous seront téléchargés depuis jsDelivr CDN, leur intégrité vérifiée par hachage SHA-256, ' +
-    'puis proposés au téléchargement. Remplacez manuellement les fichiers dans le dossier <code>lib/</code> par ceux téléchargés.</p>' +
+    'Pour vérifier et restaurer une librairie :<br>1. Ouvrez son URL ci-dessous dans un nouvel onglet<br>' +
+    '2. Téléchargez le fichier depuis le CDN officiel<br>' +
+    '3. Vérifiez son empreinte SHA-256 (ex. <code>Get-FileHash -Algorithm SHA256</code>)<br>' +
+    '4. Remplacez manuellement le fichier dans le dossier <code>lib/</code></p>' +
     cards +
-    '<div id="restoreStatus" style="margin-top:0.75rem"></div>' +
     '<button class="btn btn-sm btn-secondary mt-2" id="restoreCloseBtn">Fermer</button>';
   overlay.classList.add('visible');
   overlay.scrollTop = 0;
   document.getElementById('modalClose').onclick = hideModal;
   overlay.onclick = function(e) { if (e.target === overlay) hideModal(); };
   document.getElementById('restoreCloseBtn').onclick = hideModal;
-  document.querySelectorAll('.restore-file-btn').forEach(function(btn) {
-    btn.addEventListener('click', async function() {
-      var file = this.dataset.file;
-      var lib = LIBS_CDN[file];
-      var statusEl = document.getElementById('restoreStatus');
-      statusEl.innerHTML = '<div style="color:#fbbf24"><i class="fas fa-spinner fa-spin mr-1"></i> Téléchargement de ' + esc(file) + '…</div>';
-      try {
-        var resp = await fetch(lib.url);
-        if (!resp.ok) throw new Error('HTTP ' + resp.status);
-        var blob = await resp.blob();
-        var buf = await resp.arrayBuffer();
-        if (window.crypto && window.crypto.subtle && window.crypto.subtle.digest) {
-          var hash = await crypto.subtle.digest('SHA-256', buf);
-          var hex = Array.from(new Uint8Array(hash)).map(function(b) { return b.toString(16).padStart(2,'0'); }).join('');
-          var actual = 'sha256-' + hex;
-          if (actual !== lib.hash) {
-            statusEl.innerHTML = '<div style="color:#ef4444">Échec de vérification : le hash du fichier téléchargé ne correspond pas. Attendu : ' + lib.hash + ', reçu : ' + actual + '. Risque de compromission CDN ou version modifiée.</div>';
-            return;
-          }
-        }
-        /* Trigger download */
-        var a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = file;
-        a.click();
-        URL.revokeObjectURL(a.href);
-        statusEl.innerHTML = '<div style="color:#22c55e">✓ ' + esc(file) + ' téléchargé avec succès' + (window.crypto && window.crypto.subtle && window.crypto.subtle.digest ? ' et vérifié' : ' (vérification hash non disponible)') + '. Remplacez le fichier dans lib/ par celui-ci.</div>';
-      } catch(e) {
-        statusEl.innerHTML = '<div style="color:#ef4444">Erreur : ' + esc(e.message) + '</div>';
-      }
-    });
-  });
 }
 
 /* ============================================================
