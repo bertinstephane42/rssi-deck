@@ -1,13 +1,14 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>RSSI Secure Command Deck</title>
-<link rel="stylesheet" href="lib/tailwind.css">
-<link rel="stylesheet" href="lib/fontawesome/all.min.css">
-<script src="lib/chart.umd.min.js"></script>
-<script src="lib/marked.min.js"></script>
+<script>var _libFailures=[];function _libErr(p){_libFailures.push(p);}</script>
+<link rel="stylesheet" href="lib/tailwind.css" onerror="_libErr('lib/tailwind.css')">
+<link rel="stylesheet" href="lib/fontawesome/all.min.css" onerror="_libErr('lib/fontawesome/all.min.css')">
+<script src="lib/chart.umd.min.js" onerror="_libErr('lib/chart.umd.min.js')"></script>
+<script src="lib/marked.min.js" onerror="_libErr('lib/marked.min.js')"></script>
 <style>
 :root,:root[data-theme="dark"]{
 --bg-body:#080c14;
@@ -375,6 +376,7 @@ body{font-family:system-ui,-apple-system,'Inter','Segoe UI',sans-serif;backgroun
         <span id="fsPathDisplay" class="fs-path" style="display:none"><i class="fas fa-folder"></i> <span id="fsPathText"></span></span>
         <button class="btn btn-secondary btn-sm" id="exportDiskBtn" style="display:none" title="Exporter vers un fichier sur le disque"><i class="fas fa-download"></i></button>
         <button class="btn btn-secondary btn-sm" id="pwdChangeBtn" title="Changer le mot de passe du coffre"><i class="fas fa-key"></i></button>
+        <button class="btn btn-secondary btn-sm" id="securityCheckBtn" title="Vérification de sécurité — librairies, coffre, intégrité"><i class="fas fa-shield-halved"></i></button>
       </div>
       <span class="topbar-sep"></span>
       <div class="btn-group">
@@ -4516,6 +4518,179 @@ function hideModal() {
 }
 
 /* ============================================================
+   SECURITY CHECK
+   ============================================================ */
+function securityCheck() {
+  var results = { libs: [], vault: [], summary: { ok: 0, warn: 0, err: 0 } };
+  function add(section, status, msg) { var r = { section: section, status: status, message: msg }; results[section === 'vault' ? 'vault' : 'libs'].push(r); results.summary[status === 'ok' ? 'ok' : status === 'warning' ? 'warn' : 'err']++; return r; }
+
+  /* --- Lib integrity --- */
+  if (_libFailures.length) {
+    _libFailures.forEach(function(p) { add('libs', 'error', 'Échec de chargement : ' + p); });
+  } else {
+    add('libs', 'ok', 'Tous les fichiers librairie chargés sans erreur.');
+  }
+  if (typeof Chart === 'undefined') add('libs', 'error', 'Chart.js indisponible — graphiques du tableau de bord inopérants.');
+  if (typeof marked === 'undefined') add('libs', 'error', 'Marked.js indisponible — rendu Markdown des mémos inopérant.');
+
+  /* --- Vault conformity --- */
+  if (!vault) {
+    add('vault', 'warning', 'Aucun coffre chargé en mémoire. Déverrouillez l\'application puis relancez la vérification.');
+  } else {
+    function ok(status, msg) { add('vault', status, msg); }
+    /* Check version */
+    if (vault.version) {
+      ok(vault.version === DEFAULT_VAULT.version ? 'ok' : 'warning', 'Version : ' + vault.version + (vault.version !== DEFAULT_VAULT.version ? ' (dernière attendue : ' + DEFAULT_VAULT.version + ')' : ' (à jour)'));
+    } else {
+      ok('error', 'Champ version manquant');
+    }
+    /* Check last_updated */
+    if (vault.last_updated) {
+      var d = new Date(vault.last_updated);
+      ok(isNaN(d.getTime()) ? 'error' : 'ok', 'Dernière mise à jour : ' + vault.last_updated);
+    } else {
+      ok('warning', 'Date de dernière mise à jour absente');
+    }
+
+    /* Vault size check */
+    var vaultJson = JSON.stringify(vault);
+    if (vaultJson.length < 1024) {
+      ok('warning', 'Taille du coffre anormalement petite : ' + (vaultJson.length / 1024).toFixed(1) + ' Ko — possible corruption ou perte de données.');
+    } else {
+      ok('ok', 'Taille du coffre : ' + (vaultJson.length / 1024).toFixed(1) + ' Ko');
+    }
+
+    /* Required sections */
+    var sections = [
+      { key:'pssi', label:'PSSI' }, { key:'plan_actions', label:'Plan d\'actions' },
+      { key:'traitements', label:'Traitements RGPD' }, { key:'incidents', label:'Incidents' },
+      { key:'actifs', label:'Actifs' }, { key:'risques', label:'Risques' },
+      { key:'indicateurs', label:'Indicateurs' }, { key:'feuille_route', label:'Feuille de route' },
+      { key:'threat_intel', label:'Threat Intelligence' }, { key:'cadre_legal', label:'Cadre légal' },
+      { key:'raci', label:'Matrice RACI' }, { key:'aipd', label:'AIPD' },
+      { key:'maturite', label:'Maturité' }, { key:'prestataires', label:'Prestataires' },
+      { key:'cvss', label:'CVSS' }, { key:'outils_techniques', label:'Outils techniques' },
+      { key:'outils_fonctionnels', label:'Outils fonctionnels' },
+      { key:'playbooks', label:'Playbooks' }, { key:'memos', label:'Mémos' },
+      { key:'contacts_urgence', label:'Contacts d\'urgence' }
+    ];
+    sections.forEach(function(s) {
+      if (vault[s.key] === undefined) {
+        ok('error', 'Section « ' + s.label + ' » manquante');
+      } else if (!Array.isArray(vault[s.key]) && typeof vault[s.key] !== 'object') {
+        ok('error', 'Section « ' + s.label + ' » type invalide');
+      } else {
+        ok('ok', 'Section « ' + s.label + ' » présente');
+      }
+    });
+
+    /* Structural anomalies */
+    var anomalies = 0;
+    if (Array.isArray(vault.plan_actions)) {
+      vault.plan_actions.forEach(function(a, i) {
+        if (!a.titre) { ok('warning', 'Plan action [' + i + '] sans titre'); anomalies++; }
+        if (a.statut && !['À faire','En cours','Terminé','Annulé','Reporté'].includes(a.statut)) { ok('warning', 'Plan action [' + i + '] statut inattendu : "' + a.statut + '"'); anomalies++; }
+      });
+    }
+    if (Array.isArray(vault.traitements)) {
+      vault.traitements.forEach(function(t, i) {
+        if (!t.nom) { ok('warning', 'Traitement [' + i + '] sans nom'); anomalies++; }
+      });
+    }
+    if (Array.isArray(vault.incidents)) {
+      vault.incidents.forEach(function(inc, i) {
+        if (!inc.titre) { ok('warning', 'Incident [' + i + '] sans titre'); anomalies++; }
+        if (inc.date && isNaN(new Date(inc.date).getTime())) { ok('error', 'Incident [' + i + '] date invalide : ' + inc.date); anomalies++; }
+      });
+    }
+    if (Array.isArray(vault.actifs)) {
+      vault.actifs.forEach(function(a, i) {
+        if (!a.nom) { ok('warning', 'Actif [' + i + '] sans nom'); anomalies++; }
+      });
+    }
+    if (Array.isArray(vault.risques)) {
+      vault.risques.forEach(function(r, i) {
+        if (!r.risque) { ok('warning', 'Risque [' + i + '] sans description'); anomalies++; }
+      });
+    }
+    if (Array.isArray(vault.playbooks)) {
+      var pbTitles = {};
+      vault.playbooks.forEach(function(p, i) {
+        if (!p.titre) { ok('warning', 'Playbook [' + i + '] sans titre'); anomalies++; }
+        if (p.titre) { if (pbTitles[p.titre]) { ok('warning', 'Playbook titre en double : "' + p.titre + '"'); anomalies++; } else { pbTitles[p.titre] = true; } }
+      });
+    }
+    if (Array.isArray(vault.memos)) {
+      var memoDups = {};
+      vault.memos.forEach(function(m, i) {
+        if (!m.titre) { ok('warning', 'Mémo [' + i + '] sans titre'); anomalies++; }
+        if (m.titre) { if (memoDups[m.titre]) { ok('warning', 'Mémo titre en double : "' + m.titre + '"'); anomalies++; } else { memoDups[m.titre] = true; } }
+      });
+    }
+    if (Array.isArray(vault.outils_techniques)) {
+      var otDups = {};
+      vault.outils_techniques.forEach(function(o, i) {
+        if (!o.nom) { ok('warning', 'Outil technique [' + i + '] sans nom'); anomalies++; }
+        if (o.nom) { if (otDups[o.nom]) { ok('warning', 'Outil technique nom en double : "' + o.nom + '"'); anomalies++; } else { otDups[o.nom] = true; } }
+      });
+    }
+    if (Array.isArray(vault.outils_fonctionnels)) {
+      var ofDups = {};
+      vault.outils_fonctionnels.forEach(function(o, i) {
+        if (!o.nom) { ok('warning', 'Outil fonctionnel [' + i + '] sans nom'); anomalies++; }
+        if (o.nom) { if (ofDups[o.nom]) { ok('warning', 'Outil fonctionnel nom en double : "' + o.nom + '"'); anomalies++; } else { ofDups[o.nom] = true; } }
+      });
+    }
+    if (Array.isArray(vault.contacts_urgence)) {
+      vault.contacts_urgence.forEach(function(c, i) {
+        if (!c.nom && !c.role) { ok('warning', 'Contact urgence [' + i + '] sans nom ni rôle'); anomalies++; }
+      });
+    }
+    /* Orphaned favorites */
+    if (Array.isArray(vault.favorites) && vault.favorites.length) {
+      var allToolIds = {};
+      (vault.outils_techniques || []).forEach(function(t) { allToolIds[t.id] = true; });
+      (vault.outils_fonctionnels || []).forEach(function(t) { allToolIds[t.id] = true; });
+      var orphaned = vault.favorites.filter(function(fid) { return !allToolIds[fid]; });
+      if (orphaned.length) {
+        orphaned.forEach(function(fid) { ok('warning', 'Favori orphelin : "' + fid + '" (outil supprimé ?)'); anomalies++; });
+      }
+    }
+    if (anomalies === 0) ok('ok', 'Aucune anomalie structurelle détectée dans les données.');
+  }
+
+  /* --- Browser extensions --- */
+  add('vault', 'warning', 'Détection d\'extensions navigateur impossible depuis une page locale (file://). Vérifiez manuellement vos extensions.');
+
+  /* --- Render modal --- */
+  var overlay = document.getElementById('modalOverlay');
+  document.getElementById('modalTitle').textContent = 'Rapport de vérification sécurité';
+  var icon = results.summary.err ? '<span style="color:#ef4444">✗</span>' : results.summary.warn ? '<span style="color:#fbbf24">!</span>' : '<span style="color:#22c55e">✓</span>';
+  var summaryHtml = '<div style="margin-bottom:1rem;font-size:0.95rem">' + icon + ' ' +
+    results.summary.ok + ' succès, ' + results.summary.warn + ' avertissements, ' + results.summary.err + ' erreurs</div>';
+
+  function rowHtml(r) {
+    var color = r.status === 'ok' ? '#22c55e' : r.status === 'warning' ? '#fbbf24' : '#ef4444';
+    return '<tr><td style="padding:0.3rem 0.5rem;border:1px solid rgba(255,255,255,0.08);color:' + color + ';width:2rem;text-align:center;font-weight:700">' +
+      (r.status === 'ok' ? '✓' : r.status === 'warning' ? '!' : '✗') +
+      '</td><td style="padding:0.3rem 0.5rem;border:1px solid rgba(255,255,255,0.08);font-size:0.8rem;color:#94a3b8;white-space:nowrap">' +
+      esc(r.section) + '</td><td style="padding:0.3rem 0.5rem;border:1px solid rgba(255,255,255,0.08);font-size:0.82rem">' +
+      esc(r.message) + '</td></tr>';
+  }
+  var allRows = [].concat(results.libs, results.vault).map(rowHtml).join('');
+  document.getElementById('modalBody').innerHTML = summaryHtml +
+    '<table style="width:100%;border-collapse:collapse;font-size:0.85rem">' +
+    '<thead><tr style="background:rgba(255,255,255,0.04)"><th style="padding:0.3rem 0.5rem;border:1px solid rgba(255,255,255,0.08);text-align:left;width:2rem">#</th>' +
+    '<th style="padding:0.3rem 0.5rem;border:1px solid rgba(255,255,255,0.08);text-align:left">Composant</th>' +
+    '<th style="padding:0.3rem 0.5rem;border:1px solid rgba(255,255,255,0.08);text-align:left">Message</th></tr></thead><tbody>' + allRows + '</tbody></table>' +
+    '<button class="btn btn-sm btn-primary mt-2" id="secCheckCloseBtn">Fermer</button>';
+  overlay.classList.add('visible');
+  overlay.scrollTop = 0;
+  overlay.onclick = function(e) { if (e.target === overlay) hideModal(); };
+  document.getElementById('secCheckCloseBtn').onclick = hideModal;
+}
+
+/* ============================================================
    SEARCH
    ============================================================ */
 function filterText(s) {
@@ -5939,6 +6114,27 @@ document.addEventListener('DOMContentLoaded', async function() {
   if (themeIcon) themeIcon.className = 'fas ' + (savedTheme === 'light' ? 'fa-sun' : savedTheme === 'grey' ? 'fa-circle-half-stroke' : 'fa-moon');
   document.getElementById('themeBtn').addEventListener('click', toggleTheme);
 
+  /* Check lib loading — SRI onerror + global vars */
+  if (_libFailures.length) {
+    document.getElementById('modalTitle').textContent = 'Chargement de librairies échoué';
+    document.getElementById('modalBody').innerHTML =
+      '<p style="color:#f87171;margin-bottom:1rem">Certaines librairies n\'ont pas pu être chargées. ' +
+      'Vérifiez l\'intégrité des fichiers suivants ou remplacez-les par leur version d\'origine.</p>' +
+      '<ul style="color:#fbbf24">' + _libFailures.map(function(p) { return '<li>' + p + '</li>'; }).join('') + '</ul>' +
+      '<button class="btn btn-sm btn-primary mt-2" id="libFailOkBtn">Compris</button>';
+    document.getElementById('modalClose').style.display = 'none';
+    document.getElementById('modalOverlay').classList.add('visible');
+    document.getElementById('modalOverlay').scrollTop = 0;
+    document.getElementById('modalOverlay').onclick = null;
+    document.getElementById('libFailOkBtn').onclick = function() {
+      document.getElementById('modalClose').style.display = '';
+      document.getElementById('modalOverlay').onclick = function(e) { if (e.target === this) hideModal(); };
+      hideModal();
+    };
+  }
+  if (typeof Chart === 'undefined') notify('Chart.js n\'a pas pu être chargé. Les graphiques du tableau de bord sont indisponibles.', 'error');
+  if (typeof marked === 'undefined') notify('Marked.js n\'a pas pu être chargé. Le rendu Markdown des mémos est indisponible.', 'error');
+
   /* Detect FSA support */
   /* Migrate old (v1) vaultHandle from IDB */
   await FS.migrateOldHandle();
@@ -6117,6 +6313,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     renderView(currentView);
   });
 
+  /* Security check */
+  document.getElementById('securityCheckBtn').addEventListener('click', securityCheck);
+
   /* Help & Credits */
   document.getElementById('helpBtn').addEventListener('click', showHelpModal);
   document.getElementById('lexiconBtn').addEventListener('click', showLexiconModal);
@@ -6284,3 +6483,7 @@ document.getElementById('csvTypeSelect').addEventListener('change', function() {
 </script>
 </body>
 </html>
+
+
+
+
