@@ -1922,7 +1922,7 @@ function showGouvModal(config) {
     if (f.type === 'readonly') {
       return `<div class="calc-group"><label>${esc(f.label)}</label><input class="lock-input" id="gouvField_${f.key}" value="${esc(f.value||'')}" type="text" readonly style="opacity:0.7;cursor:default"></div>`;
     }
-    return `<div class="calc-group"><label>${esc(f.label)}</label><input class="lock-input" id="gouvField_${f.key}" value="${esc(f.value||'')}" type="text">`;
+    return `<div class="calc-group"><label>${esc(f.label)}</label><input class="lock-input" id="gouvField_${f.key}" value="${esc(f.value||'')}" type="text"></div>`;
   }).join('');
   const overlay = document.getElementById('gouvModal');
   const content = document.getElementById('gouvModalContent');
