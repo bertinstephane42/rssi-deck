@@ -3340,7 +3340,7 @@ function editKpiKri(idx, item) {
       if (d.kpi && !d.cible) return 'La cible est requise si un KPI est défini.';
       return null;
     },
-    save: function(d) {
+    onSave: async function(d) {
       if (idx === -1) {
         if (!vault.kpi_kri) vault.kpi_kri = [];
         vault.kpi_kri.push(d);
