@@ -297,6 +297,20 @@ body{font-family:system-ui,-apple-system,'Inter','Segoe UI',sans-serif;backgroun
 .help-notice{margin-top:1.5rem;margin-bottom:1.5rem;padding:0.75rem 1rem;border-radius:8px;font-size:0.75rem;line-height:1.5;background:rgba(96,165,250,0.08);border:1px solid rgba(96,165,250,0.15);color:#93c5fd}
 .date-input-group{display:flex;align-items:center;gap:4px}
 .date-input-group .lock-input{flex:1;min-width:0}
+/* Maturite criteria accordion */
+.mode-toggle{display:inline-flex;border:1px solid var(--glass-border);border-radius:6px;overflow:hidden}
+.mode-toggle button{padding:4px 12px;font-size:0.7rem;font-weight:600;border:none;cursor:pointer;background:transparent;color:var(--text-muted);transition:all 0.15s;font-family:inherit}
+.mode-toggle button.active{background:rgba(59,130,246,0.2);color:#60a5fa}
+.criteria-collapse{margin-top:6px;border-top:1px solid var(--border-lighter);padding-top:6px}
+.criteria-row{display:flex;align-items:center;gap:6px;padding:3px 0;font-size:0.75rem}
+.criteria-row .criteria-label{flex:1;color:var(--text-help);font-size:0.72rem}
+.criteria-btns{display:inline-flex;gap:2px}
+.criteria-btn{width:22px;height:22px;border-radius:50%;border:1px solid var(--glass-border);background:transparent;cursor:pointer;font-size:0.65rem;font-weight:700;color:var(--text-muted);transition:all 0.12s;display:flex;align-items:center;justify-content:center;font-family:inherit;padding:0;line-height:1}
+.criteria-btn:hover{border-color:#60a5fa;color:#60a5fa}
+.criteria-btn.active{border-color:#10b981;background:#10b981;color:#fff}
+.criteria-progress{font-size:0.6rem;color:var(--text-muted);margin-left:4px;white-space:nowrap}
+.expand-btn{background:none;border:none;color:var(--text-muted);cursor:pointer;padding:2px 4px;border-radius:3px;font-size:0.7rem;transition:all 0.12s}
+.expand-btn:hover{color:#60a5fa;background:rgba(59,130,246,0.1)}
 .date-picker-btn{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:#94a3b8;cursor:pointer;padding:0.55rem 0.65rem;font-size:0.85rem;line-height:1;transition:all 0.2s;flex-shrink:0;display:flex;align-items:center;justify-content:center}
 .date-picker-btn:hover{background:rgba(59,130,246,0.15);border-color:rgba(59,130,246,0.3);color:#60a5fa}
 @media print{body{background:#fff!important;color:#000!important}#sidebar,#topbar,.nav-item,.btn,.sub-tabs{display:none!important}.gouv-section{display:block!important}#pssiDocView{display:block!important}#pssiListView{display:none!important}}
@@ -1245,6 +1259,7 @@ function migrateVault(v) {
     if (!v.outils_techniques) v.outils_techniques = [];
     if (!v.outils_fonctionnels) v.outils_fonctionnels = [];
     if (!v.preferences) v.preferences = {};
+    if (v.preferences.maturiteMode !== 'detail') v.preferences.maturiteMode = 'rapide';
     if (!v.preferences.theme) v.preferences.theme = document.documentElement.getAttribute('data-theme') || 'dark';
     if (v.pssi && v.pssi.sections) {
       const existingIds = new Set(v.pssi.sections.map(function(s){return s.id;}));
@@ -3626,6 +3641,154 @@ const SOUS_DOMAINES_MATURITE = {
   'R\u00e9ponse (RS)':['Gestion des incidents (RS.MA)','Communication (RS.CO)','Analyse (RS.AN)','Att\u00e9nuation (RS.MI)','Am\u00e9lioration (RS.IM)'],
   'R\u00e9tablissement (RC)':['Plan de reprise (RC.RP)','Communication (RC.CO)','Am\u00e9lioration (RC.IM)','Sauvegardes et restauration (RC.BR)']
 };
+const CRITERES_MATURITE = {
+  'Contexte organisationnel (GV.OC)':[
+    { id:'GV.OC.a', nom:'Registre des parties prenantes identifi\u00e9 et tenu \u00e0 jour' },
+    { id:'GV.OC.b', nom:'Exigences l\u00e9gales et r\u00e9glementaires cartographi\u00e9es (RGPD, NIS2, DORA)' },
+    { id:'GV.OC.c', nom:'D\u00e9pendances critiques et cha\u00eene d\'approvisionnement document\u00e9es' },
+    { id:'GV.OC.d', nom:'App\u00e9tence au risque d\u00e9finie et approuv\u00e9e par la direction' }
+  ],
+  'Strat\u00e9gie de gestion des risques (GV.RM)':[
+    { id:'GV.RM.a', nom:'Politique de gestion des risques formelle et approuv\u00e9e' },
+    { id:'GV.RM.b', nom:'Processus d\'analyse des risques document\u00e9 et p\u00e9riodique' },
+    { id:'GV.RM.c', nom:'R\u00e9\u00e9valuation semestrielle des risques critiques' },
+    { id:'GV.RM.d', nom:'Reporting r\u00e9gulier au COMEX sur la posture de risque' }
+  ],
+  'Risques fournisseurs (GV.SC)':[
+    { id:'GV.SC.a', nom:'Cartographie des prestataires par criticit\u00e9' },
+    { id:'GV.SC.b', nom:'Clauses contractuelles de s\u00e9curit\u00e9 syst\u00e9matiques' },
+    { id:'GV.SC.c', nom:'Droit d\'audit et contr\u00f4le p\u00e9riodique des prestataires critiques' }
+  ],
+  'Supervision et pilotage (GV.OV)':[
+    { id:'GV.OV.a', nom:'Revue de direction p\u00e9riodique (au moins annuelle)' },
+    { id:'GV.OV.b', nom:'Indicateurs de performance s\u00e9curit\u00e9 (KPI) suivis mensuellement' },
+    { id:'GV.OV.c', nom:'Audits internes ou externes programm\u00e9s r\u00e9guli\u00e8rement' }
+  ],
+  'R\u00f4les et responsabilit\u00e9s (GV.PO)':[
+    { id:'GV.PO.a', nom:'PSSI approuv\u00e9e par le COMEX et communiqu\u00e9e \u00e0 tous' },
+    { id:'GV.PO.b', nom:'Matrice RACI des r\u00f4les SSI d\u00e9finie et diffus\u00e9e' },
+    { id:'GV.PO.c', nom:'Proc\u00e9dures op\u00e9rationnelles document\u00e9es (IAM, incident, sauvegarde)' },
+    { id:'GV.PO.d', nom:'Cycle de validation et de mise \u00e0 jour documentaire annuel' }
+  ],
+  'Inventaire des actifs (ID.AM)':[
+    { id:'ID.AM.a', nom:'Inventaire exhaustif des actifs (mat\u00e9riel, logiciel, donn\u00e9es)' },
+    { id:'ID.AM.b', nom:'Propri\u00e9taire d\u00e9sign\u00e9 pour chaque actif critique' },
+    { id:'ID.AM.c', nom:'Classification de chaque actif (C,I,D)' },
+    { id:'ID.AM.d', nom:'CMDB ou outil d\'inventaire mis \u00e0 jour trimestriellement' }
+  ],
+  '\u00c9valuation des risques (ID.RA)':[
+    { id:'ID.RA.a', nom:'Analyse des risques r\u00e9alis\u00e9e avec une m\u00e9thode reconnue (EBIOS RM)' },
+    { id:'ID.RA.b', nom:'Menaces, vuln\u00e9rabilit\u00e9s, vraisemblance et impact document\u00e9s' },
+    { id:'ID.RA.c', nom:'Focus sur les 10 risques critiques avec impact m\u00e9tier' },
+    { id:'ID.RA.d', nom:'Distinction risques internes et externes (fournisseurs, r\u00e9glementation)' }
+  ],
+  'Environnement m\u00e9tier (ID.BE)':[
+    { id:'ID.BE.a', nom:'Cartographie des processus m\u00e9tier critiques' },
+    { id:'ID.BE.b', nom:'Identification des d\u00e9pendances inter-processus' },
+    { id:'ID.BE.c', nom:'Analyse d\'impact sur l\'activit\u00e9 (BIA) r\u00e9alis\u00e9e' }
+  ],
+  'Risques fournisseurs (ID.SC)':[
+    { id:'ID.SC.a', nom:'Identification des fournisseurs critiques pour chaque processus' },
+    { id:'ID.SC.b', nom:'Analyse des points de d\u00e9faillance uniques dans la cha\u00eene' },
+    { id:'ID.SC.c', nom:'Plan de rem\u00e9diation pour les fournisseurs \u00e0 risque' }
+  ],
+  'Gestion des identit\u00e9s et acc\u00e8s (PR.AA)':[
+    { id:'PR.AA.a', nom:'Authentification multi-facteurs (MFA) sur tous les acc\u00e8s' },
+    { id:'PR.AA.b', nom:'Principe du moindre privil\u00e8ge appliqu\u00e9' },
+    { id:'PR.AA.c', nom:'Revue trimestrielle des acc\u00e8s' },
+    { id:'PR.AA.d', nom:'Comptes \u00e0 privil\u00e8ges sous PAM avec session enregistr\u00e9e' }
+  ],
+  'Sensibilisation et formation (PR.AT)':[
+    { id:'PR.AT.a', nom:'Programme de sensibilisation annuel pour tous les collaborateurs' },
+    { id:'PR.AT.b', nom:'Campagne de phishing simul\u00e9 r\u00e9guli\u00e8re' },
+    { id:'PR.AT.c', nom:'Formation sp\u00e9cifique pour les administrateurs et d\u00e9veloppeurs' }
+  ],
+  'S\u00e9curit\u00e9 des donn\u00e9es (PR.DS)':[
+    { id:'PR.DS.a', nom:'Chiffrement des donn\u00e9es au repos (AES-256)' },
+    { id:'PR.DS.b', nom:'Chiffrement des donn\u00e9es en transit (TLS 1.3)' },
+    { id:'PR.DS.c', nom:'Classification et politique de r\u00e9tention des donn\u00e9es' },
+    { id:'PR.DS.d', nom:'DLP (Data Loss Prevention) sur les donn\u00e9es sensibles' }
+  ],
+  'S\u00e9curit\u00e9 des plateformes (PR.PS)':[
+    { id:'PR.PS.a', nom:'Durcissement (hardening) des syst\u00e8mes selon benchmark CIS/ANSSI' },
+    { id:'PR.PS.b', nom:'Gestion des correctifs (patch management) avec process formalis\u00e9' },
+    { id:'PR.PS.c', nom:'Configuration s\u00e9curis\u00e9e par d\u00e9faut sur tous les \u00e9quipements' }
+  ],
+  'Technologies de protection (PR.PT)':[
+    { id:'PR.PT.a', nom:'Segmentation r\u00e9seau et architecture Zero Trust' },
+    { id:'PR.PT.b', nom:'Antivirus/EDR sur tous les endpoints' },
+    { id:'PR.PT.c', nom:'Pare-feu et contr\u00f4le d\'acc\u00e8s r\u00e9seau' },
+    { id:'PR.PT.d', nom:'Protection contre les malwares et ran\u00e7ongiciels' }
+  ],
+  'Maintenance (PR.MA)':[
+    { id:'PR.MA.a', nom:'Calendrier de mise \u00e0 jour et maintenance pr\u00e9ventive' },
+    { id:'PR.MA.b', nom:'Proc\u00e9dure de changement avec test de non-r\u00e9gression' },
+    { id:'PR.MA.c', nom:'Fen\u00eatre de maintenance mensuelle avec communication 72h avant' }
+  ],
+  'Anomalies et \u00e9v\u00e9nements (DE.AE)':[
+    { id:'DE.AE.a', nom:'Collecte et corr\u00e9lation des logs (SIEM)' },
+    { id:'DE.AE.b', nom:'Seuils d\'alerte et r\u00e8gles de d\u00e9tection d\u00e9finis' },
+    { id:'DE.AE.c', nom:'Profilage du trafic de base pour d\u00e9tection d\'anomalies' }
+  ],
+  'Surveillance continue (DE.CM)':[
+    { id:'DE.CM.a', nom:'EDR/XDR sur tous les endpoints' },
+    { id:'DE.CM.b', nom:'Supervision r\u00e9seau (IDS/IPS)' },
+    { id:'DE.CM.c', nom:'Analyse des logs DNS, proxy et flux r\u00e9seau' },
+    { id:'DE.CM.d', nom:'Couverture de surveillance 24/7 sur les actifs critiques' }
+  ],
+  'Processus de d\u00e9tection (DE.DP)':[
+    { id:'DE.DP.a', nom:'Proc\u00e9dure d\'escalade document\u00e9e' },
+    { id:'DE.DP.b', nom:'Playbooks de d\u00e9tection et cha\u00eene d\'alerte d\u00e9finis' },
+    { id:'DE.DP.c', nom:'Tests r\u00e9guliers des alertes (simulations d\'attaque)' }
+  ],
+  'Gestion des incidents (RS.MA)':[
+    { id:'RS.MA.a', nom:'Proc\u00e9dure formelle de r\u00e9ponse aux incidents' },
+    { id:'RS.MA.b', nom:'Cha\u00eene de d\u00e9cision et cellule de crise pr\u00e9-d\u00e9finies' },
+    { id:'RS.MA.c', nom:'Moyens de communication alternatifs (hors r\u00e9seau)' },
+    { id:'RS.MA.d', nom:'Exercice de crise (tabletop/crisis game) au moins annuel' }
+  ],
+  'Communication (RS.CO)':[
+    { id:'RS.CO.a', nom:'Proc\u00e9dure de notification r\u00e9gulateur (CNIL 72h)' },
+    { id:'RS.CO.b', nom:'Templates de communication de crise pr\u00e9-valid\u00e9s' },
+    { id:'RS.CO.c', nom:'Arbre de d\u00e9cision pour les notifications parties prenantes' }
+  ],
+  'Analyse (RS.AN)':[
+    { id:'RS.AN.a', nom:'Capacit\u00e9 d\'investigation forensique' },
+    { id:'RS.AN.b', nom:'Cha\u00eene de custody et collecte de preuves document\u00e9e' },
+    { id:'RS.AN.c', nom:'Identification de la cause racine syst\u00e9matique' }
+  ],
+  'Att\u00e9nuation (RS.MI)':[
+    { id:'RS.MI.a', nom:'Proc\u00e9dure de confinement et d\'\u00e9radication document\u00e9e' },
+    { id:'RS.MI.b', nom:'Capacit\u00e9 d\'isolation des systèmes compromis' },
+    { id:'RS.MI.c', nom:'Mise \u00e0 jour des r\u00e8gles de d\u00e9tection post-incident' }
+  ],
+  'Am\u00e9lioration (RS.IM)':[
+    { id:'RS.IM.a', nom:'REX formalis\u00e9 sous 1 semaine post-incident' },
+    { id:'RS.IM.b', nom:'Plan d\'actions correctives avec \u00e9ch\u00e9ances' },
+    { id:'RS.IM.c', nom:'Mise \u00e0 jour des proc\u00e9dures et des contr\u00f4les apr\u00e8s chaque incident' }
+  ],
+  'Plan de reprise (RC.RP)':[
+    { id:'RC.RP.a', nom:'PCA/PRA document\u00e9 avec RPO/RTO valid\u00e9s par les m\u00e9tiers' },
+    { id:'RC.RP.b', nom:'Inventaire des applications critiques avec priorit\u00e9 de reprise' },
+    { id:'RC.RP.c', nom:'Test r\u00e9el annuel (bascule compl\u00e8te) et technique semestriel' },
+    { id:'RC.RP.d', nom:'Tabletop trimestriel de validation du plan' }
+  ],
+  'Communication (RC.CO)':[
+    { id:'RC.CO.a', nom:'Information des parties prenantes pendant la reprise' },
+    { id:'RC.CO.b', nom:'Jalons de reprise et reporting horaire en crise' },
+    { id:'RC.CO.c', nom:'Validation m\u00e9tier formelle avant remise en production' }
+  ],
+  'Am\u00e9lioration (RC.IM)':[
+    { id:'RC.IM.a', nom:'Int\u00e9gration des REX dans les plans de reprise' },
+    { id:'RC.IM.b', nom:'R\u00e9vision annuelle des RPO/RTO avec les m\u00e9tiers' },
+    { id:'RC.IM.c', nom:'Perfectionnement continu des proc\u00e9dures de restauration' }
+  ],
+  'Sauvegardes et restauration (RC.BR)':[
+    { id:'RC.BR.a', nom:'Sauvegardes r\u00e9guli\u00e8res avec r\u00e8gle 3-2-1 appliqu\u00e9e' },
+    { id:'RC.BR.b', nom:'Tests de restauration p\u00e9riodiques document\u00e9s' },
+    { id:'RC.BR.c', nom:'Sauvegardes hors ligne ou immuables anti-ran\u00e7ongiciel' }
+  ]
+};
 function populateSousDomaine() {
   const domaine = document.getElementById('gouvField_domaine').value;
   const sdSelect = document.getElementById('gouvField_sous_domaine');
@@ -3636,6 +3799,7 @@ function renderMaturite() {
   const allItems = vault.maturite || [];
   const items = searchFilter(allItems, ['domaine','sous_domaine','observations']);
   var sumPond = 0, totalPond = 0;
+  var detailMode = vault.preferences && vault.preferences.maturiteMode === 'detail';
   DOMAINES_MATURITE.forEach(function(dom) {
     var itemsInDom = allItems.filter(function(m) { return m.domaine === dom; });
     if (itemsInDom.length) {
@@ -3650,6 +3814,8 @@ function renderMaturite() {
   return `
     <div class="flex items-center gap-2 mb-3 flex-wrap">
       <button class="btn btn-primary btn-sm" onclick="addMaturiteDomaine()"><i class="fas fa-plus"></i> Domaine</button>
+      <button class="btn btn-secondary btn-sm" onclick="showNistGuideModal()"><i class="fas fa-book"></i> Guide NIST</button>
+      <div class="mode-toggle"><button class="btn-sm${detailMode?'':' active'}" onclick="setMaturiteMode('rapide')" style="border:none;background:transparent">Rapide</button><button class="btn-sm${detailMode?' active':''}" onclick="setMaturiteMode('detail')" style="border:none;background:transparent">D\u00e9taill\u00e9</button></div>
       ${allItems.length > 0 ? '<span class="text-xs text-slate-500 flex items-center gap-2"><span class="text-slate-400">Maturit\u00e9 globale</span><span class="text-lg font-bold '+(globalPct>=80?'text-emerald-400':globalPct>=50?'text-amber-400':'text-blue-400')+'">'+globalPct+'%</span></span>' : ''}
     </div>
     ${allItems.length > 0 ? '<div style="max-width:500px;margin:0 auto 1.5rem"><canvas id="maturiteRadar"></canvas></div>' : ''}
@@ -3660,18 +3826,50 @@ function renderMaturite() {
       <span>\ud83d\udfe2 4 = Quantifi\u00e9</span>
       <span>\u2b50 5 = Optimis\u00e9</span>
     </div>
-    ${!items.length ? (searchQuery ? '<div class="empty-state" style="padding:1.5rem"><i class="fa-regular fa-chart-line"></i><p>Aucun domaine trouvé.</p></div>' : '<div class="empty-state" style="padding:1.5rem"><i class="fa-regular fa-chart-line"></i><p>Aucun domaine \u00e9valu\u00e9. Ajoutez un domaine NIST CSF ou un domaine personnalis\u00e9.</p></div>') : `
+    ${!items.length ? (searchQuery ? '<div class="empty-state" style="padding:1.5rem"><i class="fa-regular fa-chart-line"></i><p>Aucun domaine trouv\u00e9.</p></div>' : '<div class="empty-state" style="padding:1.5rem"><i class="fa-regular fa-chart-line"></i><p>Aucun domaine \u00e9valu\u00e9. Ajoutez un domaine NIST CSF ou un domaine personnalis\u00e9.</p></div>') : `
     <div style="overflow-x:auto"><table class="gouv-table">
-      <thead><tr><th>Domaine</th><th>Sous-domaine</th><th>Niveau actuel</th><th>Niveau cible</th><th>Pond.</th><th>Progression</th><th>Date \u00e9val.</th><th>Observations</th><th class="gouv-actions"></th></tr></thead>
+      <thead><tr>${detailMode?'<th style="width:28px"></th>':''}<th>Domaine</th><th>Sous-domaine</th><th>Niveau actuel</th><th>Niveau cible</th><th>Pond.</th><th>Progression</th><th>Date \u00e9val.</th><th>Observations</th><th class="gouv-actions"></th></tr></thead>
       <tbody>${items.map(function(m) {
         const idx = allItems.indexOf(m);
+        /* In detail mode, auto-compute niveau_actuel from criteria */
+        if (detailMode && m.sous_domaine && CRITERES_MATURITE[m.sous_domaine]) {
+          var crits = m.criteria || {};
+          var defs = CRITERES_MATURITE[m.sous_domaine];
+          var total = 0, count = 0;
+          defs.forEach(function(c){ var v = crits[c.id]; if(v&&v>0){total+=v;count++;} });
+          m.niveau_actuel = count ? Math.round((total/count)*10)/10 : 1;
+        }
         const pct = Math.min(100, Math.round(((m.niveau_actuel||1) / (m.niveau_cible||3)) * 100));
         const color = pct >= 80 ? '#10b981' : pct >= 50 ? '#f59e0b' : '#3b82f6';
         const dateEval = m.date_evaluation ? new Date(m.date_evaluation).toLocaleDateString('fr-FR') : '\u2014';
-        return '<tr><td><strong>'+filterText(m.domaine||'')+'</strong></td><td class="text-slate-400">'+(filterText(m.sous_domaine||'')||'\u2014')+'</td><td>'+(m.niveau_actuel||1)+'/5</td><td>'+(m.niveau_cible||3)+'/5</td><td class="text-slate-500 text-xs">'+(m.poids||1)+'x</td><td style="min-width:120px"><div class="h-1.5 rounded-full bg-white/5 overflow-hidden"><div class="h-full rounded-full" style="width:'+pct+'%;background:'+color+'"></div></div> <span class="text-[0.6rem] text-slate-500">'+pct+'%</span></td><td class="text-xs text-slate-500">'+dateEval+'</td><td>'+(filterText(m.observations||'').length > 40 ? filterText(m.observations).slice(0,40)+'\u2026' : filterText(m.observations||''))+'</td><td class="gouv-actions"><button onclick="editMaturiteDomaine('+idx+')" title="Modifier"><i class="fas fa-pencil-alt"></i></button><button onclick="deleteMaturiteDomaine('+idx+')" title="Supprimer"><i class="fas fa-trash"></i></button></td></tr>';
+        var row = '<tr>';
+        if (detailMode && m.sous_domaine && CRITERES_MATURITE[m.sous_domaine]) {
+          var defs = CRITERES_MATURITE[m.sous_domaine];
+          var crits = m.criteria || {};
+          var done = 0; defs.forEach(function(c){ if(crits[c.id]&&crits[c.id]>0) done++; });
+          row += '<td><button class="expand-btn" onclick="toggleCriteria('+idx+')" id="expandBtn'+idx+'" title="D\u00e9plier les crit\u00e8res"><i class="fas fa-plus"></i></button></td>';
+        } else if (detailMode) {
+          row += '<td></td>';
+        }
+        row += '<td><strong>'+filterText(m.domaine||'')+'</strong></td><td class="text-slate-400">'+(filterText(m.sous_domaine||'')||'\u2014')+'</td><td>'+(m.niveau_actuel||1)+'/5</td><td>'+(m.niveau_cible||3)+'/5</td><td class="text-slate-500 text-xs">'+(m.poids||1)+'x</td><td style="min-width:120px"><div class="h-1.5 rounded-full bg-white/5 overflow-hidden"><div class="h-full rounded-full" style="width:'+pct+'%;background:'+color+'"></div></div> <span class="text-[0.6rem] text-slate-500">'+pct+'%</span></td><td class="text-xs text-slate-500">'+dateEval+'</td><td>'+(filterText(m.observations||'').length > 40 ? filterText(m.observations).slice(0,40)+'\u2026' : filterText(m.observations||''))+'</td><td class="gouv-actions"><button onclick="editMaturiteDomaine('+idx+')" title="Modifier"><i class="fas fa-pencil-alt"></i></button><button onclick="deleteMaturiteDomaine('+idx+')" title="Supprimer"><i class="fas fa-trash"></i></button></td></tr>';
+        /* Criteria detail row */
+        if (detailMode && m.sous_domaine && CRITERES_MATURITE[m.sous_domaine]) {
+          var defs = CRITERES_MATURITE[m.sous_domaine];
+          var crits = m.criteria || {};
+          var critHtml = '';
+          defs.forEach(function(c){
+            var val = crits[c.id]||0;
+            var btns = [1,2,3,4,5].map(function(l){
+              return '<button class="criteria-btn'+(l===val?' active':'')+'" onclick="setCriteresNote('+idx+',\''+c.id+'\','+l+')">'+l+'</button>';
+            }).join('');
+            critHtml += '<div class="criteria-row"><span class="criteria-label">'+esc(c.nom)+'</span><div class="criteria-btns">'+btns+'</div></div>';
+          });
+          row += '<tr id="criteriaRow'+idx+'" style="display:none"><td colspan="9" style="padding:0"><div class="criteria-collapse">'+critHtml+'<div class="criteria-progress" style="margin-top:4px;text-align:right">'+done+'/'+defs.length+' crit\u00e8re(s) not\u00e9(s)</div></div></td></tr>';
+        }
+        return row;
       }).join('')}</tbody>
     </table></div>`}
-    <div class="text-[0.65rem] text-slate-600 mt-2">${items.length} domaine(s) affiché(s)</div>`;
+    <div class="text-[0.65rem] text-slate-600 mt-2">${items.length} domaine(s) affich\u00e9(s)</div>`;
 }
 function addMaturiteDomaine() {
   const defaultSd = SOUS_DOMAINES_MATURITE[DOMAINES_MATURITE[0]] || [];
@@ -3707,7 +3905,7 @@ function editMaturiteDomaine(i) {
       { key:'observations', label:'Observations', value:m.observations||'' }
     ],
     validate: function(d) { return d.domaine ? null : 'Le domaine est obligatoire.'; },
-    onSave: function(d) { d.niveau_actuel = parseInt(d.niveau_actuel)||1; d.niveau_cible = parseInt(d.niveau_cible)||3; d.poids = parseFloat(d.poids)||1; if (!d.sous_domaine) delete d.sous_domaine; vault.maturite[i] = d; setDirty(); renderGouvSubtab('maturite'); notify('Domaine mis \u00e0 jour.','success'); }
+    onSave: function(d) { if (vault.maturite[i]) d.criteria = vault.maturite[i].criteria; d.niveau_actuel = parseInt(d.niveau_actuel)||1; d.niveau_cible = parseInt(d.niveau_cible)||3; d.poids = parseFloat(d.poids)||1; if (!d.sous_domaine) delete d.sous_domaine; vault.maturite[i] = d; setDirty(); renderGouvSubtab('maturite'); notify('Domaine mis \u00e0 jour.','success'); }
   });
   document.getElementById('gouvField_domaine').addEventListener('change', populateSousDomaine, { once: true });
 }
@@ -3715,6 +3913,91 @@ async function deleteMaturiteDomaine(i) {
   if (!await showConfirm('Supprimer ce domaine ?')) return;
   vault.maturite.splice(i,1); setDirty(); renderGouvSubtab('maturite'); notify('Domaine supprim\u00e9.','success');
 }
+window.setMaturiteMode = function(mode) {
+  if (!vault.preferences) vault.preferences = {};
+  vault.preferences.maturiteMode = mode;
+  setDirty();
+  renderGouvSubtab('maturite');
+};
+window.setCriteresNote = function(idx, critId, note) {
+  var m = vault.maturite[idx];
+  if (!m) return;
+  if (!m.criteria) m.criteria = {};
+  if (m.criteria[critId] === note) { m.criteria[critId] = 0; } else { m.criteria[critId] = note; }
+  if (!m.date_evaluation) m.date_evaluation = new Date().toISOString().slice(0,10);
+  setDirty();
+  renderGouvSubtab('maturite');
+};
+window.toggleCriteria = function(idx) {
+  var row = document.getElementById('criteriaRow'+idx);
+  var btn = document.getElementById('expandBtn'+idx);
+  if (!row) return;
+  if (row.style.display === 'none') { row.style.display = 'table-row'; if(btn) btn.innerHTML = '<i class=\"fas fa-minus\"></i>'; }
+  else { row.style.display = 'none'; if(btn) btn.innerHTML = '<i class=\"fas fa-plus\"></i>'; }
+};
+window.showNistGuideModal = function() {
+  var guideHtml = '<p style="color:var(--text-help);margin-bottom:1rem;font-size:0.85rem;line-height:1.6">Le <strong>NIST Cybersecurity Framework 2.0</strong> (f\u00e9vrier 2024) structur\u00e9 en 6 fonctions et 27 sous-domaines. \u00c9valuez chaque sous-domaine sur l\'\u00e9chelle CMMI de 1 (Initial) \u00e0 5 (Optimis\u00e9).</p>';
+  var guideData = [
+    {id:'GV',name:'Gouvernance (Govern)',desc:'La fonction Gouvernance \u00e9tablit le cadre strat\u00e9gique et les m\u00e9canismes de pilotage de la cybers\u00e9curit\u00e9 au sein de l\'organisation. Elle d\u00e9finit les r\u00f4les, les responsabilit\u00e9s et les processus de supervision n\u00e9cessaires pour aligner la s\u00e9curit\u00e9 sur les objectifs m\u00e9tier.',
+     subs:[
+      {id:'GV.OC',name:'Contexte organisationnel',desc:'Identifier les parties prenantes, l\'app\u00e9tence au risque et les exigences r\u00e9glementaires (RGPD, NIS2, DORA). Tenir \u00e0 jour un registre des parties prenantes avec leurs exigences de s\u00e9curit\u00e9 document\u00e9es. <strong>Bonne pratique :</strong> revue annuelle du registre, cartographie des d\u00e9pendances critiques.'},
+      {id:'GV.RM',name:'Strat\u00e9gie de gestion des risques',desc:'D\u00e9finir un cadre formel de gestion des risques : politique d\'app\u00e9tence, processus d\'analyse, cotation et traitement. La m\u00e9thode EBIOS RM (ANSSI) est la r\u00e9f\u00e9rence. <strong>Bonne pratique :</strong> r\u00e9\u00e9valuation semestrielle avec tendance COMEX.'},
+      {id:'GV.SC',name:'Risques fournisseurs (supply chain)',desc:'G\u00e9rer les risques li\u00e9s aux tiers : cartographie des prestataires par criticite, clauses contractuelles, droit d\'audit, notification d\'incident sous 24h. <strong>Bonne pratique :</strong> portail fournisseur avec certificats ISO 27001/SOC2.'},
+      {id:'GV.OV',name:'Supervision et pilotage',desc:'M\u00e9canismes de contr\u00f4le : revue de direction, audits, KPI s\u00e9curit\u00e9, reporting COMEX. <strong>Bonne pratique :</strong> reporting trimestriel avec dashboard ex\u00e9cutif (risques critiques, incidents, plan d\'actions).'},
+      {id:'GV.PO',name:'R\u00f4les et responsabilit\u00e9s',desc:'PSSI approuv\u00e9e par le COMEX, charte informatique, proc\u00e9dures op\u00e9rationnelles, matrice RACI. <strong>Bonne pratique :</strong> PSSI vivante avec cycle de validation et revue annuelle.'}
+    ]},
+    {id:'ID',name:'Identifier (Identify)',desc:'La fonction Identification d\u00e9veloppe la connaissance n\u00e9cessaire au pilotage des risques : inventaire des actifs, analyse des risques, cartographie des processus m\u00e9tier.',
+     subs:[
+      {id:'ID.AM',name:'Inventaire des actifs',desc:'Inventaire exhaustif des actifs mat\u00e9riels, logiciels, donn\u00e9es et services. Chaque actif a un propri\u00e9taire et une classification CID. <strong>Bonne pratique :</strong> outil de CMDB revu trimestriellement.'},
+      {id:'ID.RA',name:'Analyse des risques',desc:'Identification des menaces, vuln\u00e9rabilit\u00e9s, vraisemblance et impact. Distinction risques internes et externes. <strong>Bonne pratique :</strong> ateliers EBIOS RM, cotation 1-4, focus 10 risques critiques.'},
+      {id:'ID.BE',name:'Environnement m\u00e9tier',desc:'Cartographie des processus m\u00e9tier critiques, d\u00e9pendances inter-processus, analyse d\'impact sur l\'activit\u00e9 (BIA). <strong>Bonne pratique :</strong> mise \u00e0 jour annuelle avec les m\u00e9tiers.'},
+      {id:'ID.SC',name:'Risques fournisseurs',desc:'Identification des risques sp\u00e9cifiques \u00e0 la supply chain : d\u00e9pendances critiques, points de d\u00e9faillance uniques. <strong>Bonne pratique :</strong> analyse de r\u00e9silience fournisseurs critiques.'}
+    ]},
+    {id:'PR',name:'Prot\u00e9ger (Protect)',desc:'La fonction Protection d\u00e9ploie les contr\u00f4les techniques et organisationnels pour limiter les impacts d\'un \u00e9v\u00e9nement de cybers\u00e9curit\u00e9.',
+     subs:[
+      {id:'PR.AA',name:'Gestion des identit\u00e9s et acc\u00e8s',desc:'IAM/PAM : MFA partout, moindre privil\u00e8ge, revue trimestrielle, comptes \u00e0 privil\u00e8ges sous session enregistr\u00e9e. <strong>Bonne pratique :</strong> d\u00e9sactivation imm\u00e9diate des d\u00e9parts.'},
+      {id:'PR.AT',name:'Sensibilisation et formation',desc:'Programme de sensibilisation, phishing simul\u00e9, formation sp\u00e9cifique pour les admins et devs. <strong>Bonne pratique :</strong> campagne trimestrielle, taux de clics cible < 5%.'},
+      {id:'PR.DS',name:'S\u00e9curit\u00e9 des donn\u00e9es',desc:'Chiffrement au repos (AES-256) et en transit (TLS 1.3), classification, politique de r\u00e9tention, DLP. <strong>Bonne pratique :</strong> catalogue des donn\u00e9es et contr\u00f4le d\'acc\u00e8s logique.'},
+      {id:'PR.PS',name:'S\u00e9curit\u00e9 des plateformes',desc:'Durcissement (hardening) CIS/ANSSI, patch management, configuration s\u00e9curis\u00e9e par d\u00e9faut. <strong>Bonne pratique :</strong> correctifs critiques sous 48h, benchmark syst\u00e9matique.'},
+      {id:'PR.PT',name:'Technologies de protection',desc:'Segmentation r\u00e9seau, Zero Trust, EDR, pare-feu, protection anti-malware. <strong>Bonne pratique :</strong> architecture Zero Trust progressive, d\u00e9fense en profondeur.'},
+      {id:'PR.MA',name:'Maintenance',desc:'Calendrier de mise \u00e0 jour, proc\u00e9dure de changement, tests de non-r\u00e9gression. <strong>Bonne pratique :</strong> fen\u00eatre de maintenance mensuelle, communication 72h avant.'}
+    ]},
+    {id:'DE',name:'D\u00e9tecter (Detect)',desc:'La fonction D\u00e9tection met en place les moyens de d\u00e9couvrir rapidement les \u00e9v\u00e9nements de s\u00e9curit\u00e9.',
+     subs:[
+      {id:'DE.AE',name:'Anomalies et \u00e9v\u00e9nements',desc:'Collecte et corr\u00e9lation des logs (SIEM), seuils d\'alerte, r\u00e8gles de d\u00e9tection. <strong>Bonne pratique :</strong> tuning des alertes, time-to-detect < 1h pour les alertes critiques.'},
+      {id:'DE.CM',name:'Surveillance continue',desc:'EDR/XDR, supervision r\u00e9seau (IDS/IPS), analyse logs DNS et proxy, couverture 24/7. <strong>Bonne pratique :</strong> couverture de toutes les couches (endpoint, r\u00e9seau, cloud, applicatif).'},
+      {id:'DE.DP',name:'Processus de d\u00e9tection',desc:'Proc\u00e9dure d\'escalade, playbooks, cha\u00eene d\'alerte. <strong>Bonne pratique :</strong> tests r\u00e9guliers des alertes, mise \u00e0 jour post-incident.'}
+    ]},
+    {id:'RS',name:'R\u00e9pondre (Respond)',desc:'La fonction R\u00e9ponse orchestre les actions en cas d\'incident : gestion de crise, communication, analyse et am\u00e9lioration.',
+     subs:[
+      {id:'RS.MA',name:'Gestion de la r\u00e9ponse',desc:'Proc\u00e9dure formelle, cha\u00eene de d\u00e9cision, cellule de crise, moyens alternatifs. <strong>Bonne pratique :</strong> crisis game annuel, templates de crise pr\u00e9-remplis.'},
+      {id:'RS.CO',name:'Communication',desc:'Notification r\u00e9gulateur (CNIL 72h), COMEX, clients, m\u00e9dias. <strong>Bonne pratique :</strong> templates pr\u00e9-valid\u00e9s, arbre de d\u00e9cision.'},
+      {id:'RS.AN',name:'Analyse',desc:'Investigation forensique, cha\u00eene de custody, cause racine. <strong>Bonne pratique :</strong> kit forensique pr\u00eat, r\u00e9trospective post-incident sous 72h.'},
+      {id:'RS.MI',name:'Att\u00e9nuation',desc:'Confinement, \u00e9radication, isolation des syst\u00e8mes compromis. <strong>Bonne pratique :</strong> playbooks de confinement, mises \u00e0 jour des r\u00e8gles post-incident.'},
+      {id:'RS.IM',name:'Am\u00e9lioration',desc:'REX formalis\u00e9, plan d\'actions correctives, mise \u00e0 jour des proc\u00e9dures. <strong>Bonne pratique :</strong> REX sous 1 semaine, suivi en comit\u00e9 s\u00e9curit\u00e9.'}
+    ]},
+    {id:'RC',name:'R\u00e9tablir (Recover)',desc:'La fonction R\u00e9tablissement garantit le retour \u00e0 la normale dans des d\u00e9lais acceptables apr\u00e8s un incident.',
+     subs:[
+      {id:'RC.RP',name:'Plan de reprise (PCA/PRA)',desc:'PCA/PRA document\u00e9 avec RPO/RTO valid\u00e9s, inventaire des applications critiques, proc\u00e9dure de bascule. <strong>Bonne pratique :</strong> test r\u00e9el annuel, tabletop trimestriel.'},
+      {id:'RC.CO',name:'Communication pendant la reprise',desc:'Information parties prenantes, jalons de reprise, validation m\u00e9tier. <strong>Bonne pratique :</strong> reporting horaire en crise, validation formelle avant remise en production.'},
+      {id:'RC.IM',name:'Am\u00e9lioration de la reprise',desc:'Int\u00e9gration des REX, mise \u00e0 jour des RPO/RTO, perfectionnement des proc\u00e9dures. <strong>Bonne pratique :</strong> revue annuelle des objectifs de reprise.'},
+      {id:'RC.BR',name:'Sauvegardes et restauration',desc:'Sauvegardes r\u00e9guli\u00e8res, r\u00e8gle 3-2-1, tests de restauration document\u00e9s. <strong>Bonne pratique :</strong> sauvegardes immuables anti-ran\u00e7ongiciel, tests trimestriels.'}
+    ]}
+  ];
+  guideData.forEach(function(d){
+    guideHtml += '<div style="margin-bottom:1rem;padding-bottom:0.75rem;border-bottom:1px solid var(--border-light)"><strong style="font-size:0.9rem;color:var(--text-primary);display:block;margin-bottom:4px">'+d.id+' \u2014 '+d.name+'</strong><p style="font-size:0.78rem;color:var(--text-help);margin-bottom:0.5rem;line-height:1.5">'+d.desc+'</p>';
+    d.subs.forEach(function(s){
+      guideHtml += '<div style="margin-bottom:6px;padding:8px 10px;background:var(--glass-bg);border-radius:6px;border-left:3px solid #3b82f6;font-size:0.78rem"><strong style="color:var(--text-primary);display:block;margin-bottom:2px">'+s.id+' \u2014 '+s.name+'</strong><p style="color:var(--text-help);line-height:1.5;font-size:0.75rem">'+s.desc+'</p></div>';
+    });
+    guideHtml += '</div>';
+  });
+  guideHtml += '<div style="margin-top:0.5rem;padding:10px 12px;background:var(--glass-bg);border-radius:8px;font-size:0.7rem;color:var(--text-muted);line-height:1.5"><strong style="color:var(--text-primary);display:block;margin-bottom:2px">Source</strong>NIST Cybersecurity Framework (CSF) 2.0 \u2014 National Institute of Standards and Technology, f\u00e9vrier 2024.</div>';
+  document.getElementById('modalTitle').innerHTML = 'Guide NIST CSF 2.0';
+  document.getElementById('modalBody').innerHTML = guideHtml;
+  document.getElementById('modalClose').style.display = '';
+  document.getElementById('modalOverlay').classList.add('visible');
+  document.getElementById('modalOverlay').scrollTop = 0;
+};
 function initMaturiteChart() {
   var canvas = document.getElementById('maturiteRadar');
   if (!canvas) return;
