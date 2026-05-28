@@ -6468,13 +6468,25 @@ async function changePassword() {
   };
 }
 
+function validateVaultFile(obj) {
+  var expected = { salt:'string', iv:'string', ciphertext:'string', version:1, last_updated:'string' };
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return 'Format de fichier invalide\u00a0: objet JSON attendu.';
+  var keys = Object.keys(obj);
+  for (var k in expected) {
+    if (keys.indexOf(k) === -1) return 'Format de fichier invalide\u00a0: champ manquant «\u00a0'+k+'\u00a0».';
+    if (expected[k] === 'string' && typeof obj[k] !== 'string') return 'Format de fichier invalide\u00a0: champ «\u00a0'+k+'\u00a0» doit \u00eatre une cha\u00eene.';
+    if (expected[k] === 1 && typeof obj[k] !== 'string' && typeof obj[k] !== 'number') return 'Format de fichier invalide\u00a0: champ «\u00a0'+k+'\u00a0» doit \u00eatre une cha\u00eene ou un nombre.';
+  }
+  if (keys.length > 5) return 'Format de fichier invalide\u00a0: champ(s) inattendu(s) d\u00e9tect\u00e9(s).';
+  return null;
+}
+
 async function importVault(file, pwd) {
   try {
     const text = await file.text();
     const encrypted = JSON.parse(text);
-    if (!encrypted.salt || !encrypted.iv || !encrypted.ciphertext) {
-      throw new Error('Format de fichier invalide.');
-    }
+    var err = validateVaultFile(encrypted);
+    if (err) throw new Error(err);
     if (!checkDecryptRateLimit()) {
       throw new Error('Trop de tentatives. Veuillez patienter.');
     }
@@ -6505,7 +6517,8 @@ async function decryptFromHandle(pwd) {
   try {
     const text = await FS.readVault();
     const encrypted = JSON.parse(text);
-    if (!encrypted.salt || !encrypted.iv || !encrypted.ciphertext) throw new Error('Format invalide');
+    var err = validateVaultFile(encrypted);
+    if (err) throw new Error(err);
     if (!checkDecryptRateLimit()) throw new Error('Trop de tentatives. Veuillez patienter.');
     const data = await Crypto.decrypt(encrypted, pwd);
     _decryptAttempts = 0;
@@ -6801,8 +6814,20 @@ document.addEventListener('DOMContentLoaded', async function() {
         id: 'rssi_deck'
       });
       _pendingImportFile = await handle.getFile();
-      document.getElementById('lockFileName').textContent = '✓ ' + _pendingImportFile.name;
-      document.getElementById('lockImportBtn').disabled = false;
+      var text, parsed;
+      try { text = await _pendingImportFile.text(); parsed = JSON.parse(text); } catch(e) { parsed = null; }
+      var err = parsed ? validateVaultFile(parsed) : 'Format de fichier invalide\u00a0: le fichier n\u2019est pas un JSON valide.';
+      if (err) {
+        _pendingImportFile = null;
+        document.getElementById('lockFileName').textContent = '';
+        document.getElementById('lockImportBtn').disabled = true;
+        document.getElementById('lockError').textContent = err;
+        document.getElementById('lockError').style.display = 'block';
+      } else {
+        document.getElementById('lockFileName').textContent = '\u2713 ' + _pendingImportFile.name;
+        document.getElementById('lockImportBtn').disabled = false;
+        document.getElementById('lockError').style.display = 'none';
+      }
     } catch(e) { if (e.name !== 'AbortError') notify('Erreur : ' + e.message, 'error'); }
   });
 
