@@ -3798,6 +3798,12 @@ function populateSousDomaine() {
 function renderMaturite() {
   const allItems = vault.maturite || [];
   const items = searchFilter(allItems, ['domaine','sous_domaine','observations']);
+  items.sort(function(a,b) {
+    var ia = DOMAINES_MATURITE.indexOf(a.domaine);
+    var ib = DOMAINES_MATURITE.indexOf(b.domaine);
+    if (ia !== ib) return ia - ib;
+    return (a.sous_domaine||'').localeCompare(b.sous_domaine||'');
+  });
   var sumPond = 0, totalPond = 0;
   var detailMode = vault.preferences && vault.preferences.maturiteMode === 'detail';
   DOMAINES_MATURITE.forEach(function(dom) {
@@ -3883,7 +3889,7 @@ function addMaturiteDomaine() {
       { key:'date_evaluation', label:'Date d\'évaluation', type:'date' },
       { key:'observations', label:'Observations' }
     ],
-    validate: function(d) { return d.domaine ? null : 'Le domaine est obligatoire.'; },
+    validate: function(d) { if (!d.domaine) return 'Le domaine est obligatoire.'; if (d.sous_domaine && vault.maturite.some(function(m) { return m.domaine === d.domaine && m.sous_domaine === d.sous_domaine; })) return 'Ce sous-domaine est d\u00e9j\u00e0 \u00e9valu\u00e9 pour ce domaine.'; return null; },
     onSave: function(d) { d.niveau_actuel = parseInt(d.niveau_actuel)||1; d.niveau_cible = parseInt(d.niveau_cible)||3; d.poids = parseFloat(d.poids)||1; vault.maturite.push(d); setDirty(); renderGouvSubtab('maturite'); notify('Domaine ajout\u00e9.','success'); }
   });
   document.getElementById('gouvField_domaine').addEventListener('change', populateSousDomaine, { once: true });
@@ -3904,7 +3910,7 @@ function editMaturiteDomaine(i) {
       { key:'date_evaluation', label:'Date d\'évaluation', type:'date', value:m.date_evaluation||'' },
       { key:'observations', label:'Observations', value:m.observations||'' }
     ],
-    validate: function(d) { return d.domaine ? null : 'Le domaine est obligatoire.'; },
+    validate: function(d) { if (!d.domaine) return 'Le domaine est obligatoire.'; if (d.sous_domaine && vault.maturite.some(function(m,idx) { return idx !== i && m.domaine === d.domaine && m.sous_domaine === d.sous_domaine; })) return 'Ce sous-domaine est d\u00e9j\u00e0 \u00e9valu\u00e9 pour ce domaine.'; return null; },
     onSave: function(d) { if (vault.maturite[i]) d.criteria = vault.maturite[i].criteria; d.niveau_actuel = parseInt(d.niveau_actuel)||1; d.niveau_cible = parseInt(d.niveau_cible)||3; d.poids = parseFloat(d.poids)||1; if (!d.sous_domaine) delete d.sous_domaine; vault.maturite[i] = d; setDirty(); renderGouvSubtab('maturite'); notify('Domaine mis \u00e0 jour.','success'); }
   });
   document.getElementById('gouvField_domaine').addEventListener('change', populateSousDomaine, { once: true });
@@ -3997,6 +4003,7 @@ window.showNistGuideModal = function() {
   document.getElementById('modalClose').style.display = '';
   document.getElementById('modalOverlay').classList.add('visible');
   document.getElementById('modalOverlay').scrollTop = 0;
+  bindModalEvents();
 };
 function initMaturiteChart() {
   var canvas = document.getElementById('maturiteRadar');
